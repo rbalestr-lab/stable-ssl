@@ -19,7 +19,7 @@
 
 project = "stable-SSL"
 copyright = "2024, stable-SSL team"
-author = "Hugues Van Assel, Randall Balestriero"
+author = "stable-SSL team"
 
 # The full version, including alpha/beta/rc tags
 release = "0.1-dev"

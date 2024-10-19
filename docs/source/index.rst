@@ -7,5 +7,5 @@
     :caption: Contents:
     
     self
-    stable_ssl.quick_start
-
+    quick_start
+    whats_new
