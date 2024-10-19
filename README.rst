@@ -1,7 +1,7 @@
 Stable-SSL: the Self-Supervised Learning Library by Researchers for Researchers
 ===============================================================================
 
-*You got a research idea? It shouldn't take you more than 10 minutes to start from scratch and get it running with the ability to produce high quality figures/tables from the results: that's the goal of ``stable-SSL``.*
+*You got a research idea? It shouldn't take you more than 10 minutes to start from scratch and get it running with the ability to produce high quality figures/tables from the results: that's the goal of ``stable-SSL``.
 
 We achieve that by taking the best--and only the best--from the most eponymous AI libraries: PytorchLightning, VISSL, Wandb, Hydra, Submitit.
 
@@ -112,7 +112,7 @@ Write and Read your logs (Wandb or JSON)
 
 .. _logs:
 
-- **Loggers**: We support the `*Weights and Biases* <https://wandb.ai/site>`_ and `*jsonlines* <https://jsonlines.readthedocs.io/en/latest/>`_ for logging. For the Wandb, you will need to use the following tags: ``log.entity`` (optional), ``log.project`` (optional), ``log.run`` (optional). They are all optional since Wandb handles its own exceptions if those are not passed by users. For jsonlines, the ``log.folder`` / ``log.name`` is where the logs will be dumped. Both are also optional. ``log.folder`` will be set to ``./logs`` and ``log.name`` will be set to ``%Y%m%d_%H%M%S.%f`` of the call. References: ``stable_ssl.configs.LogConfig``, ``stable_ssl.configs.WandbConfig``.
+- **Loggers**: We support the `Weights and Biases <https://wandb.ai/site>`_ and `jsonlines <https://jsonlines.readthedocs.io/en/latest/>`_ for logging. For the Wandb, you will need to use the following tags: ``log.entity`` (optional), ``log.project`` (optional), ``log.run`` (optional). They are all optional since Wandb handles its own exceptions if those are not passed by users. For jsonlines, the ``log.folder`` / ``log.name`` is where the logs will be dumped. Both are also optional. ``log.folder`` will be set to ``./logs`` and ``log.name`` will be set to ``%Y%m%d_%H%M%S.%f`` of the call. References: ``stable_ssl.configs.LogConfig``, ``stable_ssl.configs.WandbConfig``.
 
 - **Logging values**: we have a unified logging framework regardless of the logger you employ. You can directly use ``self.log({"loss": 0.001, "lr": 1})`` which will add an entry or row in Wandb or the text file. If you want to log many different things at once, it can be easier to "pack" your log commits, as in:
 
