@@ -32,8 +32,8 @@ test = [
 
 doc = [
     "sphinx",
-    "sphinx_gallery",
-    "sphinx_rtd_theme",
+    "sphinx-gallery",
+    "sphinx-book-theme",
     "matplotlib",
     "numpydoc",
     "memory_profiler",

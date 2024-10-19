@@ -1,0 +1,20 @@
+{
+ "ssl.utils.reader.wandb_project": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "stable_ssl.utils.reader",
+   "module_short": "stable_ssl.utils.reader",
+   "name": "wandb_project"
+  }
+ ],
+ "ssl.utils.reader.wandb_run": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "stable_ssl.utils.reader",
+   "module_short": "stable_ssl.utils.reader",
+   "name": "wandb_run"
+  }
+ ]
+}

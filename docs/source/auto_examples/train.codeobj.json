@@ -1,0 +1,47 @@
+{
+ "DictConfig": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "omegaconf",
+   "module_short": "omegaconf",
+   "name": "DictConfig"
+  }
+ ],
+ "Supervised": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "stable_ssl.model.supervised",
+   "module_short": "stable_ssl.model.supervised",
+   "name": "Supervised"
+  }
+ ],
+ "__name__": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "str"
+  }
+ ],
+ "hydra.main": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "hydra",
+   "module_short": "hydra",
+   "name": "main"
+  }
+ ],
+ "stable_ssl.get_args": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "stable_ssl",
+   "module_short": "stable_ssl",
+   "name": "get_args"
+  }
+ ]
+}

@@ -1,17 +1,18 @@
-Stable-SSL: Made by researchers for researchers
-===============================================
+Stable-SSL: the Self-Supervised Learning Library by Researchers for Researchers
+===============================================================================
 
 *You got a research idea? It shouldn't take you more than 10 minutes to start from scratch and get it running with the ability to produce high quality figures/tables from the results: that's the goal of `stable-SSL`.*
 
 We achieve that by taking the best--and only the best--from the most eponymous AI libraries: PytorchLightning, VISSL, Wandb, Hydra, Submitit.
 
-.. contents:: Table of Contents
-   :depth: 2
-
 .. image:: ./assets/logo.jpg
    :alt: ssl logo
    :width: 200px
    :align: right
+
+.. contents:: Table of Contents
+   :depth: 2
+
 
 Why stable-SSL?
 ---------------

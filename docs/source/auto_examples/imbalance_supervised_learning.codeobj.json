@@ -1,0 +1,263 @@
+{
+ "DictConfig": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "omegaconf",
+   "module_short": "omegaconf",
+   "name": "DictConfig"
+  }
+ ],
+ "F.cross_entropy": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.nn.functional",
+   "module_short": "torch.nn.functional",
+   "name": "cross_entropy"
+  }
+ ],
+ "Supervised": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "stable_ssl.model.supervised",
+   "module_short": "stable_ssl.model.supervised",
+   "name": "Supervised"
+  }
+ ],
+ "__name__": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "str"
+  }
+ ],
+ "colormaps.get_cmap": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.colormaps",
+   "module_short": "matplotlib.colormaps",
+   "name": "get_cmap"
+  }
+ ],
+ "hydra.main": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "hydra",
+   "module_short": "hydra",
+   "name": "main"
+  }
+ ],
+ "np.array": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "array"
+  }
+ ],
+ "np.exp": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "exp"
+  }
+ ],
+ "np.linspace": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "linspace"
+  }
+ ],
+ "np.round": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "round"
+  }
+ ],
+ "np.sqrt": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "sqrt"
+  }
+ ],
+ "np.sum": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "sum"
+  }
+ ],
+ "np.unique": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "numpy",
+   "module_short": "numpy",
+   "name": "unique"
+  }
+ ],
+ "plt.close": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "close"
+  }
+ ],
+ "plt.savefig": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "savefig"
+  }
+ ],
+ "plt.subplots": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "subplots"
+  }
+ ],
+ "plt.tight_layout": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "tight_layout"
+  }
+ ],
+ "plt.xlabel": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "xlabel"
+  }
+ ],
+ "plt.ylabel": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "matplotlib.pyplot",
+   "module_short": "matplotlib.pyplot",
+   "name": "ylabel"
+  }
+ ],
+ "seaborn.set": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "seaborn",
+   "module_short": "seaborn",
+   "name": "set"
+  }
+ ],
+ "ssl.data.resample_classes": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "stable_ssl.data",
+   "module_short": "stable_ssl.data",
+   "name": "resample_classes"
+  }
+ ],
+ "ssl.get_args": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "stable_ssl",
+   "module_short": "stable_ssl",
+   "name": "get_args"
+  }
+ ],
+ "ssl.reader.jsonl_project": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "stable_ssl.reader",
+   "module_short": "stable_ssl.reader",
+   "name": "jsonl_project"
+  }
+ ],
+ "ssl.utils.nn.resnet9": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "stable_ssl.utils.nn",
+   "module_short": "stable_ssl.utils.nn",
+   "name": "resnet9"
+  }
+ ],
+ "torch.utils.data.DataLoader": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torch.utils.data",
+   "module_short": "torch.utils.data",
+   "name": "DataLoader"
+  }
+ ],
+ "torchvision.datasets.CIFAR10": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchvision.datasets",
+   "module_short": "torchvision.datasets",
+   "name": "CIFAR10"
+  }
+ ],
+ "transforms.Compose": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchvision.transforms",
+   "module_short": "torchvision.transforms",
+   "name": "Compose"
+  }
+ ],
+ "transforms.Normalize": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchvision.transforms",
+   "module_short": "torchvision.transforms",
+   "name": "Normalize"
+  }
+ ],
+ "transforms.ToTensor": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "torchvision.transforms",
+   "module_short": "torchvision.transforms",
+   "name": "ToTensor"
+  }
+ ]
+}
