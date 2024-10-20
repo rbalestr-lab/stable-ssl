@@ -30,7 +30,7 @@ class FullGatherLayer(torch.autograd.Function):
 
 def setup_distributed(args):
     logging.info("Setting up Distributed model...")
-    print("exporting PyTorch distributed environment variables")
+    logging.info("exporting PyTorch distributed environment variables")
     dist_env = submitit.JobEnvironment()
     if "SLURM_JOB_NODELIST" in os.environ:
         cmd = ["scontrol", "show", "hostnames", os.getenv("SLURM_JOB_NODELIST")]
@@ -38,11 +38,11 @@ def setup_distributed(args):
         dist_url = f"tcp://{host_name}:{args.port}"
     else:
         dist_url = f"tcp://localhost:{args.port}"
-    print(f"Process group:\n\t{dist_env.num_tasks} tasks")
-    print(f"\tmaster: {dist_url}")
-    print(f"\trank: {dist_env.global_rank}")
-    print(f"\tworld size: {dist_env.num_nodes*dist_env.num_tasks}")
-    print(f"\tlocal rank: {dist_env.local_rank}")
+    logging.info(f"Process group:\n\t{dist_env.num_tasks} tasks")
+    logging.info(f"\tmaster: {dist_url}")
+    logging.info(f"\trank: {dist_env.global_rank}")
+    logging.info(f"\tworld size: {dist_env.num_nodes*dist_env.num_tasks}")
+    logging.info(f"\tlocal rank: {dist_env.local_rank}")
     # ToDo ?
     # os.environ["MASTER_ADDR"] = cluster_environment.main_address
     # os.environ["MASTER_PORT"] = str(cluster_environment.main_port)
@@ -60,12 +60,10 @@ def setup_distributed(args):
         )
         args.world_size = dist_env.num_nodes * dist_env.num_tasks
         args.gpu = dist_env.local_rank
-        print("BEFORE")
         assert dist_env.global_rank == torch.distributed.get_rank()
         assert (
             dist_env.num_nodes * dist_env.num_tasks
         ) == torch.distributed.get_world_size()
-        print("AFTER")
     return args
 
 

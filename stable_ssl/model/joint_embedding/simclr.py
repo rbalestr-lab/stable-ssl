@@ -39,7 +39,7 @@ class SimCLRConfig(SSLConfig):
         Temperature parameter for the contrastive loss. Default is 0.15.
     """
 
-    temperature: float = 0.1
+    temperature: float = 0.15
 
     def trainer(self):
         return SimCLR
