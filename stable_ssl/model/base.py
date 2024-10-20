@@ -4,17 +4,18 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-import numpy as np
-import copy
+from abc import abstractmethod
 import logging
-import warnings
 import time
+import copy
 import dataclasses
-from pathlib import Path
-from tqdm import tqdm
+import numpy as np
 import submitit
 import jsonlines
 import omegaconf
+from pathlib import Path
+from tqdm import tqdm
+
 from ..reader import jsonl_run
 
 
@@ -53,18 +54,18 @@ class BaseModelConfig:
     Parameters:
     -----------
     model : str
-        Type of model to use. Default is "SimCLR".
+        Type of model to use. Default is "Supervised".
     backbone_model : str
         Neural network architecture to use for the backbone. Default is "resnet9".
     sync_batchnorm : bool, optional
         Whether to use synchronized batch normalization. Default is False.
     memory_format : str, optional
         Memory format for tensors (e.g., "channels_last"). Default is "channels_last".
-    pretrained : bool
+    pretrained : bool, optional
         Whether to use the torchvision pretrained weights or use random initialization.
-    with_classifier : int
+    with_classifier : bool, optional
         Whether to keep the last layer(s) of the backbone (classifier)
-        when loading the model.
+        when loading the model. Default is True.
     """
 
     name: str = "Supervised"
@@ -337,7 +338,7 @@ class BaseModel(torch.nn.Module):
             # we do not ensure that the model is still in eval mode to not
             # override any user desired behavior
             if self.training:
-                warnings.warn(
+                logging.warning(
                     "Starting eval epoch but model is not in "
                     "eval mode after call to before_eval_epoch()."
                 )
@@ -754,11 +755,17 @@ class BaseModel(torch.nn.Module):
     def initialize_dataloaders(self):
         return self.config.data.get_dataloaders()
 
+    @abstractmethod
     def initialize_modules(self):
-        raise NotImplementedError("You need to implement your own `initialize_modules`")
+        """Initialize the modules required for the model."""
+        pass
 
+    @abstractmethod
     def forward(self):
-        raise NotImplementedError("You need to implement your own `forward`")
+        """Define the forward pass of the model."""
+        pass
 
+    @abstractmethod
     def compute_loss(self):
-        raise NotImplementedError("You need to implement your own `compute_loss`")
+        """Compute the loss for the current batch."""
+        pass
