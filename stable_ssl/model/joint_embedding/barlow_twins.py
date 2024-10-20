@@ -11,7 +11,6 @@ def off_diagonal(x):
 
 
 class BarlowTwins(SSLTrainer):
-
     def compute_ssl_loss(self, z1, z2):
         # empirical cross-correlation matrix
         c = self.bn(z1).T @ self.bn(z2)

@@ -12,7 +12,6 @@ def off_diagonal(x):
 
 
 class VICReg(SSLTrainer):
-
     def compute_ssl_loss(self, z1, z2):
 
         repr_loss = torch.nn.functional.mse_loss(z1, z2)

@@ -6,7 +6,6 @@ from dataclasses import dataclass
 
 
 class SimCLR(SSLTrainer):
-
     def compute_ssl_loss(self, h_i, h_j):
         z = torch.cat([h_i, h_j], 0)
 

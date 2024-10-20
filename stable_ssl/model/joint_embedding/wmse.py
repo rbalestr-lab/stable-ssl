@@ -5,7 +5,6 @@ import torch.distributed as dist
 
 
 class WMSE(SSLTrainer):
-
     def initialize_modules(self):
         super().initialize_modules()
         self.whitening = Whitening2d(
