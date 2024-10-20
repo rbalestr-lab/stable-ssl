@@ -109,10 +109,12 @@ class BaseModel(torch.nn.Module):
 
     def __call__(self):
 
+        logging.basicConfig(level=logging.INFO, format="[stable-SSL] %(message)s")
+        self.seed_everything(self.config.hardware.seed)
+
         if self.config.log.api == "wandb":
-            print(
-                "[stable-SSL] \t=> Initializating wandb for logging in "
-                f"{self.config.log.dump_path}."
+            logging.info(
+                f"\t=> Initializating wandb for logging in {self.config.log.dump_path}."
             )
             wandb.init(
                 entity=self.config.log.entity,
@@ -123,38 +125,29 @@ class BaseModel(torch.nn.Module):
                 resume="allow",
             )
         else:
-            print(
-                f"[stable-SSL] \t=> Dumping config file in {self.config.log.dump_path}"
-            )
+            logging.info(f"\t=> Dumping config file in {self.config.log.dump_path}")
             omegaconf.OmegaConf.save(
                 self.config, self.config.log.dump_path / "hparams.yaml"
             )
 
-        logging.basicConfig(level=self.config.log.level)
-        self.seed_everything(self.config.hardware.seed)
-
         self.scaler = torch.amp.GradScaler("cuda", enabled=self.config.hardware.float16)
         self._set_device()
 
-        logging.info("[stable-SSL] Creating dataloaders.")
+        logging.info("Creating dataloaders.")
         dataloaders = self.initialize_dataloaders()
         for name, loader in dataloaders.items():
-            logging.info(
-                f"[stable-SSL] \t=> Found dataloader `{name}` with length {len(loader)}"
-            )
+            logging.info(f"\t=> Found dataloader `{name}` with length {len(loader)}")
         if self.config.log.eval_only:
             for name in dataloaders:
                 if name in self.config.data.train_on:
-                    logging.info(
-                        f"[stable-SSL] \t=> `{name}` will be ignored (eval_only=True)."
-                    )
+                    logging.info(f"\t=> `{name}` will be ignored (eval_only=True).")
         else:
             assert len(self.config.data.train_on)
             if self.config.data.train_on not in dataloaders:
                 raise RuntimeError(f"eval_only=False and `{name}` not given")
         self.dataloaders = dataloaders
 
-        logging.info("[stable-SSL] Calling initialize_modules() method.")
+        logging.info("Calling initialize_modules() method.")
         self.initialize_modules()
         if hasattr(self, "metrics"):
             raise RuntimeError(
@@ -191,25 +184,24 @@ class BaseModel(torch.nn.Module):
                 param.numel() for param in module.parameters() if param.requires_grad
             )
             logging.info(
-                f"[stable-SSL] \t=> Found module '{name}' with {trainable} "
-                "trainable parameters."
+                f"\t=> Found module '{name}' with {trainable} trainable parameters."
             )
 
         if not self.config.log.eval_only:
-            logging.info("[stable-SSL] Calling initialize_optimizer() method.")
+            logging.info("Calling initialize_optimizer() method.")
             self.optimizer = self.initialize_optimizer()
-            logging.info("[stable-SSL] Calling initialize_scheduler() method.")
+            logging.info("Calling initialize_scheduler() method.")
             try:
                 self.scheduler = self.initialize_scheduler()
             except NotImplementedError:
-                logging.info("[stable-SSL] No scheduler given...")
+                logging.info("No scheduler given.")
         else:
             logging.info(
-                "[stable-SSL] Mode is eval_only, skipping optimizer and "
+                "Mode is eval_only, skipping optimizer and "
                 "scheduler initializations."
             )
 
-        logging.info("[stable-SSL] Calling load_checkpoint() method.")
+        logging.info("Calling load_checkpoint() method.")
         self.load_checkpoint()
         self.start_time = time.time()
         self.execute()
@@ -247,12 +239,15 @@ class BaseModel(torch.nn.Module):
             try:
                 self._train_epoch()
             except BreakEpoch:
-                print("[stable-SSL] Train epoch cut by user. Going to the next one.")
+                logging.info(
+                    "Train epoch interrupted by user. Proceeding to the next one."
+                )
             except NanError:
-                print("[stable-SSL] Nan error.")
+                logging.error("NaN error encountered during training.", exc_info=True)
                 return
             except Exception as e:
-                raise (e)
+                logging.exception("An unexpected error occurred during training.")
+                raise
 
             if self.config.log.eval_each_epoch:
                 self.eval_epoch()
@@ -260,7 +255,7 @@ class BaseModel(torch.nn.Module):
 
             freq = self.config.log.checkpoint_frequency
             if self.epoch % freq == 0:
-                print("[stable-SSL] Checkpointing everything to restart if needed.")
+                logging.info("Checkpointing everything to restart if needed.")
                 self.save_checkpoint("tmp_checkpoint.ckpt", model_only=False)
 
         # at the end of training, we (optionally) save the final model
@@ -281,24 +276,22 @@ class BaseModel(torch.nn.Module):
         # we do not ensure that the model is still in train mode to not
         # override any user desired behavior, simply speak out
         if not self.training:
-            logging.warn(
-                "[stable-SSL] Starting training epoch but model is no longer in "
+            logging.warning(
+                "Starting training epoch but model is no longer in "
                 "train mode after call to before_train_epoch()."
             )
 
         if self.config.optim.max_steps < 0:
             max_steps = len(self.dataloaders[self.config.data.train_on])
+
+        # If max_steps is a float between 0 and 1, we treat it as a percentage of the dataset
         elif 0 < self.config.optim.max_steps < 1:
-            logging.info(
-                f"[stable-SSL] \t=> Training on {self.config.optim.max_steps*100}% of "
-                "the training dataset"
-            )
             max_steps = int(
                 self.config.optim.max_steps
                 * len(self.dataloaders[self.config.data.train_on])
             )
         else:
-            max_steps = self.config.optim.max_steps
+            max_steps = min(max_steps, len(self.dataloaders[self.config.data.train_on]))
 
         for batch_idx, data in enumerate(
             tqdm(
@@ -322,10 +315,9 @@ class BaseModel(torch.nn.Module):
                 # call any user specified post-step function
                 self.after_train_step()
             except BreakStep:
-                logging.warn("[stable-SSL] train_step has been interrupted by user.")
+                logging.info("Method `train_step` has been interrupted by user.")
 
-            # we cut early in case the user specifies to only use
-            # X% of the training dataset
+            # cut early if the user specifies to only use a subpart of the training dataset
             if batch_idx >= max_steps:
                 break
 
@@ -338,7 +330,7 @@ class BaseModel(torch.nn.Module):
     def eval_epoch(self) -> dict:
 
         if set(self.dataloaders) == set([self.config.data.train_on]):
-            logging.info("[stable-SSL] No val_loader hence skipping eval epoch.")
+            logging.info("No val_loader hence skipping eval epoch.")
             return
 
         for name, loader in self.dataloaders.items():
@@ -351,7 +343,7 @@ class BaseModel(torch.nn.Module):
             # override any user desired behavior
             if self.training:
                 warnings.warn(
-                    "[stable-SSL] Starting eval epoch but model is not in "
+                    "Starting eval epoch but model is not in "
                     "eval mode after call to before_eval_epoch()."
                 )
 
@@ -378,9 +370,10 @@ class BaseModel(torch.nn.Module):
                         # call any user specified post-step function
                         self.after_eval_step()
             except BreakEpoch:
-                print("[stable-SSL] Eval epoch cut by user...")
-            except Exception as e:
-                raise (e)
+                logging.info("Eval epoch interrupted by user.")
+            except Exception:
+                logging.exception("An unexpected error occurred during evaluation.")
+                raise
 
             # be sure to clean up to avoid silent bugs
             self.data = None
@@ -442,7 +435,7 @@ class BaseModel(torch.nn.Module):
         # sends a preemption signal, with the same arguments as the __call__ method
         # "self" is your callable, at its current state.
         # "self" therefore holds the current version of the model:
-        print("[stable-SSL] Requeuing...")
+        logging.info("Requeuing the task.")
         config = copy.deepcopy(self.config)
         config.log.add_version = False
         config.log.folder = self.config.log.dump_path.as_posix()
@@ -487,23 +480,21 @@ class BaseModel(torch.nn.Module):
         """
         load_from = Path(self.config.log.load_from)
         if load_from.is_file():
-            logging.info(
-                f"[stable-SSL] \t=> file {load_from} exists\n\t=> loading it..."
-            )
+            logging.info(f"\t=> file {load_from} exists\n\t=> loading it.")
             checkpoint = load_from
         elif (self.config.log.dump_path / "tmp_checkpoint.ckpt").is_file():
             logging.info(
-                f"[stable-SSL] \t=> folder {self.config.log.dump_path} contains "
-                "`tmp_checkpoint.ckpt` file\n\t=> loading it..."
+                f"\t=> folder {self.config.log.dump_path} contains "
+                "`tmp_checkpoint.ckpt` file\n\t=> loading it."
             )
             checkpoint = self.config.log.dump_path / "tmp_checkpoint.ckpt"
         else:
-            logging.info(f"[stable-SSL] \t=> no checkpoint at `{load_from}`")
+            logging.info(f"\t=> no checkpoint at `{load_from}`")
             logging.info(
-                "[stable-SSL] \t=> no checkpoint at "
+                "\t=> no checkpoint at "
                 f"`{self.config.log.dump_path / 'tmp_checkpoint.ckpt'}`. "
             )
-            logging.info("[stable-SSL] \t=> training from scratch...")
+            logging.info("\t=> training from scratch...")
             self.epoch = 0
             return
 
@@ -511,21 +502,19 @@ class BaseModel(torch.nn.Module):
 
         for name, model in self.named_children():
             if name not in ckpt:
-                logging.info(f"[stable-SSL] \t\t=> {name} not in ckpt, skipping...")
+                logging.info(f"\t\t=> {name} not in ckpt, skipping...")
                 continue
             model.load_state_dict(ckpt[name])
-            logging.info(f"[stable-SSL] \t\t=> {name} successfully loaded...")
+            logging.info(f"\t\t=> {name} successfully loaded...")
         if "optimizer" in ckpt:
             self.optimizer.load_state_dict(ckpt["optimizer"])
-            logging.info("[stable-SSL] \t\t=> optimizer successfully loaded...")
+            logging.info("\t\t=> optimizer successfully loaded...")
         if "scheduler" in ckpt:
             self.scheduler.load_state_dict(ckpt["scheduler"])
-            logging.info("[stable-SSL] \t\t=> scheduler successfully loaded...")
+            logging.info("\t\t=> scheduler successfully loaded...")
         if "epoch" in ckpt:
             self.epoch = ckpt["epoch"]
-            logging.info(
-                f"[stable-SSL] \t\t=> training will start from epoch {ckpt['epoch']}"
-            )
+            logging.info(f"\t\t=> training will start from epoch {ckpt['epoch']}")
         else:
             self.epoch = 0
 
