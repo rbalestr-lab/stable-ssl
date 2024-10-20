@@ -93,7 +93,8 @@ class BaseModel(torch.nn.Module):
                 "logged in the config."
             )
         trainer = super(BaseModel, cls).__new__(cls)
-        config.__class__ = make_dataclass("TrainerConfig",
+        config.__class__ = make_dataclass(
+            "TrainerConfig",
             fields=[(name, type(v), v) for name, v in kwargs.items()],
             bases=(type(config),),
         )
