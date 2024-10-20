@@ -245,7 +245,7 @@ class BaseModel(torch.nn.Module):
             except NanError:
                 logging.error("NaN error encountered during training.", exc_info=True)
                 return
-            except Exception as e:
+            except Exception:
                 logging.exception("An unexpected error occurred during training.")
                 raise
 
@@ -281,15 +281,16 @@ class BaseModel(torch.nn.Module):
                 "train mode after call to before_train_epoch()."
             )
 
+        # if max_steps is negative, train on the full dataset
         if self.config.optim.max_steps < 0:
             max_steps = len(self.dataloaders[self.config.data.train_on])
-
-        # If max_steps is a float between 0 and 1, we treat it as a percentage of the dataset
+        # if max_steps is a float between 0 and 1, treat it as a percentage
         elif 0 < self.config.optim.max_steps < 1:
             max_steps = int(
                 self.config.optim.max_steps
                 * len(self.dataloaders[self.config.data.train_on])
             )
+        # otherwise, set max_steps to the length of the dataset
         else:
             max_steps = min(max_steps, len(self.dataloaders[self.config.data.train_on]))
 
@@ -306,25 +307,19 @@ class BaseModel(torch.nn.Module):
             self.data = to_device(data, self.this_device)
 
             try:
-                # call any user specified pre-step functions
                 self.before_train_step()
-
-                # perform the gradient step
                 self.train_step()
-
-                # call any user specified post-step function
                 self.after_train_step()
+
             except BreakStep:
                 logging.info("Method `train_step` has been interrupted by user.")
 
-            # cut early if the user specifies to only use a subpart of the training dataset
             if batch_idx >= max_steps:
                 break
 
-        # call any user specified post-epoch function
         self.after_train_epoch()
 
-        # be sure to clean up to avoid silent bugs
+        # clean up to avoid silent bugs
         self.data = None
 
     def eval_epoch(self) -> dict:
@@ -416,18 +411,26 @@ class BaseModel(torch.nn.Module):
         )
 
     def _set_device(self):
-        if torch.cuda.is_available() is False:
+        # Check if CUDA is available, otherwise set to CPU
+        if not torch.cuda.is_available():
             self._device = "cpu"
             return
+
         try:
+            # Setup distributed hardware configuration
             self.config.hardware = setup_distributed(self.config.hardware)
             self._device = f"cuda:{self.config.hardware.gpu}"
-        except RuntimeError as e:
-            print(e)
-            # self._device = "cuda" if torch.cuda.is_available() else "cpu"
-            self._device = f"cuda:{self.config.hardware.gpu}"
+        except RuntimeError:
+            # Log the error and set the device to default GPU (cuda:0) as a fallback
+            logging.exception(
+                "Error setting up distributed hardware. "
+                "Falling back to default GPU configuration."
+            )
+            self._device = "cuda:0"
             self.config.hardware.gpu = 0
             self.config.hardware.world_size = 1
+
+        # Set the CUDA device
         torch.cuda.set_device(self.config.hardware.gpu)
 
     def checkpoint(self):
@@ -502,19 +505,19 @@ class BaseModel(torch.nn.Module):
 
         for name, model in self.named_children():
             if name not in ckpt:
-                logging.info(f"\t\t=> {name} not in ckpt, skipping...")
+                logging.info(f"\t\t=> {name} not in ckpt, skipping.")
                 continue
             model.load_state_dict(ckpt[name])
-            logging.info(f"\t\t=> {name} successfully loaded...")
+            logging.info(f"\t\t=> {name} successfully loaded.")
         if "optimizer" in ckpt:
             self.optimizer.load_state_dict(ckpt["optimizer"])
-            logging.info("\t\t=> optimizer successfully loaded...")
+            logging.info("\t\t=> optimizer successfully loaded.")
         if "scheduler" in ckpt:
             self.scheduler.load_state_dict(ckpt["scheduler"])
-            logging.info("\t\t=> scheduler successfully loaded...")
+            logging.info("\t\t=> scheduler successfully loaded.")
         if "epoch" in ckpt:
             self.epoch = ckpt["epoch"]
-            logging.info(f"\t\t=> training will start from epoch {ckpt['epoch']}")
+            logging.info(f"\t\t=> training will start from epoch {ckpt['epoch']}.")
         else:
             self.epoch = 0
 
@@ -610,10 +613,10 @@ class BaseModel(torch.nn.Module):
 
     def cleanup(self):
         if self.config.hardware.world_size > 1:
-            print("Cleaning distributed processes...")
+            logging.info("Cleaning distributed processes...")
             torch.distributed.destroy_process_group()
         else:
-            print("Not using distributed... nothing to clean")
+            logging.info("Not using distributed. Nothing to clean.")
 
     def gather(self, x):
         return FullGatherLayer.apply(x)
