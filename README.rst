@@ -51,7 +51,7 @@ Or you can also run:
 
 .. code-block:: bash
 
-   pip install git+https://github.com/rbalestr-lab/stable-SSL
+   pip install -U git+https://github.com/rbalestr-lab/stable-SSL
 
 
 Minimal Documentation

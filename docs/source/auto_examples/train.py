@@ -7,24 +7,23 @@ from omegaconf import DictConfig
 
 import stable_ssl
 
-# from stable_ssl.ssl_modules import SimCLR
-from stable_ssl.model.supervised import Supervised
+from stable_ssl.model import SimCLR
+from stable_ssl.model import Supervised
 
 model_dict = {
-    # "SimCLR": SimCLR,
+    "SimCLR": SimCLR,
     "Supervised": Supervised,
 }
 
 
 @hydra.main()
 def main(cfg: DictConfig):
-
     args = stable_ssl.get_args(cfg)
 
     print("--- Arguments ---")
     print(args)
 
-    trainer = model_dict[args.model.model](args)
+    trainer = model_dict[args.model.name](args)
     trainer()
 
 

@@ -22,7 +22,7 @@
    "is_class": false,
    "is_explicit": false,
    "module": "stable_ssl.model.supervised",
-   "module_short": "stable_ssl.model",
+   "module_short": "stable_ssl.model.supervised",
    "name": "Supervised"
   }
  ],
@@ -179,12 +179,12 @@
    "name": "set"
   }
  ],
- "ssl.data.resample_classes": [
+ "ssl.base.resample_classes": [
   {
    "is_class": false,
    "is_explicit": false,
-   "module": "stable_ssl.data",
-   "module_short": "stable_ssl.data",
+   "module": "stable_ssl.base",
+   "module_short": "stable_ssl.base",
    "name": "resample_classes"
   }
  ],

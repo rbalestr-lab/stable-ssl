@@ -8,11 +8,20 @@
    "name": "DictConfig"
   }
  ],
+ "SimCLR": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "stable_ssl.model",
+   "module_short": "stable_ssl.model",
+   "name": "SimCLR"
+  }
+ ],
  "Supervised": [
   {
    "is_class": false,
    "is_explicit": false,
-   "module": "stable_ssl.model.supervised",
+   "module": "stable_ssl.model",
    "module_short": "stable_ssl.model",
    "name": "Supervised"
   }

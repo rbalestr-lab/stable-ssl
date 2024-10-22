@@ -51,7 +51,7 @@ with class imbalance.
             )
             distribution = np.exp(np.linspace(0, self.config.distribution, 10))
             distribution /= np.sum(distribution)
-            trainset = ssl.data.resample_classes(trainset, distribution)
+            trainset = ssl.base.resample_classes(trainset, distribution)
             trainloader = torch.utils.data.DataLoader(
                 trainset,
                 batch_size=self.config.optim.batch_size,
