@@ -90,7 +90,7 @@ Slurm
 
 .. _slurm:
 
-To launch on slurm simply add ``hydra/launcher=submitit_slurm`` in the command line, for instance: 
+To launch on slurm simply add ``hydra/launcher=submitit_slurm`` in the command line, for instance:
 
 .. code-block:: bash
 
