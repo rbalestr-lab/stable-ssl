@@ -79,7 +79,7 @@ Multi-run
 
 .. _multirun:
 
-To launch multiple runs, add `-m` and specify the multiple values to try as ``++group.variable=value1,value2,value3``. For instance:
+To launch multiple runs, add `-m` and specify the multiple values to try as ``++group.variable=value1,value2,value3``. For instance: 
 
 .. code-block:: bash
 
