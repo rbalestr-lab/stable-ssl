@@ -2,7 +2,7 @@ import torchvision
 import torch.nn as nn
 
 
-def load_model(
+def load_nn(
     name, n_classes, with_classifier=True, pretrained=False, dataset="CIFAR10", **kwargs
 ):
     if name == "resnet9":

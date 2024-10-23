@@ -3,7 +3,7 @@ from .utils import FullGatherLayer, setup_distributed, seed_everything, to_devic
 from .schedulers import LinearWarmupCosineAnnealing
 from .optim import LARS
 from .exceptions import BreakEpoch, BreakStep, NanError, BreakAllEpochs
-from .nn import load_model, adapt_resolution
+from .nn import load_nn, adapt_resolution
 
 __all__ = [
     "mask_correlated_samples",
@@ -16,7 +16,7 @@ __all__ = [
     "BreakStep",
     "NanError",
     "BreakAllEpochs",
-    "load_model",
+    "load_nn",
     "to_device",
     "adapt_resolution",
 ]

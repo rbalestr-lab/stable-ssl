@@ -1,10 +1,11 @@
+from dataclasses import dataclass, field
 import torch
 import torch.nn.functional as F
-from ..base import BaseModel, BaseModelConfig
 from torch import nn
-from ...utils import load_model
-from dataclasses import dataclass, field
 from torchmetrics.classification import MulticlassAccuracy
+
+from ...utils import load_nn
+from ..base import BaseModel, BaseModelConfig
 
 
 @dataclass
@@ -37,7 +38,7 @@ class SSLTrainer(BaseModel):
 
     def initialize_modules(self):
         # backbone
-        model, fan_in = load_model(
+        model, fan_in = load_nn(
             name=self.config.model.backbone_model,
             n_classes=self.config.data.datasets[self.config.data.train_on].num_classes,
             with_classifier=False,
