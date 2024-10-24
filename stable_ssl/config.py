@@ -21,20 +21,6 @@ from .data import DataConfig
 
 import random
 
-_MODEL_CONFIGS = {
-    "SimCLR": SimCLRConfig,
-    "Barlowtwins": BarlowTwinsConfig,
-    "Supervised": BaseModelConfig,
-    "VICReg": VICRegConfig,
-    "WMSE": WMSEConfig,
-}
-_LOG_CONFIGS = {
-    "Wandb": WandbConfig,
-    "wandb": WandbConfig,
-    "None": LogConfig,
-    None: LogConfig,
-}
-
 
 @dataclass
 class OptimConfig:
@@ -194,7 +180,7 @@ class LogConfig:
 @dataclass
 class WandbConfig(LogConfig):
     """
-    Configuration for logging and checkpointing during training.
+    Configuration for logging with Weights & Biases (Wandb) during training.
 
     Parameters:
     -----------
@@ -213,7 +199,7 @@ class WandbConfig(LogConfig):
 @dataclass
 class TrainerConfig:
     """
-    Global configuration for training a Self-Supervised Learning (SSL) model.
+    Global configuration for training a model.
 
     Parameters:
     -----------
@@ -240,6 +226,21 @@ class TrainerConfig:
 
     def __str__(self) -> str:
         return OmegaConf.to_yaml(self)
+
+
+_MODEL_CONFIGS = {
+    "SimCLR": SimCLRConfig,
+    "Barlowtwins": BarlowTwinsConfig,
+    "Supervised": BaseModelConfig,
+    "VICReg": VICRegConfig,
+    "WMSE": WMSEConfig,
+}
+_LOG_CONFIGS = {
+    "Wandb": WandbConfig,
+    "wandb": WandbConfig,
+    "None": LogConfig,
+    None: LogConfig,
+}
 
 
 def get_args(cfg_dict, model_class=None):
