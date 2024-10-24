@@ -21,4 +21,4 @@ jobs:
         pip install pydocstyle
 
     - name: Run pydocstyle
-      run: pydocstyle torchdr --ignore='D100,D102,D104,D107,D203,D213,D413,D412'
+      run: pydocstyle stable_ssl --ignore='D100,D102,D104,D107,D203,D213,D413,D412'
