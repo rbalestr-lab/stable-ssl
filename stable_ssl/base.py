@@ -19,7 +19,7 @@ import omegaconf
 from pathlib import Path
 from tqdm import tqdm
 
-from ..reader import jsonl_run
+from .reader import jsonl_run
 
 
 try:

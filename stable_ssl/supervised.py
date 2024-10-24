@@ -2,8 +2,8 @@ import torch
 import torch.nn.functional as F
 from torchmetrics.classification import MulticlassAccuracy
 
-from stable_ssl.utils import load_nn
-from stable_ssl import BaseModel
+from .utils import load_nn
+from .base import BaseModel
 
 
 class Supervised(BaseModel):
