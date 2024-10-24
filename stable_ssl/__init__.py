@@ -18,10 +18,21 @@ from .config import (
     OptimConfig,
     HardwareConfig,
     LogConfig,
-    TrainerConfig,
     WandbConfig,
+    BaseModelConfig,
+    TrainerConfig,
 )
 from .data import DataConfig
+from .ssl_model import (
+    SimCLR,
+    SimCLRConfig,
+    BarlowTwins,
+    BarlowTwinsConfig,
+    VICReg,
+    VICRegConfig,
+    WMSE,
+    WMSEConfig,
+)
 
 __all__ = [
     "__title__",
@@ -34,7 +45,16 @@ __all__ = [
     "OptimConfig",
     "HardwareConfig",
     "LogConfig",
-    "TrainerConfig",
     "WandbConfig",
+    "BaseModelConfig",
+    "TrainerConfig",
     "DataConfig",
+    "SimCLR",
+    "SimCLRConfig",
+    "BarlowTwins",
+    "BarlowTwinsConfig",
+    "VICReg",
+    "VICRegConfig",
+    "WMSE",
+    "WMSEConfig",
 ]

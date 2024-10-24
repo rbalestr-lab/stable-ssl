@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+"""Base class for joint embedding models."""
+#
+# Author: Hugues Van Assel <vanasselhugues@gmail.com>
+#         Randall Balestriero <randallbalestriero@gmail.com>
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+
 from dataclasses import dataclass, field
 import torch
 import torch.nn.functional as F
