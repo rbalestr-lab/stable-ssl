@@ -8,14 +8,13 @@ import random
 import torch
 
 from .utils import LARS
-from .model.joint_embedding import (
+from .ssl_model.joint_embedding import (
     BarlowTwinsConfig,
     SimCLRConfig,
     VICRegConfig,
     WMSEConfig,
 )
-from .model.supervised import Supervised
-
+from .supervised import Supervised
 from .data import DataConfig
 
 

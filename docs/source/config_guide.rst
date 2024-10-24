@@ -14,8 +14,25 @@ Configuration File Guide
    :toctree: gen_modules/
    :template: myclass_template.rst
 
-   OptimConfig
-   HardwareConfig
-   DataConfig
-   LogConfig
-   WandbConfig
+   config.OptimConfig
+   config.HardwareConfig
+   config.DataConfig
+   config.LogConfig
+   config.WandbConfig
+
+
+.. autosummary::
+   :toctree: gen_modules/
+   :template: myclass_template.rst
+
+   config.BaseModelConfig
+
+
+.. autosummary::
+   :toctree: gen_modules/
+   :template: myclass_template.rst
+
+   ssl_model.joint_embedding.SimCLRConfig
+   ssl_model.joint_embedding.BarlowTwinsConfig
+   ssl_model.joint_embedding.VicRegConfig
+   ssl_model.joint_embedding.WMSEConfig

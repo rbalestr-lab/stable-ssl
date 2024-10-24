@@ -15,23 +15,19 @@ from .__about__ import (
 
 from .config import (
     get_args,
-    OptimConfig,
-    HardwareConfig,
-    LogConfig,
-    WandbConfig,
-    BaseModelConfig,
-    TrainerConfig,
+    # OptimConfig,
+    # HardwareConfig,
+    # LogConfig,
+    # WandbConfig,
+    # BaseModelConfig,
+    # TrainerConfig,
 )
 from .data import DataConfig
 from .ssl_model import (
     SimCLR,
-    SimCLRConfig,
     BarlowTwins,
-    BarlowTwinsConfig,
     VICReg,
-    VICRegConfig,
     WMSE,
-    WMSEConfig,
 )
 
 __all__ = [
@@ -42,19 +38,15 @@ __all__ = [
     "__author__",
     "__license__",
     "get_args",
-    "OptimConfig",
-    "HardwareConfig",
-    "LogConfig",
-    "WandbConfig",
-    "BaseModelConfig",
-    "TrainerConfig",
+    # "OptimConfig",
+    # "HardwareConfig",
+    # "LogConfig",
+    # "WandbConfig",
+    # "BaseModelConfig",
+    # "TrainerConfig",
     "DataConfig",
     "SimCLR",
-    "SimCLRConfig",
     "BarlowTwins",
-    "BarlowTwinsConfig",
     "VICReg",
-    "VICRegConfig",
     "WMSE",
-    "WMSEConfig",
 ]
