@@ -16,11 +16,10 @@ from .augmentations import TransformsConfig
 
 @dataclass
 class DatasetConfig:
-    """
-    Configuration for the data used for training the model.
+    """Configuration for the data used for training the model.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     dir : str
         Path to the directory containing the training data.
         Default is "data".
@@ -44,6 +43,7 @@ class DatasetConfig:
     shuffle: bool = False
 
     def __post_init__(self):
+        """Initialize transforms if not provided."""
         if self.transforms is None:
             self.transforms = [TransformsConfig("None")]
         else:
@@ -53,6 +53,7 @@ class DatasetConfig:
 
     @property
     def num_classes(self):
+        """Return the number of classes in the dataset."""
         if self.name == "CIFAR10":
             return 10
         elif self.name == "CIFAR100":
@@ -60,18 +61,23 @@ class DatasetConfig:
 
     @property
     def resolution(self):
+        """Return the resolution of the images in the dataset."""
         if self.name in ["CIFAR10", "CIFAR100"]:
             return 32
 
     @property
     def data_path(self):
+        """Return the path to the dataset."""
         return os.path.join(hydra.utils.get_original_cwd(), self.dir, self.name)
 
     def get_dataset(self):
-        """
-        Load a dataset from torchvision.datasets.
-        """
+        """Load a dataset from torchvision.datasets.
 
+        Raises
+        ------
+        ValueError
+            If the dataset is not found in torchvision.datasets.
+        """
         if not hasattr(torchvision.datasets, self.name):
             raise ValueError(f"Dataset {self.name} not found in torchvision.datasets.")
 
@@ -85,6 +91,13 @@ class DatasetConfig:
         )
 
     def get_dataloader(self):
+        """Return a DataLoader for the dataset.
+
+        Returns
+        -------
+        torch.utils.data.DataLoader
+            DataLoader object for the dataset.
+        """
         dataset = self.get_dataset()
 
         # FIXME: handle those cases
@@ -115,38 +128,51 @@ class DatasetConfig:
 
 @dataclass
 class DataConfig:
-    """
-    Configuration for the data used for training the model.
+    """Configuration for multiple datasets used for training the model.
 
-    Parameters:
-    -----------
-    data_dir : str
-        Path to the directory containing the training data.
-        Default is "data".
-    dataset : str
-        Name of the dataset to use (e.g., "CIFAR10", "CIFAR100").
-        Default is "CIFAR10".
-    resolution : int
-        Resolution of the images in the dataset. Default is 32.
-    num_classes : int
-        Number of classes in the dataset. Default is 10.
-    coeff_imbalance : float
-        Coefficient for creating an imbalanced version of the dataset.
-        Default is None.
+    Parameters
+    ----------
+    train_on : str
+        The dataset to train on.
+    datasets : dict[str, DatasetConfig]
+        A dictionary of dataset configurations.
     """
 
     train_on: str
     datasets: dict[str, DatasetConfig]
 
     def __init__(self, train_on, *args, **datasets):
+        """Initialize DataConfig.
+
+        Parameters
+        ----------
+        train_on : str
+            The dataset to train on.
+        datasets : dict
+            A dictionary of dataset configurations.
+        """
         assert len(args) == 0
         self.train_on = train_on
         self.datasets = {name: DatasetConfig(**d) for name, d in datasets.items()}
 
     def get_datasets(self):
+        """Get datasets for training and validation.
+
+        Returns
+        -------
+        dict
+            A dictionary containing datasets.
+        """
         return {name: d.get_dataset() for name, d in self.datasets.items()}
 
     def get_dataloaders(self):
+        """Get dataloaders for the datasets.
+
+        Returns
+        -------
+        dict
+            A dictionary containing dataloaders.
+        """
         return {name: d.get_dataloader() for name, d in self.datasets.items()}
 
 
@@ -201,6 +227,20 @@ class DataConfig:
 
 
 def from_torchvision(data_path, dataset):
+    """Load dataset features and labels from torchvision.
+
+    Parameters
+    ----------
+    data_path : str
+        Path to the dataset.
+    dataset : torch.utils.data.Dataset
+        The dataset class from torchvision.
+
+    Returns
+    -------
+    tuple
+        Tuple of features and labels.
+    """
     dataset = dataset(
         root=data_path, train=True, download=True, transform=transforms.ToTensor()
     )
@@ -210,15 +250,27 @@ def from_torchvision(data_path, dataset):
 
 
 def resample_classes(dataset, samples_or_freq, random_seed=None):
-    """
-    Create an exponential class imbalance.
-    Args:
-        dataset (torch.utils.data.Dataset): The input data, shape (N, ...).
-        samples_or_freq (iterable): Number of samples or frequency
-            for each class in the new dataset.
-        random_seed (int): The random seed.
-    """
+    """Create an exponential class imbalance.
 
+    Parameters
+    ----------
+    dataset : torch.utils.data.Dataset
+        The input dataset.
+    samples_or_freq : iterable
+        Number of samples or frequency for each class in the new dataset.
+    random_seed : int, optional
+        The random seed for reproducibility. Default is None.
+
+    Returns
+    -------
+    torch.utils.data.Subset
+        Subset of the dataset with the resampled classes.
+
+    Raises
+    ------
+    ValueError
+        If the dataset does not have 'labels' or 'targets' attributes.
+    """
     if hasattr(dataset, "labels"):
         labels = dataset.labels
     elif hasattr(dataset, "targets"):
@@ -233,7 +285,7 @@ def resample_classes(dataset, samples_or_freq, random_seed=None):
 
     if np.min(samples_or_freq) < 0:
         raise ValueError(
-            "You can't have negative values in `sampels_or_freq`, "
+            "You can't have negative values in `samples_or_freq`, "
             f"got {samples_or_freq}."
         )
     elif np.sum(samples_or_freq) <= 1:
@@ -245,7 +297,7 @@ def resample_classes(dataset, samples_or_freq, random_seed=None):
             raise ValueError("specified more samples per class than available")
     else:
         raise ValueError(
-            f"samples_or_freq needs to sum to <= 1 or len(datset) ({len(dataset)}), "
+            f"samples_or_freq needs to sum to <= 1 or len(dataset) ({len(dataset)}), "
             f"got {np.sum(samples_or_freq)}."
         )
 
@@ -266,11 +318,18 @@ def resample_classes(dataset, samples_or_freq, random_seed=None):
 
 
 class CustomTorchvisionDataset(Dataset):
+    """A custom dataset class for loading torchvision datasets.
+
+    Parameters
+    ----------
+    root : str
+        Path to the dataset.
+    transform : callable, optional
+        Transformation function to apply to the data. Default is None.
+    """
+
     def __init__(self, root, transform=None):
-        """
-        root: Directory where the dataset is stored
-        transform: A function/transform to apply to the data
-        """
+        """Initialize the dataset with the given root path and transform."""
         self.transform = transform
 
         # Load the dataset from the .pt file
@@ -279,9 +338,22 @@ class CustomTorchvisionDataset(Dataset):
         self.labels = data["labels"]
 
     def __len__(self):
+        """Return the length of the dataset."""
         return len(self.features)
 
     def __getitem__(self, idx):
+        """Get a sample from the dataset.
+
+        Parameters
+        ----------
+        idx : int
+            Index of the sample to retrieve.
+
+        Returns
+        -------
+        tuple
+            The feature and label of the sample.
+        """
         feature = self.features[idx]
         feature = to_pil_image(feature)
 
@@ -291,9 +363,3 @@ class CustomTorchvisionDataset(Dataset):
             feature = self.transform(feature)
 
         return feature, label
-
-
-# if __name__ == "__main__":
-#     data_path = "../runs/data/CIFAR10/"
-
-#     load_dataset("CIFAR10", data_path, train=True, coeff_imbalance=1.1)

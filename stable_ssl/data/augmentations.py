@@ -32,9 +32,7 @@ class TransformsConfig:
     transforms: list[dict] = None
 
     def __post_init__(self):
-        """
-        Initialize the transformation configuration with a default setup or custom transformations.
-        """
+        """Initialize the transformation configuration with a default setup or custom transformations."""
         extra = [v2.ToImage(), v2.ToDtype(torch.float32, scale=True)]
         if self.transforms is None:
             self.transforms = [{}]
