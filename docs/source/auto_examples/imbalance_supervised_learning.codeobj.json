@@ -22,7 +22,7 @@
    "is_class": false,
    "is_explicit": false,
    "module": "stable_ssl.model.supervised",
-   "module_short": "stable_ssl.model",
+   "module_short": "stable_ssl.model.supervised",
    "name": "Supervised"
   }
  ],

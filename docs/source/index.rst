@@ -9,4 +9,5 @@
     self
     getting_started
     config_guide
+    ssl_methods
     whats_new

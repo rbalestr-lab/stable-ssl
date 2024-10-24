@@ -18,6 +18,7 @@ import jsonlines
 import omegaconf
 from pathlib import Path
 from tqdm import tqdm
+from dataclasses import dataclass, make_dataclass
 
 from .reader import jsonl_run
 
@@ -32,7 +33,7 @@ except ModuleNotFoundError:
 
 import torch
 
-from ..utils import (
+from .utils import (
     BreakAllEpochs,
     BreakEpoch,
     NanError,
@@ -45,7 +46,35 @@ from ..utils import (
     to_device,
 )
 
-from dataclasses import make_dataclass
+
+@dataclass
+class BaseModelConfig:
+    """
+    Configuration for the SSL model parameters.
+
+    Parameters:
+    -----------
+    model : str
+        Type of model to use. Default is "Supervised".
+    backbone_model : str
+        Neural network architecture to use for the backbone. Default is "resnet9".
+    sync_batchnorm : bool, optional
+        Whether to use synchronized batch normalization. Default is False.
+    memory_format : str, optional
+        Memory format for tensors (e.g., "channels_last"). Default is "channels_last".
+    pretrained : bool, optional
+        Whether to use the torchvision pretrained weights or use random initialization.
+    with_classifier : bool, optional
+        Whether to keep the last layer(s) of the backbone (classifier)
+        when loading the model. Default is True.
+    """
+
+    name: str = "Supervised"
+    backbone_model: str = "resnet18"
+    sync_batchnorm: bool = False
+    memory_format: str = "channels_last"
+    pretrained: bool = False
+    with_classifier: bool = True
 
 
 class BaseModel(torch.nn.Module):

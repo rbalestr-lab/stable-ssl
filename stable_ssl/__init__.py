@@ -22,17 +22,13 @@ from .config import (
     # BaseModelConfig,
     # TrainerConfig,
 )
-from .data import DataConfig
 
-from . import ssl_model
 from .ssl_model import (
     SimCLR,
     BarlowTwins,
     VICReg,
     WMSE,
 )
-
-from . import utils
 
 __all__ = [
     "__title__",
@@ -42,15 +38,12 @@ __all__ = [
     "__author__",
     "__license__",
     "get_args",
-    "utils",
     # "OptimConfig",
     # "HardwareConfig",
     # "LogConfig",
     # "WandbConfig",
     # "BaseModelConfig",
     # "TrainerConfig",
-    "DataConfig",
-    "ssl_model",
     "SimCLR",
     "BarlowTwins",
     "VICReg",
