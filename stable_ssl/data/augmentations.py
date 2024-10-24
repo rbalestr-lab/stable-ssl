@@ -32,7 +32,7 @@ class TransformsConfig:
     transforms: list[dict] = None
 
     def __post_init__(self):
-        """Initialize the transformation configuration with a default setup or custom transformations."""
+        """Initialize the transformation configuration."""
         extra = [v2.ToImage(), v2.ToDtype(torch.float32, scale=True)]
         if self.transforms is None:
             self.transforms = [{}]
@@ -133,7 +133,7 @@ def plasma_fractal(mapsize=256, wibbledecay=3):
         return array / 4 + wibble * np.random.uniform(-wibble, wibble, array.shape)
 
     def fillsquares():
-        """For each square of points stepsize apart, calculate middle value as mean of points + wibble."""
+        """Calculate middle value of squares as mean of points plus wibble."""
         cornerref = maparray[0:mapsize:stepsize, 0:mapsize:stepsize]
         squareaccum = cornerref + np.roll(cornerref, shift=-1, axis=0)
         squareaccum += np.roll(squareaccum, shift=-1, axis=1)
@@ -142,7 +142,7 @@ def plasma_fractal(mapsize=256, wibbledecay=3):
         ] = wibbledmean(squareaccum)
 
     def filldiamonds():
-        """For each diamond of points stepsize apart, calculate middle value as mean of points + wibble."""
+        """Calculate middle value of diamonds as mean of points plus wibble."""
         mapsize = maparray.shape[0]
         drgrid = maparray[
             stepsize // 2 : mapsize : stepsize, stepsize // 2 : mapsize : stepsize
