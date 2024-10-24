@@ -1,7 +1,7 @@
 from .base import SSLConfig, SSLTrainer
 from .barlow_twins import BarlowTwins, BarlowTwinsConfig
 from .simclr import SimCLR, SimCLRConfig
-from .vicreg import VICReg, VicRegConfig
+from .vicreg import VICReg, VICRegConfig
 from .wmse import WMSE, WMSEConfig
 
 __all__ = [
@@ -11,8 +11,8 @@ __all__ = [
     "BarlowTwinsConfig",
     "SimCLR",
     "SimCLRConfig",
-    "VicReg",
-    "VicRegConfig",
+    "VICReg",
+    "VICRegConfig",
     "WMSE",
     "WMSEConfig",
 ]
