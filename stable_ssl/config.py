@@ -9,94 +9,31 @@ import torch
 
 from .utils import LARS
 from .model.base import BaseModelConfig
-from .model.joint_embedding.barlow_twins import BarlowTwinsConfig
-from .model.joint_embedding.simclr import SimCLRConfig
-from .model.joint_embedding.vicreg import VICRegConfig
-from .model.joint_embedding.wmse import WMSEConfig
+from .model.joint_embedding import (
+    BarlowTwinsConfig,
+    SimCLRConfig,
+    VICRegConfig,
+    WMSEConfig,
+)
 from .model.supervised import Supervised
 
 from .data import DataConfig
 
 import random
 
-
-# @dataclass
-# class DataConfig:
-#     """
-#     Configuration for the data used for training the model.
-
-#     Parameters:
-#     -----------
-#     data_dir : str
-#         Path to the directory containing the training data.
-#         Default is "data".
-#     dataset : str
-#         Name of the dataset to use (e.g., "CIFAR10", "CIFAR100").
-#         Default is "CIFAR10".
-#     resolution : int
-#         Resolution of the images in the dataset. Default is 32.
-#     num_classes : int
-#         Number of classes in the dataset. Default is 10.
-#     coeff_imbalance : float
-#         Coefficient for creating an imbalanced version of the dataset.
-#         Default is None.
-#     """
-
-#     data_dir: str = "data"
-#     dataset: str = "CIFAR10"
-#     resolution: int = 32
-#     num_classes: int = 10
-#     num_workers: int = 0
-
-#     def __post_init__(self):
-#         # Adjust resolution and num_classes based on dataset
-#         if self.dataset in ["CIFAR10", "CIFAR100"]:
-#             self.resolution = 32
-#             if self.dataset == "CIFAR10":
-#                 self.num_classes = 10
-#             elif self.dataset == "CIFAR100":
-#                 self.num_classes = 100
-
-#         # Set data_path based on data_dir and dataset
-#         self.data_path = os.path.join(
-#             hydra.utils.get_original_cwd(), self.data_dir, self.dataset
-#         )
-
-
-# @dataclass
-# class ModelConfig:
-#     """
-#     Configuration for the SSL model parameters.
-
-#     Parameters:
-#     -----------
-#     model : str
-#         Type of model to use. Default is "SimCLR".
-#     backbone_model : str
-#         Neural network architecture to use for the backbone. Default is "resnet9".
-#     sync_batchnorm : bool, optional
-#         Whether to use synchronized batch normalization. Default is False.
-#     memory_format : str, optional
-#         Memory format for tensors (e.g., "channels_last"). Default is "channels_last".
-#     temperature : str
-#         Temperature parameter for the contrastive loss. Default is 0.15.
-#     projector : str
-#         Architecture of the projector head. Default is "8192-8192-8192".
-#     pretrained : bool
-#         Whether to use the torchvision pretrained weights or use random
-# initialization.
-#     with_classifier : int
-#         Whether to keep the last layer(s) of the backbone (classifier) when loading
-# the model.
-#     """
-
-#     model: str = "Supervised"
-#     backbone_model: str = "resnet18"
-#     sync_batchnorm: bool = False
-#     memory_format: str = "channels_last"
-#     projector: str = "2048-128"
-#     pretrained: bool = False
-#     with_classifier: bool = True
+_MODEL_CONFIGS = {
+    "SimCLR": SimCLRConfig,
+    "Barlowtwins": BarlowTwinsConfig,
+    "Supervised": BaseModelConfig,
+    "VICReg": VICRegConfig,
+    "WMSE": WMSEConfig,
+}
+_LOG_CONFIGS = {
+    "Wandb": WandbConfig,
+    "wandb": WandbConfig,
+    "None": LogConfig,
+    None: LogConfig,
+}
 
 
 @dataclass
@@ -303,21 +240,6 @@ class TrainerConfig:
 
     def __str__(self) -> str:
         return OmegaConf.to_yaml(self)
-
-
-_MODEL_CONFIGS = {
-    "SimCLR": SimCLRConfig,
-    "Barlowtwins": BarlowTwinsConfig,
-    "Supervised": BaseModelConfig,
-    "VICReg": VICRegConfig,
-    "WMSE": WMSEConfig,
-}
-_LOG_CONFIGS = {
-    "Wandb": WandbConfig,
-    "wandb": WandbConfig,
-    "None": LogConfig,
-    None: LogConfig,
-}
 
 
 def get_args(cfg_dict, model_class=None):

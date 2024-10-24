@@ -1,7 +1,7 @@
 from .base import SSLConfig, SSLTrainer
 from .barlow_twins import BarlowTwins, BarlowTwinsConfig
 from .simclr import SimCLR, SimCLRConfig
-from .vicreg import VicReg, VicRegConfig
+from .vicreg import VICReg, VicRegConfig
 from .wmse import WMSE, WMSEConfig
 
 __all__ = [
