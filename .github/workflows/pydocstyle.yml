@@ -1,0 +1,24 @@
+name: Pydocstyle Lint
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install pydocstyle
+      run: |
+        python -m pip install --upgrade pip
+        pip install pydocstyle
+
+    - name: Run pydocstyle
+      run: pydocstyle torchdr --ignore='D100,D102,D104,D107,D203,D213,D413,D412'

@@ -51,4 +51,5 @@ doc = [
     "numpydoc",
     "memory_profiler",
     "myst-parser",
+    "pydocstyle",
 ]
