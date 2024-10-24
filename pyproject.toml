@@ -23,8 +23,9 @@ dependencies = [
     "pandas", 
     "jsonlines", 
     "torchmetrics", 
-    "scipy"
+    "scipy",
 ]
+
 dynamic = ["version"]
 
 [tool.setuptools]

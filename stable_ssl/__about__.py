@@ -1,9 +1,3 @@
-# Author: Hugues Van Assel <vanasselhugues@gmail.com>
-#         Randall Balestriero <randallbalestriero@gmail.com>
-#
-# License: MIT
-
-
 __all__ = [
     "__title__",
     "__summary__",
@@ -18,4 +12,4 @@ __summary__ = "Self-Supervised Learning Library"
 __version__ = "0.0.0"
 __author__ = "Hugues Van Assel, Randall Balestriero"
 __license__ = "MIT"
-__url__ = "/"
+__url__ = "https://rbalestr-lab.github.io/stable-SSL.github.io/"

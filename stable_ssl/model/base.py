@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """Main function for training a model."""
 #
+# Author: Hugues Van Assel <vanasselhugues@gmail.com>
+#         Randall Balestriero <randallbalestriero@gmail.com>
+#
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 

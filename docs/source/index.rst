@@ -8,4 +8,5 @@
     
     self
     getting_started
+    config_guide
     whats_new

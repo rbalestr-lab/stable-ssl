@@ -1,9 +1,9 @@
 import torch
 import torch.nn.functional as F
+from torchmetrics.classification import MulticlassAccuracy
 
 from ..utils import load_nn
 from . import BaseModel
-from torchmetrics.classification import MulticlassAccuracy
 
 
 class Supervised(BaseModel):
