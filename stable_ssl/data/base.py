@@ -1,4 +1,8 @@
 import os
+from dataclasses import dataclass
+import logging
+import numpy as np
+import hydra
 
 import torch
 import torchvision
@@ -6,12 +10,8 @@ from torchvision import transforms
 from torch.utils.data import Dataset
 from torchvision.transforms.functional import to_pil_image
 
-from stable_ssl.data.sampler import Sampler
-import numpy as np
-from dataclasses import dataclass
-import logging
+from .sampler import Sampler
 from .augmentations import TransformsConfig
-import hydra
 
 
 @dataclass
@@ -229,9 +229,7 @@ def resample_classes(dataset, samples_or_freq, random_seed=None):
         labels, return_counts=True, return_inverse=True
     )
 
-    logging.info(
-        f"[stable-SSL] Subsampling : original class counts: {list(class_counts)}"
-    )
+    logging.info(f"Subsampling : original class counts: {list(class_counts)}")
 
     if np.min(samples_or_freq) < 0:
         raise ValueError(
@@ -255,9 +253,7 @@ def resample_classes(dataset, samples_or_freq, random_seed=None):
         target_class_counts / (target_class_counts / class_counts).max()
     ).astype(int)
 
-    logging.info(
-        f"[stable-SSL] Subsampling : target class counts: {list(target_class_counts)}"
-    )
+    logging.info(f"Subsampling : target class counts: {list(target_class_counts)}")
 
     keep_indices = []
     generator = np.random.Generator(np.random.PCG64(seed=random_seed))
@@ -265,6 +261,7 @@ def resample_classes(dataset, samples_or_freq, random_seed=None):
         cl_indices = np.flatnonzero(class_inverse == cl)
         cl_indices = generator.choice(cl_indices, size=count, replace=False)
         keep_indices.extend(cl_indices)
+
     return torch.utils.data.Subset(dataset, indices=keep_indices)
 
 

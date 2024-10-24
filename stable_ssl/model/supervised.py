@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 
-from ..utils import load_model
+from ..utils import load_nn
 from . import BaseModel
 from torchmetrics.classification import MulticlassAccuracy
 
@@ -17,7 +17,7 @@ class Supervised(BaseModel):
     """
 
     def initialize_modules(self):
-        model, _ = load_model(
+        model, _ = load_nn(
             name=self.config.model.backbone_model,
             n_classes=self.config.data.num_classes,
             with_classifier=self.config.model.with_classifier,

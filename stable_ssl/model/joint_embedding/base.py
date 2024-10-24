@@ -38,14 +38,14 @@ class SSLTrainer(BaseModel):
 
     def initialize_modules(self):
         # backbone
-        model, fan_in = load_nn(
+        backbone, fan_in = load_nn(
             name=self.config.model.backbone_model,
             n_classes=self.config.data.datasets[self.config.data.train_on].num_classes,
             with_classifier=False,
             pretrained=False,
             dataset=self.config.data.datasets[self.config.data.train_on].name,
         )
-        self.backbone = model.train()
+        self.backbone = backbone.train()
 
         # projector
         sizes = [fan_in] + self.config.model.projector
@@ -75,13 +75,19 @@ class SSLTrainer(BaseModel):
 
         h_i = self.projector(embed_i)
         h_j = self.projector(embed_j)
+
+        # compute SSL loss to train the backbone and the projector
         loss_ssl = self.compute_ssl_loss(h_i, h_j)
+
+        # compute backbone loss to train the backbone classifier
         loss_backbone = F.cross_entropy(
             self.backbone_classifier(embed_i.detach()), self.data[1]
         )
         loss_backbone += F.cross_entropy(
             self.backbone_classifier(embed_j.detach()), self.data[1]
         )
+
+        # compute projector loss to train the projector classifier
         loss_proj = F.cross_entropy(
             self.projector_classifier(h_i.detach()), self.data[1]
         )
