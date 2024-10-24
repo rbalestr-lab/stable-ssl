@@ -46,7 +46,6 @@ from ..utils import (
 )
 
 from dataclasses import make_dataclass
-from dataclasses import dataclass
 
 
 class BaseModel(torch.nn.Module):
