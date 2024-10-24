@@ -33,7 +33,7 @@ How stable-SSL helps you
 
 .. _how:
 
-``stable-SSL`` implements all the basic boilerplate code, including data loader, logging, checkpointing, optimization, etc. You only need to implement 3 methods to get started: your loss, your model, and your prediction (see `example <#own_trainer>`_ below). But if you want to customize more things, simply inherit the base ``Trainer`` and override any method! This could include different metrics, different data samples, different training loops, etc.
+``stable-SSL`` implements all the basic boilerplate code, including data loader, logging, checkpointing, optimization, etc. You only need to implement 3 methods to get started: your loss, your model, and your prediction (see `example <#own_trainer>`_ below). But if you want to customize more things, simply inherit the base ``BaseModel`` and override any method! This could include different metrics, different data samples, different training loops, etc.
 
 
 Installation
