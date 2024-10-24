@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field, make_dataclass
 from typing import Optional, Tuple
-import warnings
 import logging
 from omegaconf import OmegaConf
 from pathlib import Path
@@ -64,7 +63,13 @@ class OptimConfig:
     grad_max_norm: Optional[float] = None
 
     def __post_init__(self):
+        """
+        Validates and sets default values for optimizer parameters.
 
+        Ensures that a valid optimizer is provided and assigns default values
+        for parameters like learning rate, weight decay, and others, if they
+        are not explicitly set. Issues warnings when defaults are used.
+        """
         if not (hasattr(torch.optim, self.optimizer) or self.optimizer == "LARS"):
             raise ValueError(
                 f"[stable-SSL] Invalid optimizer: {self.optimizer}. Must be a "
@@ -84,7 +89,7 @@ class OptimConfig:
                     # If a useful parameter is not provided, its default value is used.
                     default_value = default_params[param]
                     setattr(self, param, default_value)
-                    warnings.warn(
+                    logging.warning(
                         f"[stable-SSL] {param} not provided for {self.optimizer} "
                         f"optimizer. Default value of {default_value} is used."
                     )
@@ -122,6 +127,9 @@ class HardwareConfig:
     workers: int = 0
 
     def __post_init__(self):
+        """
+        Sets a random port for distributed training if not provided.
+        """
         self.port = self.port or random.randint(49152, 65535)
 
 
@@ -164,6 +172,12 @@ class LogConfig:
     api = None
 
     def __post_init__(self):
+        """
+        Initializes logging folder and run settings.
+
+        If the folder path is not specified, creates a default path under `./logs`.
+        The run identifier is set using the current timestamp if not provided.
+        """
         if self.folder is None:
             self.folder = Path("./logs")
         else:
@@ -174,6 +188,11 @@ class LogConfig:
 
     @property
     def dump_path(self):
+        """
+        Returns the full path where logs and checkpoints are stored.
+
+        This path includes the base folder and the run identifier.
+        """
         return self.folder / self.run
 
 

@@ -12,11 +12,10 @@ from scipy.ndimage import zoom as scizoom
 
 @dataclass
 class TransformsConfig:
-    """
-    Configuration for the data used for training the model.
+    """Configuration for the data used for training the model.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     transforms : list[tuple[str, dict]]
         The transformations to apply. For example:
         ```
@@ -33,6 +32,9 @@ class TransformsConfig:
     transforms: list[dict] = None
 
     def __post_init__(self):
+        """
+        Initialize the transformation configuration with a default setup or custom transformations.
+        """
         extra = [v2.ToImage(), v2.ToDtype(torch.float32, scale=True)]
         if self.transforms is None:
             self.transforms = [{}]
@@ -48,11 +50,10 @@ class TransformsConfig:
 
 @dataclass
 class TransformConfig:
-    """
-    Configuration for the data used for training the model.
+    """Configuration for the data used for training the model.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     transforms : list[tuple[str, dict]]
         The transformations to apply. For example:
         ```
@@ -112,10 +113,17 @@ class TransformConfig:
 
 
 def plasma_fractal(mapsize=256, wibbledecay=3):
-    """
-    Generate a heightmap using diamond-square algorithm.
-    Return square 2d array, side length 'mapsize', of floats in range 0-255.
+    """Generate a heightmap using diamond-square algorithm.
+
+    Returns a square 2D array, side length 'mapsize', of floats in range 0-255.
     'mapsize' must be a power of two.
+
+    Parameters
+    ----------
+    mapsize : int, optional
+        Size of the map (must be a power of two). Default is 256.
+    wibbledecay : int, optional
+        The rate of decay for the randomness. Default is 3.
     """
     assert mapsize & (mapsize - 1) == 0
     maparray = np.empty((mapsize, mapsize), dtype=np.float_)
@@ -127,8 +135,7 @@ def plasma_fractal(mapsize=256, wibbledecay=3):
         return array / 4 + wibble * np.random.uniform(-wibble, wibble, array.shape)
 
     def fillsquares():
-        """For each square of points stepsize apart,
-        calculate middle value as mean of points + wibble"""
+        """For each square of points stepsize apart, calculate middle value as mean of points + wibble."""
         cornerref = maparray[0:mapsize:stepsize, 0:mapsize:stepsize]
         squareaccum = cornerref + np.roll(cornerref, shift=-1, axis=0)
         squareaccum += np.roll(squareaccum, shift=-1, axis=1)
@@ -137,8 +144,7 @@ def plasma_fractal(mapsize=256, wibbledecay=3):
         ] = wibbledmean(squareaccum)
 
     def filldiamonds():
-        """For each diamond of points stepsize apart,
-        calculate middle value as mean of points + wibble"""
+        """For each diamond of points stepsize apart, calculate middle value as mean of points + wibble."""
         mapsize = maparray.shape[0]
         drgrid = maparray[
             stepsize // 2 : mapsize : stepsize, stepsize // 2 : mapsize : stepsize
@@ -168,6 +174,20 @@ def plasma_fractal(mapsize=256, wibbledecay=3):
 
 
 def clipped_zoom(img, zoom_factor):
+    """Apply clipped zoom to an image.
+
+    Parameters
+    ----------
+    img : numpy.ndarray
+        Input image array.
+    zoom_factor : float
+        Factor by which to zoom the image.
+
+    Returns
+    -------
+    numpy.ndarray
+        The zoomed and clipped image.
+    """
     h = img.shape[0]
     # ceil crop height(= crop width)
     ch = int(np.ceil(h / float(zoom_factor)))
@@ -189,11 +209,19 @@ def clipped_zoom(img, zoom_factor):
 
 
 class GaussianNoise(torch.nn.Module):
+    """Apply Gaussian noise to an image.
+
+    Parameters
+    ----------
+    severity : int, optional
+        Severity level of the noise. Default is 1.
+    """
+
     def __init__(self, severity=1):
         super().__init__()
         self.severity = severity
 
-    def __cal__(self, x):
+    def __call__(self, x):
         c = [0.08, 0.12, 0.18, 0.26, 0.38][self.severity - 1]
 
         x = np.array(x) / 255.0
@@ -201,6 +229,14 @@ class GaussianNoise(torch.nn.Module):
 
 
 class ShotNoise(torch.nn.Module):
+    """Apply Shot noise to an image.
+
+    Parameters
+    ----------
+    severity : int, optional
+        Severity level of the noise. Default is 1.
+    """
+
     def __init__(self, severity=1):
         super().__init__()
         self.severity = severity
@@ -224,6 +260,14 @@ class ShotNoise(torch.nn.Module):
 
 
 class SpeckleNoise(torch.nn.Module):
+    """Apply Speckle noise to an image.
+
+    Parameters
+    ----------
+    severity : int, optional
+        Severity level of the noise. Default is 1.
+    """
+
     def __init__(self, severity=1):
         super().__init__()
         self.severity = severity
@@ -312,6 +356,14 @@ class SpeckleNoise(torch.nn.Module):
 
 
 class ZoomBlur(torch.nn.Module):
+    """Apply zoom blur to an image.
+
+    Parameters
+    ----------
+    severity : int, optional
+        Severity level of the blur. Default is 1.
+    """
+
     def __init__(self, severity=1):
         super().__init__()
         self.severity = severity
@@ -335,6 +387,14 @@ class ZoomBlur(torch.nn.Module):
 
 
 class Fog(torch.nn.Module):
+    """Apply fog effect to an image.
+
+    Parameters
+    ----------
+    severity : int, optional
+        Severity level of the fog. Default is 1.
+    """
+
     def __init__(self, severity=1):
         super().__init__()
         self.severity = severity
@@ -474,6 +534,14 @@ class Fog(torch.nn.Module):
 
 
 class Contrast(torch.nn.Module):
+    """Apply contrast adjustment to an image.
+
+    Parameters
+    ----------
+    severity : int, optional
+        Severity level of the contrast adjustment. Default is 1.
+    """
+
     def __init__(self, severity=1):
         super().__init__()
         self.severity = severity
@@ -509,6 +577,14 @@ class Contrast(torch.nn.Module):
 
 
 class JPEGCompression(torch.nn.Module):
+    """Apply JPEG compression to an image.
+
+    Parameters
+    ----------
+    severity : int, optional
+        Severity level of the compression. Default is 1.
+    """
+
     def __init__(self, severity=1):
         super().__init__()
         self.severity = severity
@@ -524,6 +600,14 @@ class JPEGCompression(torch.nn.Module):
 
 
 class Pixelate(torch.nn.Module):
+    """Apply pixelation effect to an image.
+
+    Parameters
+    ----------
+    severity : int, optional
+        Severity level of the pixelation. Default is 1.
+    """
+
     def __init__(self, severity=1):
         super().__init__()
         self.severity = severity
