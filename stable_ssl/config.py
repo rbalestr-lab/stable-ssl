@@ -23,8 +23,7 @@ import random
 
 @dataclass
 class OptimConfig:
-    """
-    Configuration for the optimizer used for training the model.
+    """Configuration for the optimizer used for training the model.
 
     Parameters:
     -----------
@@ -63,8 +62,7 @@ class OptimConfig:
     grad_max_norm: Optional[float] = None
 
     def __post_init__(self):
-        """
-        Validates and sets default values for optimizer parameters.
+        """Validates and sets default values for optimizer parameters.
 
         Ensures that a valid optimizer is provided and assigns default values
         for parameters like learning rate, weight decay, and others, if they
@@ -100,8 +98,7 @@ class OptimConfig:
 
 @dataclass
 class HardwareConfig:
-    """
-    Hardware configuration for training.
+    """Hardware configuration for training.
 
     Parameters:
     -----------
@@ -127,16 +124,13 @@ class HardwareConfig:
     workers: int = 0
 
     def __post_init__(self):
-        """
-        Sets a random port for distributed training if not provided.
-        """
+        """Sets a random port for distributed training if not provided."""
         self.port = self.port or random.randint(49152, 65535)
 
 
 @dataclass
 class LogConfig:
-    """
-    Configuration for logging and checkpointing during training.
+    """Configuration for logging and checkpointing during training.
 
     Parameters:
     -----------
@@ -172,8 +166,7 @@ class LogConfig:
     api = None
 
     def __post_init__(self):
-        """
-        Initializes logging folder and run settings.
+        """Initializes logging folder and run settings.
 
         If the folder path is not specified, creates a default path under `./logs`.
         The run identifier is set using the current timestamp if not provided.
@@ -188,8 +181,7 @@ class LogConfig:
 
     @property
     def dump_path(self):
-        """
-        Returns the full path where logs and checkpoints are stored.
+        """Returns the full path where logs and checkpoints are stored.
 
         This path includes the base folder and the run identifier.
         """
@@ -198,8 +190,7 @@ class LogConfig:
 
 @dataclass
 class WandbConfig(LogConfig):
-    """
-    Configuration for logging with Weights & Biases (Wandb) during training.
+    """Configuration for logging with Weights & Biases (Wandb) during training.
 
     Parameters:
     -----------
@@ -217,8 +208,7 @@ class WandbConfig(LogConfig):
 
 @dataclass
 class TrainerConfig:
-    """
-    Global configuration for training a model.
+    """Global configuration for training a model.
 
     Parameters:
     -----------

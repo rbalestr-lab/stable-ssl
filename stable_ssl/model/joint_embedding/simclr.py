@@ -6,7 +6,23 @@ from dataclasses import dataclass
 
 
 class SimCLR(SSLTrainer):
+    """SimCLR model for self-supervised learning."""
+
     def compute_ssl_loss(self, h_i, h_j):
+        """Compute the contrastive loss for SimCLR.
+
+        Parameters
+        ----------
+        h_i : torch.Tensor
+            Latent representation of the first augmented view of the batch.
+        h_j : torch.Tensor
+            Latent representation of the second augmented view of the batch.
+
+        Returns
+        -------
+        float
+            The computed contrastive loss.
+        """
         z = torch.cat([h_i, h_j], 0)
 
         N = z.size(0) * self.config.hardware.world_size
@@ -30,11 +46,10 @@ class SimCLR(SSLTrainer):
 
 @dataclass
 class SimCLRConfig(SSLConfig):
-    """
-    Configuration for the SSL model parameters.
+    """Configuration for the SSL model parameters.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     temperature : float
         Temperature parameter for the contrastive loss. Default is 0.15.
     """
@@ -42,4 +57,11 @@ class SimCLRConfig(SSLConfig):
     temperature: float = 0.15
 
     def trainer(self):
+        """Return the corresponding trainer for the SimCLR configuration.
+
+        Returns
+        -------
+        SimCLR
+            A SimCLR trainer instance.
+        """
         return SimCLR
