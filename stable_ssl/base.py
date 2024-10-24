@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Main function for training a model."""
+"""Base class for training a model."""
 #
 # Author: Hugues Van Assel <vanasselhugues@gmail.com>
 #         Randall Balestriero <randallbalestriero@gmail.com>

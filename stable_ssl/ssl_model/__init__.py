@@ -1,5 +1,3 @@
-from .base import BaseModel
-from .supervised import Supervised
 from .joint_embedding.simclr import SimCLR
 from .joint_embedding.barlow_twins import BarlowTwins
 from .joint_embedding.wmse import WMSE

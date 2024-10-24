@@ -1,6 +1,7 @@
-import torch
-from .base import SSLConfig, SSLTrainer
 from dataclasses import dataclass
+import torch
+
+from .base import JEConfig, JETrainer
 
 
 def off_diagonal(x):
@@ -10,7 +11,7 @@ def off_diagonal(x):
     return x.flatten()[:-1].view(n - 1, n + 1)[:, 1:].flatten()
 
 
-class BarlowTwins(SSLTrainer):
+class BarlowTwins(JETrainer):
     def compute_ssl_loss(self, z1, z2):
         # empirical cross-correlation matrix
         c = self.bn(z1).T @ self.bn(z2)
@@ -26,7 +27,7 @@ class BarlowTwins(SSLTrainer):
 
 
 @dataclass
-class BarlowTwinsConfig(SSLConfig):
+class BarlowTwinsConfig(JEConfig):
     """
     Configuration for the SSL model parameters.
 

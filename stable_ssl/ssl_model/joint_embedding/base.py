@@ -9,7 +9,7 @@ from ..base import BaseModel, BaseModelConfig
 
 
 @dataclass
-class SSLConfig(BaseModelConfig):
+class JEConfig(BaseModelConfig):
     """
     Configuration for the SSL model parameters.
 
@@ -26,7 +26,7 @@ class SSLConfig(BaseModelConfig):
             self.projector = [int(i) for i in self.projector.split("-")]
 
 
-class SSLTrainer(BaseModel):
+class JETrainer(BaseModel):
     r"""Base class for training a Self-Supervised Learning (SSL) model.
 
     Parameters:

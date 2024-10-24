@@ -1,11 +1,11 @@
+from dataclasses import dataclass
 import torch
 import torch.nn.functional as F
 
-from .base import SSLTrainer, SSLConfig
-from dataclasses import dataclass
+from .base import JEConfig, JETrainer
 
 
-class SimCLR(SSLTrainer):
+class SimCLR(JETrainer):
     """SimCLR model for self-supervised learning."""
 
     def compute_ssl_loss(self, h_i, h_j):
@@ -45,7 +45,7 @@ class SimCLR(SSLTrainer):
 
 
 @dataclass
-class SimCLRConfig(SSLConfig):
+class SimCLRConfig(JEConfig):
     """Configuration for the SSL model parameters.
 
     Parameters
