@@ -29,6 +29,7 @@ from .ssl_model import (
     VICReg,
     WMSE,
 )
+from .supervised import Supervised
 
 __all__ = [
     "__title__",
@@ -44,6 +45,7 @@ __all__ = [
     # "WandbConfig",
     # "BaseModelConfig",
     # "TrainerConfig",
+    "Supervised",
     "SimCLR",
     "BarlowTwins",
     "VICReg",

@@ -7,8 +7,7 @@ from omegaconf import DictConfig
 
 import stable_ssl
 
-from stable_ssl.model import SimCLR
-from stable_ssl.model import Supervised
+from stable_ssl import SimCLR, Supervised
 
 model_dict = {
     "SimCLR": SimCLR,
