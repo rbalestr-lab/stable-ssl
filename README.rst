@@ -5,6 +5,9 @@ Stable-SSL: the Self-Supervised Learning Library by Researchers for Researchers
 
 We achieve that by taking the best--and only the best--from the most eponymous AI libraries: PytorchLightning, VISSL, Wandb, Hydra, Submitit.
 
+``stable-SSL`` implements all the basic boilerplate code, including data loader, logging, checkpointing, optimization, etc. You only need to implement 3 methods to get started: your loss, your model, and your prediction (see `example <#own_trainer>`_ below). But if you want to customize more things, simply inherit the base ``BaseModel`` and override any method! This could include different metrics, different data samples, different training loops, etc.
+
+
 .. image:: ./assets/logo.jpg
    :alt: ssl logo
    :width: 200px
@@ -28,13 +31,6 @@ A quick search of ``AI libraries`` or ``Self Supervised Learning libraries`` wil
 Hence our goal is to fill that void.
 
 
-How stable-SSL helps you
-------------------------
-
-.. _how:
-
-``stable-SSL`` implements all the basic boilerplate code, including data loader, logging, checkpointing, optimization, etc. You only need to implement 3 methods to get started: your loss, your model, and your prediction (see `example <#own_trainer>`_ below). But if you want to customize more things, simply inherit the base ``BaseModel`` and override any method! This could include different metrics, different data samples, different training loops, etc.
-
 
 Installation
 ------------
@@ -54,23 +50,6 @@ Or you can also run:
    pip install -U git+https://github.com/rbalestr-lab/stable-SSL
 
 
-Getting Started
----------------
-
-.. _getting_started:
-
-First build a confif file 
-
-.. code-block:: python
-
-   @hydra.main()
-   def main(cfg):
-      """Load the configuration and launch the run."""
-      args = stable_ssl.get_args(cfg)  # Get the verified arguments
-      model = getattr(stable_ssl, args.model.name)(args)  # Create model
-      model()  # Call model
-
-
 
 Minimal Documentation
 ---------------------
@@ -88,10 +67,6 @@ At the very least, you need to implement three methods:
 - ``initialize_modules``: this method initializes whatever model and parameters to use for training/inference
 - ``forward``: that method that will be doing the prediction, e.g., for classification it will be p(y|x)
 - ``compute_loss``: that method should return a scalar value used for backpropagation/training.
-
-
-
-
 
 
 Library Design
@@ -128,10 +103,25 @@ Examples
 How to launch experiments
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. _getting_started:
+
+First build a confif file 
+
+.. code-block:: python
+
+   @hydra.main()
+   def main(cfg):
+      """Load the configuration and launch the run."""
+      args = stable_ssl.get_args(cfg)  # Get the verified arguments
+      model = getattr(stable_ssl, args.model.name)(args)  # Create model
+      model()  # Call model
+
+
 The file ``main.py`` to launch experiments is located in the ``runs/`` folder.
 
 The default parameters are given in the ``sable_ssl/config.py`` file.
 The parameters are structured in the following groups: data, model, hardware, log, optim.
+
 
 Using default config files
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
