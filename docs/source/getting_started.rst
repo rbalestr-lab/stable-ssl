@@ -67,6 +67,9 @@ Then, create a Python script that will load the configuration and launch the run
 
 .. code-block:: python
 
+   import stable_ssl
+   import hydra
+
    @hydra.main()
    def main(cfg):
       """Load the configuration and launch the run."""
