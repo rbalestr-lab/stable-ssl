@@ -54,6 +54,3 @@ doc = [
     "myst-parser",
     "pydocstyle",
 ]
-
-[project.entry-points.console_scripts]
-ssl-run = "stable_ssl.main:main"

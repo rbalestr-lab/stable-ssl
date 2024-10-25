@@ -15,7 +15,7 @@ Examples using ``stable_ssl.get_args``
 
 .. raw:: html
 
-    <div class="sphx-glr-thumbcontainer" tooltip="This script demonstrates how to train a model using the stable-SSL library.">
+    <div class="sphx-glr-thumbcontainer" tooltip="This script demonstrates how to launch a run using the stable-SSL library.">
 
 .. only:: html
 
@@ -26,7 +26,7 @@ Examples using ``stable_ssl.get_args``
 
 .. raw:: html
 
-      <div class="sphx-glr-thumbnail-title">This script demonstrates how to train a model using the stable-SSL library.</div>
+      <div class="sphx-glr-thumbnail-title">This script demonstrates how to launch a run using the stable-SSL library.</div>
     </div>
 
 
