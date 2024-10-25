@@ -27,8 +27,8 @@ try:
     import wandb
 except ModuleNotFoundError:
     logging.warning(
-        "Wandb module is not installed, make sure to not use wandb for logging "
-        "or an error will be thrown"
+        "Wandb module is not installed, make sure not to use wandb for logging "
+        "or an error will be thrown."
     )
 
 import torch
@@ -52,8 +52,8 @@ class BaseModelConfig:
     """
     Configuration for the SSL model parameters.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     model : str
         Type of model to use. Default is "Supervised".
     backbone_model : str
@@ -80,8 +80,8 @@ class BaseModelConfig:
 class BaseModel(torch.nn.Module):
     r"""Base class for training a model.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     config : TrainerConfig
         Parameters for BaseModel organized in groups.
         For details, see the `TrainerConfig` class in `config.py`.
@@ -102,17 +102,30 @@ class BaseModel(torch.nn.Module):
         trainer._config = copy.deepcopy(config)
         return trainer
 
-    @property
-    def config(self):
-        return self._config
-
     def __init__(self, config, *args, **kwargs):
         super().__init__()
 
+    @abstractmethod
+    def initialize_modules(self):
+        """Initialize the modules required for the model."""
+        pass
+
+    @abstractmethod
+    def forward(self):
+        """Define the forward pass of the model."""
+        pass
+
+    @abstractmethod
+    def compute_loss(self):
+        """Compute the loss for the current batch."""
+        pass
+
     def __call__(self):
 
-        logging.basicConfig(level=logging.INFO, format="[stable-SSL] %(message)s")
-        self.seed_everything(self.config.hardware.seed)
+        logging.basicConfig(
+            level=self.config.log.level, format="[stable-SSL] %(message)s"
+        )
+        seed_everything(self.config.hardware.seed)
 
         if self.config.log.api == "wandb":
             logging.info(
@@ -135,10 +148,11 @@ class BaseModel(torch.nn.Module):
         self.scaler = torch.amp.GradScaler("cuda", enabled=self.config.hardware.float16)
         self._set_device()
 
+        # Set up the dataloaders.
         logging.info("Creating dataloaders.")
-        dataloaders = self.initialize_dataloaders()
+        self.dataloaders = self.config.data.get_dataloaders()
         for name, loader in dataloaders.items():
-            logging.info(f"\t=> Found dataloader `{name}` with length {len(loader)}")
+            logging.info(f"\t=> Found dataloader `{name}` with length {len(loader)}.")
         if self.config.log.eval_only:
             for name in dataloaders:
                 if name in self.config.data.train_on:
@@ -146,24 +160,27 @@ class BaseModel(torch.nn.Module):
         else:
             assert len(self.config.data.train_on)
             if self.config.data.train_on not in dataloaders:
-                raise RuntimeError(f"eval_only=False and `{name}` not given")
+                raise RuntimeError(f"eval_only=False and `{name}` not given.")
         self.dataloaders = dataloaders
 
+        # Set up the model's modules. This method should be implemented by the child class.
         logging.info("Calling initialize_modules() method.")
         self.initialize_modules()
+
+        # Set up the metrics. This method should be implemented by the child class.
         if hasattr(self, "metrics"):
             raise RuntimeError(
                 "You can't assign any value to `self.metrics`, this will be "
-                "used for metrics only"
+                "used for metrics only."
             )
         self.initialize_metrics()
         if not hasattr(self, "metrics"):
             raise RuntimeError(
                 "The `initialize_metrics` method should create a `self.metrics` "
-                "ModuleDict object"
+                "ModuleDict object."
             )
         if not isinstance(self.metrics, torch.nn.ModuleDict):
-            raise RuntimeError("The `self.metrics` should be a ModuleDict")
+            raise RuntimeError("The `self.metrics` should be a ModuleDict.")
         self._log_buffer = {}
         self.register_buffer("global_step", torch.zeros((1,), dtype=int))
 
@@ -190,11 +207,11 @@ class BaseModel(torch.nn.Module):
             )
 
         if not self.config.log.eval_only:
-            logging.info("Calling initialize_optimizer() method.")
-            self.optimizer = self.initialize_optimizer()
-            logging.info("Calling initialize_scheduler() method.")
+            logging.info("Calling _initialize_optimizer() method.")
+            self.optimizer = self._initialize_optimizer()
+            logging.info("Calling _initialize_scheduler() method.")
             try:
-                self.scheduler = self.initialize_scheduler()
+                self.scheduler = self._initialize_scheduler()
             except NotImplementedError:
                 logging.info("No scheduler given.")
         else:
@@ -225,9 +242,6 @@ class BaseModel(torch.nn.Module):
             except BreakAllEpochs:
                 self.cleanup()
                 wandb.finish()
-
-    def seed_everything(self, seed):
-        seed_everything(seed)
 
     def initialize_metrics(self):
         self.metrics = torch.nn.ModuleDict()
@@ -272,27 +286,27 @@ class BaseModel(torch.nn.Module):
 
     def _train_epoch(self):
 
-        # hierarchically set up all modules in train mode
+        self.train()  # hierarchically set up all modules in train mode
         self.before_train_epoch()
 
-        # we do not ensure that the model is still in train mode to not
-        # override any user desired behavior, simply speak out
+        # We do not ensure that the model is still in train mode to not
+        # override any user desired behavior, simply speak out.
         if not self.training:
             logging.warning(
                 "Starting training epoch but model is no longer in "
                 "train mode after call to before_train_epoch()."
             )
 
-        # if max_steps is negative, train on the full dataset
+        # If max_steps is negative, train on the full dataset.
         if self.config.optim.max_steps < 0:
             max_steps = len(self.dataloaders[self.config.data.train_on])
-        # if max_steps is a float between 0 and 1, treat it as a percentage
+        # If max_steps is a float between 0 and 1, treat it as a percentage.
         elif 0 < self.config.optim.max_steps < 1:
             max_steps = int(
                 self.config.optim.max_steps
                 * len(self.dataloaders[self.config.data.train_on])
             )
-        # otherwise, set max_steps to the length of the dataset
+        # Otherwise, set max_steps to the length of the dataset.
         else:
             max_steps = min(max_steps, len(self.dataloaders[self.config.data.train_on]))
 
@@ -330,8 +344,8 @@ class BaseModel(torch.nn.Module):
             logging.info("No val_loader hence skipping eval epoch.")
             return
 
-        for name, loader in self.dataloaders.items():
-            if name == self.config.data.train_on:
+        for name_loader, loader in self.dataloaders.items():
+            if name_loader == self.config.data.train_on:
                 continue
             # set-up model in eval mode + reset metrics
             self.before_eval_epoch()
@@ -362,7 +376,7 @@ class BaseModel(torch.nn.Module):
                         with torch.amp.autocast(
                             "cuda", enabled=self.config.hardware.float16
                         ):
-                            self.eval_step()
+                            self.eval_step(name_loader=name_loader)
 
                         # call any user specified post-step function
                         self.after_eval_step()
@@ -379,6 +393,7 @@ class BaseModel(torch.nn.Module):
             self.after_eval_epoch()
 
     def train_step(self):
+        self.optimizer.zero_grad(set_to_none=True)
         with torch.amp.autocast("cuda", enabled=self.config.hardware.float16):
             loss = self.compute_loss()
 
@@ -413,17 +428,17 @@ class BaseModel(torch.nn.Module):
         )
 
     def _set_device(self):
-        # Check if CUDA is available, otherwise set to CPU
+        # Check if CUDA is available, otherwise set to CPU.
         if not torch.cuda.is_available():
             self._device = "cpu"
             return
 
         try:
-            # Setup distributed hardware configuration
+            # Setup distributed hardware configuration.
             self.config.hardware = setup_distributed(self.config.hardware)
             self._device = f"cuda:{self.config.hardware.gpu}"
         except RuntimeError:
-            # Log the error and set the device to default GPU (cuda:0) as a fallback
+            # Log the error and set the device to default GPU (cuda:0) as a fallback.
             logging.exception(
                 "Error setting up distributed hardware. "
                 "Falling back to default GPU configuration."
@@ -432,7 +447,7 @@ class BaseModel(torch.nn.Module):
             self.config.hardware.gpu = 0
             self.config.hardware.world_size = 1
 
-        # Set the CUDA device
+        # Set the CUDA device.
         torch.cuda.set_device(self.config.hardware.gpu)
 
     def checkpoint(self):
@@ -523,7 +538,7 @@ class BaseModel(torch.nn.Module):
         else:
             self.epoch = 0
 
-    def initialize_optimizer(self):
+    def _initialize_optimizer(self):
         if self.config.optim.optimizer == "Adam":
             optimizer = torch.optim.Adam(
                 self.parameters(),
@@ -560,14 +575,7 @@ class BaseModel(torch.nn.Module):
             )
         return optimizer
 
-    @property
-    def logs(self):
-        if self.config.log.api == "wandb":
-            raise NotImplementedError
-        else:
-            return jsonl_run(self.config.log.dump_path)[1]
-
-    def initialize_scheduler(self):
+    def _initialize_scheduler(self):
         min_lr = self.config.optim.lr * 0.005
         peak_step = 5 * len(self.dataloaders[self.config.data.train_on])
         total_steps = self.config.optim.epochs * len(
@@ -635,9 +643,16 @@ class BaseModel(torch.nn.Module):
             return None
         return self._epoch
 
-    @epoch.setter
-    def epoch(self, value):
-        self._epoch = value
+    @property
+    def logs(self):
+        if self.config.log.api == "wandb":
+            raise NotImplementedError
+        else:
+            return jsonl_run(self.config.log.dump_path)[1]
+
+    @property
+    def config(self):
+        return self._config
 
     @property
     def step(self):
@@ -645,30 +660,33 @@ class BaseModel(torch.nn.Module):
             return None
         return self._step
 
-    @step.setter
-    def step(self, value):
-        self._step = value
-
     @property
     def data(self):
         return self._data
-
-    @data.setter
-    def data(self, value):
-        self._data = value
 
     @property
     def this_device(self):
         return self._device
 
+    @epoch.setter
+    def epoch(self, value):
+        self._epoch = value
+
+    @step.setter
+    def step(self, value):
+        self._step = value
+
+    @data.setter
+    def data(self, value):
+        self._data = value
+
     def before_train_all_epochs(self):
         return
 
     def before_train_epoch(self):
-        self.train()
+        return
 
     def before_train_step(self):
-        self.optimizer.zero_grad(set_to_none=True)
         return
 
     def after_train_step(self):
@@ -680,13 +698,13 @@ class BaseModel(torch.nn.Module):
     def before_eval_epoch(self):
         self.eval()
         for name, metric in self.metrics.items():
-            if name.startswith("eval/epoch/"):
+            if name.startswith(f"eval/epoch/"):
                 metric.reset()
 
     def after_eval_epoch(self):
         packet = {}
         for name, metric in self.metrics.items():
-            if name.startswith("eval/epoch/"):
+            if name.startswith(f"eval/epoch/"):
                 packet[name] = metric.compute()
         self.log(packet, commit=True)
 
@@ -696,12 +714,12 @@ class BaseModel(torch.nn.Module):
     def after_eval_step(self):
         return
 
-    def eval_step(self):
+    def eval_step(self, name_loader):
         output = self.forward(self.data[0])
         for name, metric in self.metrics.items():
-            if name.startswith("eval/epoch/"):
+            if name.startswith(f"eval/epoch/{name_loader}/"):
                 metric.update(output, self.data[1])
-            elif name.startswith("eval/step/"):
+            elif name.startswith(f"eval/step/{name_loader}/"):
                 self.log({name: metric(output, self.data[1])}, commit=False)
         self.log(commit=True)
 
@@ -752,21 +770,3 @@ class BaseModel(torch.nn.Module):
     #     )
 
     #     return self.dataset_to_loader(eval_dataset, False)
-
-    def initialize_dataloaders(self):
-        return self.config.data.get_dataloaders()
-
-    @abstractmethod
-    def initialize_modules(self):
-        """Initialize the modules required for the model."""
-        pass
-
-    @abstractmethod
-    def forward(self):
-        """Define the forward pass of the model."""
-        pass
-
-    @abstractmethod
-    def compute_loss(self):
-        """Compute the loss for the current batch."""
-        pass
