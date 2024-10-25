@@ -54,6 +54,22 @@ Or you can also run:
    pip install -U git+https://github.com/rbalestr-lab/stable-SSL
 
 
+Getting Started
+---------------
+
+.. _getting_started:
+
+.. code-block:: python3
+
+   @hydra.main()
+   def main(cfg):
+      """Load the configuration and launch the run."""
+      args = stable_ssl.get_args(cfg)  # Get the verified arguments
+      model = getattr(stable_ssl, args.model.name)(args)  # Create model
+      model()  # Call model
+
+
+
 Minimal Documentation
 ---------------------
 

@@ -1,5 +1,52 @@
 # inspired from https://github.com/p3i0t/SimCLR-CIFAR10
 
+data:
+  train_on: base
+  base:
+    name: CIFAR10
+    batch_size: 32
+    drop_last: True
+    shuffle: True
+    split: train
+    num_workers: 10
+    transforms:
+      view1:
+      - name: RandomResizedCrop
+        kwargs:
+          size: 32
+          scale:
+            - 0.1
+            - 0.2
+      - name: RandomHorizontalFlip
+      - name: SpeckleNoise
+        kwargs:
+          severity: 2
+        p: 0.5
+      - name: GaussianBlur
+        kwargs:
+          kernel_size: 5
+        p: 0.2
+      view2:
+      - name: RandomResizedCrop
+        kwargs:
+          size: 32
+          scale:
+            - 0.1
+            - 0.2
+      - name: RandomHorizontalFlip
+  test_in:
+    name: CIFAR10
+    batch_size: 32
+    drop_last: False
+    split: train
+    num_workers: 10
+  test_out:
+    name: CIFAR10
+    batch_size: 32
+    drop_last: False
+    num_workers: 10
+    split: test
+    
 model:
   name: SimCLR
   backbone_model: resnet18
