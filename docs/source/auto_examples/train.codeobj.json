@@ -1,31 +1,4 @@
 {
- "DictConfig": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "omegaconf",
-   "module_short": "omegaconf",
-   "name": "DictConfig"
-  }
- ],
- "SimCLR": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "stable_ssl.model",
-   "module_short": "stable_ssl.model",
-   "name": "SimCLR"
-  }
- ],
- "Supervised": [
-  {
-   "is_class": false,
-   "is_explicit": false,
-   "module": "stable_ssl.model",
-   "module_short": "stable_ssl.model",
-   "name": "Supervised"
-  }
- ],
  "__name__": [
   {
    "is_class": false,
@@ -42,6 +15,15 @@
    "module": "hydra",
    "module_short": "hydra",
    "name": "main"
+  }
+ ],
+ "stable_ssl": [
+  {
+   "is_class": false,
+   "is_explicit": false,
+   "module": "builtins",
+   "module_short": "builtins",
+   "name": "stable_ssl"
   }
  ],
  "stable_ssl.get_args": [
