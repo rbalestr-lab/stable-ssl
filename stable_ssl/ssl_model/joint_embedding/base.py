@@ -116,32 +116,3 @@ class JETrainer(BaseModel):
 
     def compute_ssl_loss(self, embeds):
         raise NotImplementedError
-
-    def initialize_metrics(self, eval_dataset_names):
-        nc = self.config.data.datasets[self.config.data.train_on].num_classes
-        train_acc1 = MulticlassAccuracy(num_classes=nc, top_k=1)
-
-        # Initialize the metrics dictionary with the train metric
-        self.metrics = torch.nn.ModuleDict({"train/step/acc1": train_acc1})
-
-        # Add unique evaluation metrics for each eval dataset
-        name_eval_loaders = set(self.dataloaders.keys()) - set(
-            self.config.data.train_on
-        )
-        for name_loader in name_eval_loaders:
-            self.metrics.update(
-                {
-                    f"eval/epoch/{name_loader}/acc1": MulticlassAccuracy(
-                        num_classes=nc, top_k=1
-                    ),
-                    f"eval/epoch/{name_loader}/acc5": MulticlassAccuracy(
-                        num_classes=nc, top_k=5
-                    ),
-                    f"eval/epoch/{name_loader}/acc1_by_class": MulticlassAccuracy(
-                        num_classes=nc, average="none", top_k=1
-                    ),
-                    f"eval/epoch/{name_loader}/acc5_by_class": MulticlassAccuracy(
-                        num_classes=nc, average="none", top_k=5
-                    ),
-                }
-            )

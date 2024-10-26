@@ -150,6 +150,10 @@ class LogConfig:
         Whether to only evaluate the model without training. Default is False.
     eval_each_epoch : bool, optional
         Whether to evaluate the model at the end of each epoch. Default is False.
+    wandb_entity : str, optional
+        Name of the (Weights & Biases) entity. Default is None.
+    wandb_project : str, optional
+        Name of the (Weights & Biases) project. Default is None. 
     """
 
     folder: Optional[str] = None
@@ -161,7 +165,8 @@ class LogConfig:
     final_model_name: str = "final_model"
     eval_only: bool = False
     eval_each_epoch: bool = True
-    api = None
+    wandb_entity: Optional[str] = None
+    wandb_project: Optional[str] = None
 
     def __post_init__(self):
         """Initializes logging folder and run settings.
@@ -186,22 +191,23 @@ class LogConfig:
         return self.folder / self.run
 
 
-@dataclass
-class WandbConfig(LogConfig):
-    """Configuration for logging with Weights & Biases (Wandb) during training.
+# @dataclass
+# class WandbConfig(LogConfig):
+#     """Configuration for logging with Weights & Biases (Wandb) during training.
 
-    Parameters:
-    -----------
-    entity : str, optional
-        Name of the (Weights & Biases) entity. Default is None.
-    project : str, optional
-        Name of the (Weights & Biases) project. Default is None.
-    run : str, optional
-        Name of the Weights & Biases run. Default is None.
-    """
+#     Parameters:
+#     -----------
+#     entity : str, optional
+#         Name of the (Weights & Biases) entity. Default is None.
+#     project : str, optional
+#         Name of the (Weights & Biases) project. Default is None.
+#     run : str, optional
+#         Name of the Weights & Biases run. Default is None.
+#     """
 
-    entity: Optional[str] = None
-    project: Optional[str] = None
+#     entity: Optional[str] = None
+#     project: Optional[str] = None
+#     api: str = None
 
 
 @dataclass

@@ -127,13 +127,15 @@ class BaseModel(torch.nn.Module):
         )
         seed_everything(self.config.hardware.seed)
 
-        if self.config.log.api == "wandb":
+        # Use WandB if an entity or project name is provided.
+        self.use_wandb = bool(self.config.log.wandb_entity or self.config.log.wandb_project)
+        if self.use_wandb:
             logging.info(
                 f"\t=> Initializating wandb for logging in {self.config.log.dump_path}."
             )
             wandb.init(
-                entity=self.config.log.entity,
-                project=self.config.log.project,
+                entity=self.config.log.wandb_entity,
+                project=self.config.log.wandb_project,
                 config=dataclasses.asdict(self.config),
                 name=self.config.log.run,
                 dir=str(self.config.log.dump_path),
@@ -150,7 +152,7 @@ class BaseModel(torch.nn.Module):
 
         # Set up the dataloaders.
         logging.info("Creating dataloaders.")
-        self.dataloaders = self.config.data.get_dataloaders()
+        dataloaders = self.config.data.get_dataloaders()
         for name, loader in dataloaders.items():
             logging.info(f"\t=> Found dataloader `{name}` with length {len(loader)}.")
         if self.config.log.eval_only:
@@ -244,7 +246,34 @@ class BaseModel(torch.nn.Module):
                 wandb.finish()
 
     def initialize_metrics(self):
-        self.metrics = torch.nn.ModuleDict()
+        nc = self.config.data.datasets[self.config.data.train_on].num_classes
+        train_acc1 = MulticlassAccuracy(num_classes=nc, top_k=1)
+
+        # Initialize the metrics dictionary with the train metric.
+        self.metrics = torch.nn.ModuleDict({"train/step/acc1": train_acc1})
+
+        # Add unique evaluation metrics for each eval dataset.
+        name_eval_loaders = set(self.dataloaders.keys()) - set(
+            self.config.data.train_on
+        )
+        for name_loader in name_eval_loaders:
+            self.metrics.update(
+                {
+                    f"eval/epoch/{name_loader}/acc1": MulticlassAccuracy(
+                        num_classes=nc, top_k=1
+                    ),
+                    f"eval/epoch/{name_loader}/acc5": MulticlassAccuracy(
+                        num_classes=nc, top_k=5
+                    ),
+                    f"eval/epoch/{name_loader}/acc1_by_class": MulticlassAccuracy(
+                        num_classes=nc, average="none", top_k=1
+                    ),
+                    f"eval/epoch/{name_loader}/acc5_by_class": MulticlassAccuracy(
+                        num_classes=nc, average="none", top_k=5
+                    ),
+                }
+            )
+
 
     def _train_all_epochs(self):
         while self.epoch < self.config.optim.epochs:
@@ -274,12 +303,12 @@ class BaseModel(torch.nn.Module):
                 logging.info("Checkpointing everything to restart if needed.")
                 self.save_checkpoint("tmp_checkpoint.ckpt", model_only=False)
 
-        # at the end of training, we (optionally) save the final model
+        # At the end of training, we (optionally) save the final model.
         if self.config.log.save_final_model:
             self.save_checkpoint(
                 f"{self.config.log.final_model_name}.ckpt", model_only=True
             )
-        # and remove any temporary checkpoint
+        # Remove any temporary checkpoint.
         (self.config.log.dump_path / "tmp_checkpoint.ckpt").unlink(missing_ok=True)
 
         wandb.finish()
@@ -364,7 +393,7 @@ class BaseModel(torch.nn.Module):
                     for step, data in tqdm(
                         enumerate(loader),
                         total=max_steps,
-                        desc=f"Eval {name}: {self.epoch=}",
+                        desc=f"Eval {name_loader}: {self.epoch=}",
                     ):
                         self.batch_idx = step
                         self.data = to_device(data, self.this_device)
@@ -476,10 +505,10 @@ class BaseModel(torch.nn.Module):
                 else:
                     self._log_buffer[name] = value.tolist()
         # log in wandb
-        if self.config.log.api == "wandb":
+        if self.use_wandb:
             for name, value in self._log_buffer.items():
                 if isinstance(value, list):
-                    table = wandb.Table(columns=["index", "epoch", name])
+                    table = wandb.Table(columns=["epoch", name])
                     for i, v in enumerate(np.asarray(value).flatten()):
                         table.add_data(i, v)
                     self._log_buffer[name] = table
@@ -645,7 +674,7 @@ class BaseModel(torch.nn.Module):
 
     @property
     def logs(self):
-        if self.config.log.api == "wandb":
+        if self.use_wandb:
             raise NotImplementedError
         else:
             return jsonl_run(self.config.log.dump_path)[1]
