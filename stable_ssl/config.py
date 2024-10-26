@@ -248,12 +248,12 @@ _MODEL_CONFIGS = {
     "VICReg": VICRegConfig,
     "WMSE": WMSEConfig,
 }
-_LOG_CONFIGS = {
-    "Wandb": WandbConfig,
-    "wandb": WandbConfig,
-    "None": LogConfig,
-    None: LogConfig,
-}
+# _LOG_CONFIGS = {
+#     "Wandb": WandbConfig,
+#     "wandb": WandbConfig,
+#     "None": LogConfig,
+#     None: LogConfig,
+# }
 
 
 def get_args(cfg_dict, model_class=None):
@@ -272,15 +272,12 @@ def get_args(cfg_dict, model_class=None):
             name = "Supervised"
     model = _MODEL_CONFIGS[name](**model)
 
-    log = cfg_dict.get("log", {})
-    log = _LOG_CONFIGS[log.get("api", None)](**log)
-
     args = TrainerConfig(
         data=DataConfig(**cfg_dict.get("data", {})),
         optim=OptimConfig(**cfg_dict.get("optim", {})),
         model=model,
         hardware=HardwareConfig(**cfg_dict.get("hardware", {})),
-        log=log,
+        log=LogConfig(**cfg_dict.get("log", {})),
     )
 
     args.__class__ = make_dataclass(

@@ -19,6 +19,7 @@ import omegaconf
 from pathlib import Path
 from tqdm import tqdm
 from dataclasses import dataclass, make_dataclass
+from torchmetrics.classification import MulticlassAccuracy
 
 from .reader import jsonl_run
 
@@ -253,9 +254,9 @@ class BaseModel(torch.nn.Module):
         self.metrics = torch.nn.ModuleDict({"train/step/acc1": train_acc1})
 
         # Add unique evaluation metrics for each eval dataset.
-        name_eval_loaders = set(self.dataloaders.keys()) - set(
+        name_eval_loaders = set(self.dataloaders.keys()) - set([
             self.config.data.train_on
-        )
+        ])
         for name_loader in name_eval_loaders:
             self.metrics.update(
                 {
