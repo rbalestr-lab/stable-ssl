@@ -3,8 +3,6 @@ This script demonstrates how to launch a run using the stable-SSL library.
 """
 
 import hydra
-from omegaconf import OmegaConf
-
 import stable_ssl
 
 
