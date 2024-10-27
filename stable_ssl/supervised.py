@@ -1,6 +1,4 @@
-import torch
 import torch.nn.functional as F
-from torchmetrics.classification import MulticlassAccuracy
 
 from .utils import load_nn
 from .base import BaseModel

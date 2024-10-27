@@ -17,7 +17,7 @@ import random
 import torch
 
 from .utils import LARS
-from .ssl_model.joint_embedding import (
+from .joint_embedding import (
     BarlowTwinsConfig,
     SimCLRConfig,
     VICRegConfig,

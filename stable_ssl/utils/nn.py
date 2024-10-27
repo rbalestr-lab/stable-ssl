@@ -80,7 +80,7 @@ def load_nn(
         in_features = model.head.in_features
         model.head = last_layer(n_classes, with_classifier, in_features)
     else:
-        raise ValueError(f"Unknown model structure for {name}.")
+        raise ValueError(f"Unknown model structure for : '{backbone_model}'.")
 
     # Adapt the resolution of the model if using CIFAR with resnet.
     if (
