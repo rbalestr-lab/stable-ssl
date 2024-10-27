@@ -20,7 +20,8 @@ class VICReg(JETrainer):
     Reference
     ---------
     .. [BPL21] Bardes, A., Ponce, J., & LeCun, Y. (2021).
-            VICReg: Variance-Invariance-Covariance Regularization For Self-Supervised Learning.
+            VICReg: Variance-Invariance-Covariance Regularization
+            For Self-Supervised Learning.
             International Conference on Learning Representations (ICLR).
     """
 
