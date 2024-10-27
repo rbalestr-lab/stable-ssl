@@ -206,7 +206,7 @@ def clipped_zoom(img, zoom_factor):
 # /////////////// Corruptions ///////////////
 
 
-class GaussianNoise(torch.nn.Module):
+class CustomGaussianNoise(torch.nn.Module):
     """Apply Gaussian noise to an image.
 
     Parameters
