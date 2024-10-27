@@ -70,11 +70,12 @@ class LARS(Optimizer):
             group.setdefault("nesterov", False)
 
     def step(self, closure=None):
-        """Performs a single optimization step.
+        """Perform a single optimization step.
 
-        Arguments:
-            closure (callable, optional): A closure that reevaluates the model
-                and returns the loss.
+        Parameters
+        ----------
+        closure: callable, optional
+                A closure that reevaluates the model and returns the loss.
         """
         loss = None
         if closure is not None:

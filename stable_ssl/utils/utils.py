@@ -10,10 +10,7 @@ import torch
 
 
 class FullGatherLayer(torch.autograd.Function):
-    """
-    Gather tensors from all process and support backward propagation
-    for the gradients across processes.
-    """
+    """Gather tensors from all process. Supports backward propagation."""
 
     @staticmethod
     def forward(ctx, x):
@@ -29,6 +26,7 @@ class FullGatherLayer(torch.autograd.Function):
 
 
 def setup_distributed(args):
+    """Set up the distributed environment for PyTorch."""
     logging.info("Setting up Distributed model...")
     logging.info("exporting PyTorch distributed environment variables")
     dist_env = submitit.JobEnvironment()
@@ -68,6 +66,7 @@ def setup_distributed(args):
 
 
 def count_SLURM_jobs(pending=True, running=True):
+    """Count the number of SLURM jobs for the current user."""
     if pending and running:
         request = "pending,running"
     elif pending:
@@ -84,6 +83,7 @@ def count_SLURM_jobs(pending=True, running=True):
 
 
 def seed_everything(seed, fast=True):
+    """Seed all random number generators."""
     if seed is None:
         seed = int(time())
     random.seed(seed)
@@ -101,6 +101,7 @@ def seed_everything(seed, fast=True):
 
 
 def find_module(model: torch.nn.Module, module: torch.nn.Module):
+    """Find modules in a model."""
     names = []
     values = []
     for child_name, child in model.named_modules():
@@ -111,8 +112,9 @@ def find_module(model: torch.nn.Module, module: torch.nn.Module):
 
 
 def replace_module(model, replacement_mapping):
+    """Replace a module in a model with another module."""
     if not isinstance(model, torch.nn.Module):
-        raise ValueError("Torch.nn.Module expected as input")
+        raise ValueError("Torch.nn.Module expected as input.")
     for name, module in model.named_modules():
         if name == "":
             continue
@@ -127,6 +129,7 @@ def replace_module(model, replacement_mapping):
 
 
 def to_device(obj, device, non_blocking=True):
+    """Recursively move tensors to the specified device."""
     if isinstance(obj, torch.Tensor):
         return obj.to(device, non_blocking=non_blocking)
     elif isinstance(obj, tuple):
