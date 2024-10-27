@@ -64,7 +64,7 @@ class OptimConfig:
 
         Ensures that a valid optimizer is provided and assigns default values
         for parameters like learning rate, weight decay, and others, if they
-        are not explicitly set. Issues warnings when defaults are used.
+        are not explicitly set.
         """
         if not (hasattr(torch.optim, self.optimizer) or self.optimizer == "LARS"):
             raise ValueError(
@@ -213,9 +213,11 @@ class TrainerConfig:
     log: LogConfig = field(default_factory=LogConfig)
 
     def __repr__(self) -> str:
+        """Returns a YAML representation of the configuration."""
         return OmegaConf.to_yaml(self)
 
     def __str__(self) -> str:
+        """Returns a YAML string of the configuration."""
         return OmegaConf.to_yaml(self)
 
 

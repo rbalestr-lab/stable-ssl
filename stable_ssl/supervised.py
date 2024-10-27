@@ -9,8 +9,8 @@ from .base import BaseModel
 class Supervised(BaseModel):
     r"""Base class for training a supervised model.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     config : BaseModelConfig
         Parameters for BaseModel organized in groups.
         For details, see the `BaseModelConfig` class in `config.py`.
