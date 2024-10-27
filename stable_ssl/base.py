@@ -295,7 +295,7 @@ class BaseModel(torch.nn.Module):
                 logging.exception("An unexpected error occurred during training.")
                 raise
 
-            if self.config.log.eval_each_epoch:
+            if self.epoch%self.config.log.eval_epoch_freq == 0:
                 self.eval_epoch()
             self.epoch = self.epoch + 1
 

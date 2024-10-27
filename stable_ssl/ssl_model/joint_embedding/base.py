@@ -11,7 +11,6 @@ from dataclasses import dataclass, field
 import torch
 import torch.nn.functional as F
 from torch import nn
-from torchmetrics.classification import MulticlassAccuracy
 
 from stable_ssl.utils import load_nn
 from stable_ssl.base import BaseModel, BaseModelConfig

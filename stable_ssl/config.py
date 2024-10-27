@@ -148,12 +148,12 @@ class LogConfig:
         Name for the final saved model. Default is "final_model".
     eval_only : bool, optional
         Whether to only evaluate the model without training. Default is False.
-    eval_each_epoch : bool, optional
-        Whether to evaluate the model at the end of each epoch. Default is False.
+    eval_epoch_freq : int, optional
+        Frequency of evaluation (in terms of epochs). Default is 1.
     wandb_entity : str, optional
         Name of the (Weights & Biases) entity. Default is None.
     wandb_project : str, optional
-        Name of the (Weights & Biases) project. Default is None. 
+        Name of the (Weights & Biases) project. Default is None.
     """
 
     folder: Optional[str] = None
@@ -164,7 +164,7 @@ class LogConfig:
     save_final_model: bool = False
     final_model_name: str = "final_model"
     eval_only: bool = False
-    eval_each_epoch: bool = True
+    eval_epoch_freq: int = 1
     wandb_entity: Optional[str] = None
     wandb_project: Optional[str] = None
 
