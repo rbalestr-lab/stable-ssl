@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+"""VICReg model."""
+#
+# Author: Randall Balestriero <randallbalestriero@gmail.com>
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+
 import logging
 
 try:
@@ -21,6 +29,7 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 
 
 def jsonl_project(folder, num_workers=8):
+    """Load configs and values from runs in a folder."""
     if not Path(folder).is_dir():
         raise ValueError(f"The provided folder ({folder}) is not a directory!")
     runs = list(Path(folder).rglob("*/hparams.yaml"))
@@ -39,13 +48,14 @@ def jsonl_project(folder, num_workers=8):
 
 
 def jsonl_run(path):
+    """Load config and values from a single run directory."""
     _path = Path(path)
     if not _path.is_dir():
         raise ValueError(f"The provided path ({path}) is not a directory!")
     # load the config
     if not (_path / "hparams.yaml").is_file():
         raise ValueError(
-            f"The provided path ({path}) must at least contain a `hparams.yaml` file..."
+            f"The provided path ({path}) must at least contain a `hparams.yaml` file."
         )
     config = omegaconf.OmegaConf.load(_path / "hparams.yaml")
     values = []
@@ -61,6 +71,7 @@ def jsonl_run(path):
 def wandb_project(
     entity, project, max_steps=-1, keys=None, num_workers=10, state="finished"
 ):
+    """Download configs and data from a wandb project."""
     api = wandb.Api()
     runs = api.runs(f"{entity}/{project}")
     runs = [r for r in runs if r.state == state]
@@ -84,10 +95,12 @@ def wandb_project(
 
 
 def _wandb_run_packed(args):
+    """Help function to unpack arguments for wandb_run."""
     return wandb_run(*args)
 
 
 def wandb_run(entity, project, run_id, max_steps=-1, keys=None):
+    """Download config and data for a single wandb run."""
     api = wandb.Api()
     run = api.run(f"{entity}/{project}/{run_id}")
 
@@ -115,6 +128,7 @@ def wandb_run(entity, project, run_id, max_steps=-1, keys=None):
 
 
 def flatten_config(config):
+    """Flatten nested config dictionaries into a single level."""
     for name in ["log", "data", "model", "optim", "hardware"]:
         for k, v in config[name].items():
             config[f"{name}.{k}"] = v
@@ -123,6 +137,7 @@ def flatten_config(config):
 
 
 def tabulate_runs(configs, runs, value, ignore=["hardware.port"]):
+    """Create a pivot table from configs and runs for a specific value."""
     res = configs
     for col in configs.columns:
         if len(configs[col].unique()) == 1 or col in ignore:

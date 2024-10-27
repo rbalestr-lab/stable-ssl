@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+"""Configuration for stable-ssl runs."""
+#
+# Author: Hugues Van Assel <vanasselhugues@gmail.com>
+#         Randall Balestriero <randallbalestriero@gmail.com>
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+
 from dataclasses import dataclass, field, make_dataclass
 from typing import Optional, Tuple
 import logging
@@ -68,7 +77,7 @@ class OptimConfig:
         """
         if not (hasattr(torch.optim, self.optimizer) or self.optimizer == "LARS"):
             raise ValueError(
-                f"[stable-SSL] Invalid optimizer: {self.optimizer}. Must be a "
+                f"Invalid optimizer: {self.optimizer}. Must be a "
                 "torch optimizer or 'LARS'."
             )
 
@@ -86,7 +95,7 @@ class OptimConfig:
                     default_value = default_params[param]
                     setattr(self, param, default_value)
                     logging.warning(
-                        f"[stable-SSL] {param} not provided for {self.optimizer} "
+                        f"{param} not provided for {self.optimizer} "
                         f"optimizer. Default value of {default_value} is used."
                     )
             else:
@@ -119,7 +128,7 @@ class HardwareConfig:
     port: Optional[int] = None
 
     def __post_init__(self):
-        """Sets a random port for distributed training if not provided."""
+        """Set a random port for distributed training if not provided."""
         self.port = self.port or random.randint(49152, 65535)
 
 
@@ -181,7 +190,7 @@ class LogConfig:
 
     @property
     def dump_path(self):
-        """Returns the full path where logs and checkpoints are stored.
+        """Return the full path where logs and checkpoints are stored.
 
         This path includes the base folder and the run identifier.
         """
@@ -213,11 +222,11 @@ class TrainerConfig:
     log: LogConfig = field(default_factory=LogConfig)
 
     def __repr__(self) -> str:
-        """Returns a YAML representation of the configuration."""
+        """Return a YAML representation of the configuration."""
         return OmegaConf.to_yaml(self)
 
     def __str__(self) -> str:
-        """Returns a YAML string of the configuration."""
+        """Return a YAML string of the configuration."""
         return OmegaConf.to_yaml(self)
 
 
@@ -231,6 +240,7 @@ _MODEL_CONFIGS = {
 
 
 def get_args(cfg_dict, model_class=None):
+    """Create and return a TrainerConfig from a configuration dictionary."""
 
     kwargs = {
         name: value
