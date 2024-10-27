@@ -219,11 +219,19 @@ class GaussianNoise(torch.nn.Module):
         super().__init__()
         self.severity = severity
 
-    def __call__(self, x):
+    def forward(self, x):
+        """
+        x: PIL.Image
+            Needs to be a PIL image in the range (0-255)
+        """
+        if self.severity == 0:
+            return x
         c = [0.08, 0.12, 0.18, 0.26, 0.38][self.severity - 1]
 
         x = np.array(x) / 255.0
-        return np.clip(x + np.random.normal(size=x.shape, scale=c), 0, 1) * 255
+        x = np.clip(x + np.random.normal(size=x.shape, scale=c), 0, 1) * 255
+        x = Image.fromarray(np.uint8(x))
+        return x
 
 
 class ShotNoise(torch.nn.Module):
@@ -239,18 +247,26 @@ class ShotNoise(torch.nn.Module):
         super().__init__()
         self.severity = severity
 
-    def __call__(self, x):
+    def forward(self, x):
+        """
+        x: PIL.Image
+            Needs to be a PIL image in the range (0-255)
+        """
+        if self.severity == 0:
+            return x
         c = [60, 25, 12, 5, 3][self.severity - 1]
 
         x = np.array(x) / 255.0
-        return np.clip(np.random.poisson(x * c) / float(c), 0, 1) * 255
+        x = np.clip(np.random.poisson(x * c) / float(c), 0, 1) * 255
+        x = Image.fromarray(np.uint8(x))
+        return x
 
 
 # class ImpulseNoise:
 #     def __init__(self, severity=1):
 #         self.severity = severity
 
-#     def __call__(self, x):
+#     def forward(self, x):
 #         c = [0.03, 0.06, 0.09, 0.17, 0.27][self.severity - 1]
 
 #         x = sk.util.random_noise(np.array(x) / 255.0, mode="s&p", amount=c)
@@ -270,11 +286,19 @@ class SpeckleNoise(torch.nn.Module):
         super().__init__()
         self.severity = severity
 
-    def __call__(self, x):
+    def forward(self, x):
+        """
+        x: PIL.Image
+            Needs to be a PIL image in the range (0-255)
+        """
+        if self.severity == 0:
+            return x
         c = [0.15, 0.2, 0.35, 0.45, 0.6][self.severity - 1]
 
         x = np.array(x) / 255.0
-        return np.clip(x + x * np.random.normal(size=x.shape, scale=c), 0, 1) * 255
+        x = np.clip(x + x * np.random.normal(size=x.shape, scale=c), 0, 1) * 255
+        x = Image.fromarray(np.uint8(x))
+        return x
 
 
 # def fgsm(x, source_net, severity=1):
@@ -366,7 +390,13 @@ class ZoomBlur(torch.nn.Module):
         super().__init__()
         self.severity = severity
 
-    def __call__(self, x):
+    def forward(self, x):
+        """
+        x: PIL.Image
+            Needs to be a PIL image in the range (0-255)
+        """
+        if self.severity == 0:
+            return x
         c = [
             np.arange(1, 1.11, 0.01),
             np.arange(1, 1.16, 0.01),
@@ -381,7 +411,9 @@ class ZoomBlur(torch.nn.Module):
             out += clipped_zoom(x, zoom_factor)
 
         x = (x + out) / (len(c) + 1)
-        return np.clip(x, 0, 1) * 255
+        x = np.clip(x, 0, 1) * 255
+        x = Image.fromarray(np.uint8(x))
+        return x
 
 
 class Fog(torch.nn.Module):
@@ -397,13 +429,21 @@ class Fog(torch.nn.Module):
         super().__init__()
         self.severity = severity
 
-    def __call__(self, x):
+    def forward(self, x):
+        """
+        x: PIL.Image
+            Needs to be a PIL image in the range (0-255)
+        """
+        if self.severity == 0:
+            return x
         c = [(1.5, 2), (2.0, 2), (2.5, 1.7), (2.5, 1.5), (3.0, 1.4)][self.severity - 1]
 
         x = np.array(x) / 255.0
         max_val = x.max()
         x += c[0] * plasma_fractal(wibbledecay=c[1])[:224, :224][..., np.newaxis]
-        return np.clip(x * max_val / (max_val + c[0]), 0, 1) * 255
+        x = np.clip(x * max_val / (max_val + c[0]), 0, 1) * 255
+        x = Image.fromarray(np.uint8(x))
+        return x
 
 
 # def frost(x, severity=1):
@@ -544,12 +584,20 @@ class Contrast(torch.nn.Module):
         super().__init__()
         self.severity = severity
 
-    def __call__(self, x):
+    def forward(self, x):
+        """
+        x: PIL.Image
+            Needs to be a PIL image in the range (0-255)
+        """
+        if self.severity == 0:
+            return x
         c = [0.4, 0.3, 0.2, 0.1, 0.05][self.severity - 1]
 
         x = np.array(x) / 255.0
         means = np.mean(x, axis=(0, 1), keepdims=True)
-        return np.clip((x - means) * c + means, 0, 1) * 255
+        x = np.clip((x - means) * c + means, 0, 1) * 255
+        x = Image.fromarray(np.uint8(x))
+        return x
 
 
 # def brightness(x, severity=1):
@@ -587,7 +635,13 @@ class JPEGCompression(torch.nn.Module):
         super().__init__()
         self.severity = severity
 
-    def __call__(self, x):
+    def forward(self, x):
+        """
+        x: PIL.Image
+            Needs to be a PIL image in the range (0-255)
+        """
+        if self.severity == 0:
+            return x
         c = [25, 18, 15, 10, 7][self.severity - 1]
 
         output = BytesIO()
@@ -602,18 +656,26 @@ class Pixelate(torch.nn.Module):
 
     Parameters
     ----------
+    size: int
+        The size of the final pixelated image.
     severity : int, optional
         Severity level of the pixelation. Default is 1.
     """
 
-    def __init__(self, severity=1):
+    def __init__(self, size, severity=1):
         super().__init__()
         self.severity = severity
+        self.size = size
 
-    def __call__(self, x):
+    def forward(self, x):
+        """
+        x: PIL.Image
+            Needs to be a PIL image in the range (0-255)
+        """
+        if self.severity == 0:
+            return x
         c = [0.6, 0.5, 0.4, 0.3, 0.25][self.severity - 1]
 
-        x = x.resize((int(224 * c), int(224 * c)), Image.BOX)
-        x = x.resize((224, 224), Image.BOX)
-
+        x = x.resize((int(self.size * c), int(self.size * c)), Image.BOX)
+        x = x.resize((self.size, self.size), Image.BOX)
         return x
