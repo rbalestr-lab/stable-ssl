@@ -20,24 +20,33 @@ class DatasetConfig:
 
     Parameters
     ----------
-    dir : str
+    dir : str, optional
         Path to the directory containing the training data.
         Default is "data".
-    name : str
+    name : str, optional
         Name of the dataset to use (e.g., "CIFAR10", "CIFAR100").
         Default is "CIFAR10".
-    split : str
+    split : str, optional
         Name of the dataset split to use (e.g., "train", "test").
         Default is "train".
-    num_workers : int
-        NUmber of process to use
+    num_workers : int, optional
+        Number of workers to use for data loading.
+        Default is -1 (use all available CPUs).
+    batch_size : int, optional
+        Batch size for training. Default is 256.
+    transforms : dict, optional
+        Dictionary of transformations to apply to the data. Default is None.
+    drop_last : bool, optional
+        Whether to drop the last incomplete batch. Default is False.
+    shuffle : bool, optional
+        Whether to shuffle the data. Default is False.
     """
 
     dir: str = "data"
     name: str = "CIFAR10"
     split: str = "train"
-    num_workers: int = 0
-    batch_size: int = 32
+    num_workers: int = -1
+    batch_size: int = 256
     transforms: list[TransformsConfig] = None
     drop_last: bool = False
     shuffle: bool = False
@@ -112,11 +121,17 @@ class DatasetConfig:
         # per_device_batch_size = (
         #     self.config.optim.batch_size // self.config.hardware.world_size
         # )
-
+        if self.num_workers == -1:
+            num_workers = os.cpu_count()
+            logging.info(
+                f"Using {num_workers} workers (maximum available) for data loading."
+            )
+        else:
+            num_workers = self.num_workers
         loader = torch.utils.data.DataLoader(
             dataset,
             batch_size=self.batch_size,
-            num_workers=self.num_workers,
+            num_workers=num_workers,
             pin_memory=True,
             sampler=None,
             shuffle=self.shuffle,

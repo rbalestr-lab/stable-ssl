@@ -110,8 +110,6 @@ class HardwareConfig:
         Number of processes participating in distributed training. Default is 1.
     port : int, optional
         Port number for distributed training. Default is None.
-    workers: int, optional
-        Number of workers for data loading. Default is -1 (all available cores).
     """
 
     seed: Optional[int] = None
@@ -119,7 +117,6 @@ class HardwareConfig:
     gpu: int = 0
     world_size: int = 1
     port: Optional[int] = None
-    workers: int = -1
 
     def __post_init__(self):
         """Sets a random port for distributed training if not provided."""
@@ -191,41 +188,22 @@ class LogConfig:
         return self.folder / self.run
 
 
-# @dataclass
-# class WandbConfig(LogConfig):
-#     """Configuration for logging with Weights & Biases (Wandb) during training.
-
-#     Parameters:
-#     -----------
-#     entity : str, optional
-#         Name of the (Weights & Biases) entity. Default is None.
-#     project : str, optional
-#         Name of the (Weights & Biases) project. Default is None.
-#     run : str, optional
-#         Name of the Weights & Biases run. Default is None.
-#     """
-
-#     entity: Optional[str] = None
-#     project: Optional[str] = None
-#     api: str = None
-
-
 @dataclass
 class TrainerConfig:
     """Global configuration for training a model.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
+    model : BaseModelConfig
+        Model configuration.
     data : DataConfig
         Data configuration.
     optim : OptimConfig
         Optimizer configuration.
-    architecture : ArchitectureConfig
-        Model architecture configuration.
     hardware : HardwareConfig
         Hardware configuration.
     log : LogConfig
-        Logging and checkpointing configuration
+        Logging and checkpointing configuration.
     """
 
     model: BaseModelConfig = field(default_factory=BaseModelConfig)
