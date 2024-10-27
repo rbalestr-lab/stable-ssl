@@ -1,36 +1,44 @@
-"""
-File: optim.py
-Project: omega
------
-# Copyright (c) Randall Balestriero
-# All rights reserved.
+# -*- coding: utf-8 -*-
+"""Optimizers for PyTorch models."""
+#
+# Author: Randall Balestriero <randallbalestriero@gmail.com>
+#         Hugues Van Assel <vanasselhugues@gmail.com>
+#
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
-"""
 
 import torch
 from torch.optim.optimizer import Optimizer, required
 
 
 class LARS(Optimizer):
-    r"""Implements LARS (Layer-wise Adaptive Rate Scaling).
+    """Implement LARS (Layer-wise Adaptive Rate Scaling) optimizer.
 
-    Args:
-        params (iterable): iterable of parameters to optimize or dicts defining
-            parameter groups
-        lr (float): learning rate
-        momentum (float, optional): momentum factor (default: 0)
-        eta (float, optional): LARS coefficient as used in the paper (default: 1e-3)
-        weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
-        dampening (float, optional): dampening for momentum (default: 0)
-        nesterov (bool, optional): enables Nesterov momentum (default: False)
-        epsilon (float, optional): epsilon to prevent zero division (default: 0)
+    Parameters
+    ----------
+    params : iterable
+        Iterable of parameters to optimize or dicts defining parameter groups.
+    lr : float
+        Learning rate.
+    momentum : float, optional
+        Momentum factor. Default is 0.
+    eta : float, optional
+        LARS coefficient as used in the paper. Default is 1e-3.
+    weight_decay : float, optional
+        Weight decay (L2 penalty). Default is 0.
+    dampening : float, optional
+        Dampening for momentum. Default is 0.
+    nesterov : bool, optional
+        Enables Nesterov momentum. Default is False.
+    epsilon : float, optional
+        Epsilon to prevent division by zero. Default is 0.
 
-    Example:
-        >>> optimizer = torch.optim.LARS(model.parameters(), lr=0.1, momentum=0.9)
-        >>> optimizer.zero_grad()
-        >>> loss_fn(model(input), target).backward()
-        >>> optimizer.step()
+    Examples
+    --------
+    >>> optimizer = torch.optim.LARS(model.parameters(), lr=0.1, momentum=0.9)
+    >>> optimizer.zero_grad()
+    >>> loss_fn(model(input), target).backward()
+    >>> optimizer.step()
     """
 
     def __init__(
@@ -61,10 +69,13 @@ class LARS(Optimizer):
             epsilon=epsilon,
         )
         if nesterov and (momentum <= 0 or dampening != 0):
-            raise ValueError("Nesterov momentum requires a momentum and zero dampening")
+            raise ValueError(
+                "Nesterov momentum requires a momentum and zero dampening."
+            )
         super(LARS, self).__init__(params, defaults)
 
     def __setstate__(self, state):
+        """Set the optimizer state."""
         super(LARS, self).__setstate__(state)
         for group in self.param_groups:
             group.setdefault("nesterov", False)
