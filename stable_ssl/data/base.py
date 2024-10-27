@@ -122,8 +122,8 @@ class DatasetConfig:
         #     self.config.optim.batch_size // self.config.hardware.world_size
         # )
         if self.num_workers == -1:
-            if os.environ.get('SLURM_JOB_ID'):
-                num_workers = os.environ.get('SLURM_JOB_CPUS_PER_NODE', 1)
+            if os.environ.get("SLURM_JOB_ID"):
+                num_workers = os.environ.get("SLURM_JOB_CPUS_PER_NODE", 1)
             else:
                 num_workers = os.cpu_count()
             logging.info(
