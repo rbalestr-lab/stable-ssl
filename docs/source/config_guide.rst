@@ -140,7 +140,7 @@ When defining a specific method, you can set method-specific parameters by creat
    :toctree: gen_modules/
    :template: myclass_template.rst
 
-   ssl_model.joint_embedding.SimCLRConfig
-   ssl_model.joint_embedding.BarlowTwinsConfig
-   ssl_model.joint_embedding.VICRegConfig
-   ssl_model.joint_embedding.WMSEConfig
+   joint_embedding.SimCLRConfig
+   joint_embedding.BarlowTwinsConfig
+   joint_embedding.VICRegConfig
+   joint_embedding.WMSEConfig
