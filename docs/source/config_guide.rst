@@ -59,18 +59,6 @@ The `log` keyword configures the logging settings for your run. The complete lis
    config.LogConfig
 
 
-Weights and Biases Configuration (`wandb`)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Configure Weights and Biases (Wandb) integration using the `wandb` keyword. The complete list of parameters for the `wandb` section is available below:
-
-.. autosummary::
-   :toctree: gen_modules/
-   :template: myclass_template.rst
-
-   config.WandbConfig
-
-
 Data Configuration (`data`)   
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
