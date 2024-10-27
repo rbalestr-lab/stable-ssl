@@ -47,7 +47,7 @@ class JETrainer(BaseModel):
     def initialize_modules(self):
         # backbone
         backbone, fan_in = load_nn(
-            name=self.config.model.backbone_model,
+            backbone_model=self.config.model.backbone_model,
             n_classes=self.config.data.datasets[self.config.data.train_on].num_classes,
             with_classifier=False,
             pretrained=False,

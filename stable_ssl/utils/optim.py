@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Optimizers for PyTorch models."""
+"""Optimizers."""
 #
 # Author: Randall Balestriero <randallbalestriero@gmail.com>
 #         Hugues Van Assel <vanasselhugues@gmail.com>

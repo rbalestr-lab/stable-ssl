@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Learning rate schedulers for PyTorch optimizers."""
+"""Learning rate schedulers."""
 #
 # Author: Randall Balestriero <randallbalestriero@gmail.com>
 #         Hugues Van Assel <vanasselhugues@gmail.com>

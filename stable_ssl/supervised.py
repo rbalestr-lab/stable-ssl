@@ -18,7 +18,7 @@ class Supervised(BaseModel):
 
     def initialize_modules(self):
         model, _ = load_nn(
-            name=self.config.model.backbone_model,
+            backbone_model=self.config.model.backbone_model,
             n_classes=self.config.data.num_classes,
             with_classifier=self.config.model.with_classifier,
             pretrained=self.config.model.pretrained,

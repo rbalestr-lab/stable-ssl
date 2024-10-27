@@ -1,42 +1,88 @@
+# -*- coding: utf-8 -*-
+"""Neural network models."""
+#
+# Author: Randall Balestriero <randallbalestriero@gmail.com>
+#         Hugues Van Assel <vanasselhugues@gmail.com>
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+
 import torchvision
 import torch.nn as nn
 
 
 def load_nn(
-    name, n_classes, with_classifier=True, pretrained=False, dataset="CIFAR10", **kwargs
+    backbone_model,
+    n_classes,
+    with_classifier=True,
+    pretrained=False,
+    dataset="CIFAR10",
+    **kwargs,
 ):
-    if name == "resnet9":
-        model = resnet9(**kwargs)
-    elif name == "ConvMixer":
-        model = ConvMixer(**kwargs)
+    """Load a neural network model with a given backbone.
 
+    Parameters
+    ----------
+    backbone_model : str
+        Name of the backbone model.
+    n_classes : int
+        Number of classes in the dataset.
+    with_classifier : bool, optional
+        Whether to include a classifier layer, by default True.
+    pretrained : bool, optional
+        Whether to load a pretrained model, by default False.
+    dataset : str, optional
+        Name of the dataset, by default "CIFAR10".
+    **kwargs: dict
+        Additional keyword arguments for the model.
+
+    Returns
+    -------
+    torch.nn.Module
+        The neural network model.
+    int
+        The number of features in the last layer.
+    """
+    # Load the backbone_model.
+    if backbone_model == "resnet9":
+        model = resnet9(**kwargs)
+    elif backbone_model == "ConvMixer":
+        model = ConvMixer(**kwargs)
     else:
         try:
-            model = torchvision.models.__dict__[name](pretrained=pretrained, **kwargs)
+            model = torchvision.models.__dict__[backbone_model](
+                pretrained=pretrained, **kwargs
+            )
         except KeyError:
-            raise ValueError(f"Unknown model {name}.")
+            raise ValueError(f"Unknown model: {backbone_model}.")
 
-    if hasattr(model, "fc"):  # For models like ResNet
+    # Adapt the last layer, either linear or identity.
+    def last_layer(n_classes, with_classifier, in_features):
+        if with_classifier:
+            return nn.Linear(in_features, n_classes)
+        else:
+            return nn.Identity()
+
+    # For models like ResNet.
+    if hasattr(model, "fc"):
         in_features = model.fc.in_features
         model.fc = last_layer(n_classes, with_classifier, in_features)
-    elif hasattr(model, "classifier"):  # For models like VGG, AlexNet
+    # For models like VGG or AlexNet.
+    elif hasattr(model, "classifier"):
         in_features = model.classifier[-1].in_features
         model.classifier[-1] = last_layer(n_classes, with_classifier, in_features)
-    elif hasattr(model, "heads"):  # For models like ViT
+    # For models like ViT.
+    elif hasattr(model, "heads"):
         in_features = model.heads.head.in_features
         model.heads.head = last_layer(n_classes, with_classifier, in_features)
-    elif hasattr(model, "head"):  # For models like Swin Transformer
+    # For models like Swin Transformer.
+    elif hasattr(model, "head"):
         in_features = model.head.in_features
         model.head = last_layer(n_classes, with_classifier, in_features)
     else:
         raise ValueError(f"Unknown model structure for {name}.")
 
-    model = adapt_resolution(model, dataset=dataset, backbone_model=name)
-
-    return model, in_features
-
-
-def adapt_resolution(model, dataset, backbone_model):
+    # Adapt the resolution of the model if using CIFAR with resnet.
     if (
         "CIFAR" in dataset
         and "resnet" in backbone_model
@@ -46,17 +92,13 @@ def adapt_resolution(model, dataset, backbone_model):
             3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False
         )
         model.maxpool = nn.Identity()
-    return model
 
-
-def last_layer(n_classes, with_classifier, in_features):
-    if with_classifier:
-        return nn.Linear(in_features, n_classes)
-    else:
-        return nn.Identity()
+    return model, in_features
 
 
 class resnet9(nn.Module):
+    """ResNet-9 model."""
+
     def __init__(self, in_channels=3, num_classes=10):
         super().__init__()
 
@@ -100,7 +142,14 @@ class resnet9(nn.Module):
 
 
 class ConvMixer(nn.Module):
-    # https://openreview.net/forum?id=TVHS5Y4dNvM
+    """ConvMixer model from [TK22]_.
+
+    References
+    ----------
+    .. [TK22]  Trockman, A., & Kolter, J. Z. (2022).
+            Patches are all you need?. arXiv preprint arXiv:2201.09792.
+    """
+
     def __init__(
         self,
         in_channels=3,
