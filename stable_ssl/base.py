@@ -129,7 +129,9 @@ class BaseModel(torch.nn.Module):
         seed_everything(self.config.hardware.seed)
 
         # Use WandB if an entity or project name is provided.
-        self.use_wandb = bool(self.config.log.wandb_entity or self.config.log.wandb_project)
+        self.use_wandb = bool(
+            self.config.log.wandb_entity or self.config.log.wandb_project
+        )
         if self.use_wandb:
             logging.info(
                 f"\t=> Initializating wandb for logging in {self.config.log.dump_path}."
@@ -166,11 +168,11 @@ class BaseModel(torch.nn.Module):
                 raise RuntimeError(f"eval_only=False and `{name}` not given.")
         self.dataloaders = dataloaders
 
-        # Set up the model's modules. This method should be implemented by the child class.
+        # Set up the model's modules. Should be implemented by the child class.
         logging.info("Calling initialize_modules() method.")
         self.initialize_modules()
 
-        # Set up the metrics. This method should be implemented by the child class.
+        # Set up the metrics. Should be implemented by the child class.
         if hasattr(self, "metrics"):
             raise RuntimeError(
                 "You can't assign any value to `self.metrics`, this will be "
@@ -254,9 +256,9 @@ class BaseModel(torch.nn.Module):
         self.metrics = torch.nn.ModuleDict({"train/step/acc1": train_acc1})
 
         # Add unique evaluation metrics for each eval dataset.
-        name_eval_loaders = set(self.dataloaders.keys()) - set([
-            self.config.data.train_on
-        ])
+        name_eval_loaders = set(self.dataloaders.keys()) - set(
+            [self.config.data.train_on]
+        )
         for name_loader in name_eval_loaders:
             self.metrics.update(
                 {
@@ -274,7 +276,6 @@ class BaseModel(torch.nn.Module):
                     ),
                 }
             )
-
 
     def _train_all_epochs(self):
         while self.epoch < self.config.optim.epochs:
@@ -295,7 +296,7 @@ class BaseModel(torch.nn.Module):
                 logging.exception("An unexpected error occurred during training.")
                 raise
 
-            if self.epoch%self.config.log.eval_epoch_freq == 0:
+            if self.epoch % self.config.log.eval_epoch_freq == 0:
                 self.eval_epoch()
             self.epoch = self.epoch + 1
 
@@ -728,13 +729,13 @@ class BaseModel(torch.nn.Module):
     def before_eval_epoch(self):
         self.eval()
         for name, metric in self.metrics.items():
-            if name.startswith(f"eval/epoch/"):
+            if name.startswith("eval/epoch/"):
                 metric.reset()
 
     def after_eval_epoch(self):
         packet = {}
         for name, metric in self.metrics.items():
-            if name.startswith(f"eval/epoch/"):
+            if name.startswith("eval/epoch/"):
                 packet[name] = metric.compute()
         self.log(packet, commit=True)
 
