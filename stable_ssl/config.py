@@ -111,7 +111,7 @@ class HardwareConfig:
     port : int, optional
         Port number for distributed training. Default is None.
     workers: int, optional
-        Number of workers for data loading. Default is 0 (data loaded in main process).
+        Number of workers for data loading. Default is -1 (all available cores).
     """
 
     seed: Optional[int] = None
@@ -119,7 +119,7 @@ class HardwareConfig:
     gpu: int = 0
     world_size: int = 1
     port: Optional[int] = None
-    workers: int = 0
+    workers: int = -1
 
     def __post_init__(self):
         """Sets a random port for distributed training if not provided."""
@@ -248,12 +248,6 @@ _MODEL_CONFIGS = {
     "VICReg": VICRegConfig,
     "WMSE": WMSEConfig,
 }
-# _LOG_CONFIGS = {
-#     "Wandb": WandbConfig,
-#     "wandb": WandbConfig,
-#     "None": LogConfig,
-#     None: LogConfig,
-# }
 
 
 def get_args(cfg_dict, model_class=None):
@@ -273,9 +267,9 @@ def get_args(cfg_dict, model_class=None):
     model = _MODEL_CONFIGS[name](**model)
 
     args = TrainerConfig(
+        model=model,
         data=DataConfig(**cfg_dict.get("data", {})),
         optim=OptimConfig(**cfg_dict.get("optim", {})),
-        model=model,
         hardware=HardwareConfig(**cfg_dict.get("hardware", {})),
         log=LogConfig(**cfg_dict.get("log", {})),
     )
