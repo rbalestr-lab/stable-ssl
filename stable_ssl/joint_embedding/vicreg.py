@@ -11,18 +11,20 @@
 from dataclasses import dataclass
 import torch
 
-from stable_ssl.utils import FullGatherLayer
+from stable_ssl.utils import FullGatherLayer, off_diagonal
 from .base import JEConfig, JETrainer
 
 
-def off_diagonal(x):
-    # return a flattened view of the off-diagonal elements of a square matrix
-    n, m = x.shape
-    assert n == m
-    return x.flatten()[:-1].view(n - 1, n + 1)[:, 1:].flatten()
-
-
 class VICReg(JETrainer):
+    """VICReg model from [BPL21]_.
+
+    Reference
+    ---------
+    .. [BPL21] Bardes, A., Ponce, J., & LeCun, Y. (2021).
+            VICReg: Variance-Invariance-Covariance Regularization For Self-Supervised Learning.
+            International Conference on Learning Representations (ICLR).
+    """
+
     def compute_ssl_loss(self, z1, z2):
 
         repr_loss = torch.nn.functional.mse_loss(z1, z2)

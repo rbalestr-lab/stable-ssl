@@ -15,7 +15,14 @@ from .base import JEConfig, JETrainer
 
 
 class SimCLR(JETrainer):
-    """SimCLR model for self-supervised learning."""
+    """SimCLR model from [CKNH20]_.
+
+    Reference
+    ---------
+    .. [CKNH20] Chen, T., Kornblith, S., Norouzi, M., & Hinton, G. (2020).
+            A Simple Framework for Contrastive Learning of Visual Representations.
+            In International Conference on Machine Learning (pp. 1597-1607). PMLR.
+    """
 
     def compute_ssl_loss(self, h_i, h_j):
         """Compute the contrastive loss for SimCLR.
@@ -55,7 +62,7 @@ class SimCLR(JETrainer):
 
 @dataclass
 class SimCLRConfig(JEConfig):
-    """Configuration for the SSL model parameters.
+    """Configuration for the SimCLR model parameters.
 
     Parameters
     ----------

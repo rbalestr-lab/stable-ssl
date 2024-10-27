@@ -23,7 +23,7 @@ from .config import (
     # TrainerConfig,
 )
 
-from .ssl_model import (
+from .joint_embedding import (
     SimCLR,
     BarlowTwins,
     VICReg,

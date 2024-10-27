@@ -18,11 +18,10 @@ from stable_ssl.base import BaseModel, BaseModelConfig
 
 @dataclass
 class JEConfig(BaseModelConfig):
-    """
-    Configuration for the SSL model parameters.
+    """Configuration for the joint-embedding model parameters.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     projector : str
         Architecture of the projector head. Default is "2048-128".
     """
@@ -30,15 +29,16 @@ class JEConfig(BaseModelConfig):
     projector: list[int] = field(default_factory=lambda: [2048, 128])
 
     def __post_init__(self):
+        """Convert projector string to a list of integers if necessary."""
         if isinstance(self.projector, str):
             self.projector = [int(i) for i in self.projector.split("-")]
 
 
 class JETrainer(BaseModel):
-    r"""Base class for training a Self-Supervised Learning (SSL) model.
+    r"""Base class for training a joint-embedding SSL model.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     config : TrainerConfig
         Parameters for Trainer organized in groups.
         For details, see the `TrainerConfig` class in `config.py`.

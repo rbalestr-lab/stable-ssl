@@ -15,6 +15,15 @@ from .base import JEConfig, JETrainer
 
 
 class WMSE(JETrainer):
+    """Whitening Mean Squared Error (WMSE) model from [ESSS21]_.
+
+    Reference
+    ---------
+    .. [ESSS21] Ermolov, A., Siarohin, A., Sangineto, E., & Sebe, N. (2021).
+            Whitening for self-supervised representation learning.
+            In International conference on machine learning (pp. 3015-3024). PMLR.
+    """
+
     def initialize_modules(self):
         super().initialize_modules()
         self.whitening = Whitening2d(
@@ -45,6 +54,8 @@ class WMSE(JETrainer):
 
 
 class Whitening2d(torch.nn.Module):
+    """2D Whitening layer."""
+
     def __init__(self, num_features, momentum=0.01, track_running_stats=True, eps=0):
         super(Whitening2d, self).__init__()
         self.num_features = num_features

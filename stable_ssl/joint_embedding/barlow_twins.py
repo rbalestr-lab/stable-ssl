@@ -12,21 +12,24 @@ from dataclasses import dataclass
 import torch
 
 from .base import JEConfig, JETrainer
-
-
-def off_diagonal(x):
-    # return a flattened view of the off-diagonal elements of a square matrix
-    n, m = x.shape
-    assert n == m
-    return x.flatten()[:-1].view(n - 1, n + 1)[:, 1:].flatten()
+from stable_ssl.utils import off_diagonal
 
 
 class BarlowTwins(JETrainer):
+    """BarlowTwins model from [ZJM+21]_.
+
+    Reference
+    ---------
+    .. [ZJM+21] Zbontar, J., Jing, L., Misra, I., LeCun, Y., & Deny, S. (2021).
+            Barlow Twins: Self-Supervised Learning via Redundancy Reduction.
+            In International conference on machine learning (pp. 12310-12320). PMLR.
+    """
+
     def compute_ssl_loss(self, z1, z2):
-        # empirical cross-correlation matrix
+        # Empirical cross-correlation matrix.
         c = self.bn(z1).T @ self.bn(z2)
 
-        # sum the cross-correlation matrix between all gpus
+        # Sum the cross-correlation matrix between all gpus.
         c.div_(self.args.batch_size)
         torch.distributed.all_reduce(c)
 
@@ -38,11 +41,10 @@ class BarlowTwins(JETrainer):
 
 @dataclass
 class BarlowTwinsConfig(JEConfig):
-    """
-    Configuration for the SSL model parameters.
+    """Configuration for the BarlowTwins model parameters.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     lambd : str
         Lambda parameter for the off-diagonal loss. Default is 0.1.
     """

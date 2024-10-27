@@ -9,16 +9,24 @@
 
 
 class BreakEpoch(Exception):
+    """Interrupt the current epoch."""
+
     pass
 
 
 class BreakStep(Exception):
+    """Interrupt the current training step."""
+
     pass
 
 
 class NanError(Exception):
+    """NaN error."""
+
     pass
 
 
 class BreakAllEpochs(Exception):
+    """Interrupt the training process across all epochs."""
+
     pass

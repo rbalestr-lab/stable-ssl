@@ -23,8 +23,8 @@ from .base import BaseModelConfig
 class OptimConfig:
     """Configuration for the optimizer used for training the model.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     optimizer : str
         Type of optimizer to use (e.g., "AdamW", "RMSprop", "SGD", "LARS").
         Default is "LARS".
@@ -98,8 +98,8 @@ class OptimConfig:
 class HardwareConfig:
     """Hardware configuration for training.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     seed : int, optional
         Random seed for reproducibility. Default is None.
     float16 : bool, optional
@@ -127,8 +127,8 @@ class HardwareConfig:
 class LogConfig:
     """Configuration for logging and checkpointing during training.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     folder : str, optional
         Path to the folder where logs and checkpoints will be saved.
         Default is the current directory + random hash folder.
