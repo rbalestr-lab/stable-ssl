@@ -224,7 +224,7 @@ class GaussianNoise(torch.nn.Module):
         x: PIL.Image
             Needs to be a PIL image in the range (0-255)
         """
-        if self.severity==0:
+        if self.severity == 0:
             return x
         c = [0.08, 0.12, 0.18, 0.26, 0.38][self.severity - 1]
 
@@ -252,7 +252,7 @@ class ShotNoise(torch.nn.Module):
         x: PIL.Image
             Needs to be a PIL image in the range (0-255)
         """
-        if self.severity==0:
+        if self.severity == 0:
             return x
         c = [60, 25, 12, 5, 3][self.severity - 1]
 
@@ -291,7 +291,7 @@ class SpeckleNoise(torch.nn.Module):
         x: PIL.Image
             Needs to be a PIL image in the range (0-255)
         """
-        if self.severity==0:
+        if self.severity == 0:
             return x
         c = [0.15, 0.2, 0.35, 0.45, 0.6][self.severity - 1]
 
@@ -395,7 +395,7 @@ class ZoomBlur(torch.nn.Module):
         x: PIL.Image
             Needs to be a PIL image in the range (0-255)
         """
-        if self.severity==0:
+        if self.severity == 0:
             return x
         c = [
             np.arange(1, 1.11, 0.01),
@@ -434,7 +434,7 @@ class Fog(torch.nn.Module):
         x: PIL.Image
             Needs to be a PIL image in the range (0-255)
         """
-        if self.severity==0:
+        if self.severity == 0:
             return x
         c = [(1.5, 2), (2.0, 2), (2.5, 1.7), (2.5, 1.5), (3.0, 1.4)][self.severity - 1]
 
@@ -444,6 +444,7 @@ class Fog(torch.nn.Module):
         x = np.clip(x * max_val / (max_val + c[0]), 0, 1) * 255
         x = Image.fromarray(np.uint8(x))
         return x
+
 
 # def frost(x, severity=1):
 #     c = [(1, 0.4), (0.8, 0.6), (0.7, 0.7), (0.65, 0.7), (0.6, 0.75)][severity - 1]
@@ -588,7 +589,7 @@ class Contrast(torch.nn.Module):
         x: PIL.Image
             Needs to be a PIL image in the range (0-255)
         """
-        if self.severity==0:
+        if self.severity == 0:
             return x
         c = [0.4, 0.3, 0.2, 0.1, 0.05][self.severity - 1]
 
@@ -639,7 +640,7 @@ class JPEGCompression(torch.nn.Module):
         x: PIL.Image
             Needs to be a PIL image in the range (0-255)
         """
-        if self.severity==0:
+        if self.severity == 0:
             return x
         c = [25, 18, 15, 10, 7][self.severity - 1]
 
@@ -656,7 +657,7 @@ class Pixelate(torch.nn.Module):
     Parameters
     ----------
     size: int
-        The size of the final pixelated image. For CIFAR it's supposed to be 32x32 and for ImageNet it's 224x224.
+        The size of the final pixelated image.
     severity : int, optional
         Severity level of the pixelation. Default is 1.
     """
@@ -671,11 +672,7 @@ class Pixelate(torch.nn.Module):
         x: PIL.Image
             Needs to be a PIL image in the range (0-255)
         """
-        """
-        x: PIL.Image
-            Needs to be a PIL image in the range (0-255)
-        """
-        if self.severity==0:
+        if self.severity == 0:
             return x
         c = [0.6, 0.5, 0.4, 0.3, 0.25][self.severity - 1]
 
