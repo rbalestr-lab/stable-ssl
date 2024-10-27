@@ -220,10 +220,10 @@ class GaussianNoise(torch.nn.Module):
         self.severity = severity
 
     def forward(self, x):
-        """
-        x: PIL.Image
-            Needs to be a PIL image in the range (0-255)
-        """
+        # """
+        # x: PIL.Image
+        #     Needs to be a PIL image in the range (0-255)
+        # """
         if self.severity == 0:
             return x
         c = [0.08, 0.12, 0.18, 0.26, 0.38][self.severity - 1]
@@ -248,10 +248,10 @@ class ShotNoise(torch.nn.Module):
         self.severity = severity
 
     def forward(self, x):
-        """
-        x: PIL.Image
-            Needs to be a PIL image in the range (0-255)
-        """
+        # """
+        # x: PIL.Image
+        #     Needs to be a PIL image in the range (0-255)
+        # """
         if self.severity == 0:
             return x
         c = [60, 25, 12, 5, 3][self.severity - 1]
@@ -287,10 +287,10 @@ class SpeckleNoise(torch.nn.Module):
         self.severity = severity
 
     def forward(self, x):
-        """
-        x: PIL.Image
-            Needs to be a PIL image in the range (0-255)
-        """
+        # """
+        # x: PIL.Image
+        #     Needs to be a PIL image in the range (0-255)
+        # """
         if self.severity == 0:
             return x
         c = [0.15, 0.2, 0.35, 0.45, 0.6][self.severity - 1]
@@ -391,10 +391,10 @@ class ZoomBlur(torch.nn.Module):
         self.severity = severity
 
     def forward(self, x):
-        """
-        x: PIL.Image
-            Needs to be a PIL image in the range (0-255)
-        """
+        # """
+        # x: PIL.Image
+        #     Needs to be a PIL image in the range (0-255)
+        # """
         if self.severity == 0:
             return x
         c = [
@@ -430,10 +430,10 @@ class Fog(torch.nn.Module):
         self.severity = severity
 
     def forward(self, x):
-        """
-        x: PIL.Image
-            Needs to be a PIL image in the range (0-255)
-        """
+        # """
+        # x: PIL.Image
+        #     Needs to be a PIL image in the range (0-255)
+        # """
         if self.severity == 0:
             return x
         c = [(1.5, 2), (2.0, 2), (2.5, 1.7), (2.5, 1.5), (3.0, 1.4)][self.severity - 1]
@@ -585,10 +585,10 @@ class Contrast(torch.nn.Module):
         self.severity = severity
 
     def forward(self, x):
-        """
-        x: PIL.Image
-            Needs to be a PIL image in the range (0-255)
-        """
+        # """
+        # x: PIL.Image
+        #     Needs to be a PIL image in the range (0-255)
+        # """
         if self.severity == 0:
             return x
         c = [0.4, 0.3, 0.2, 0.1, 0.05][self.severity - 1]
@@ -636,10 +636,10 @@ class JPEGCompression(torch.nn.Module):
         self.severity = severity
 
     def forward(self, x):
-        """
-        x: PIL.Image
-            Needs to be a PIL image in the range (0-255)
-        """
+        # """
+        # x: PIL.Image
+        #     Needs to be a PIL image in the range (0-255)
+        # """
         if self.severity == 0:
             return x
         c = [25, 18, 15, 10, 7][self.severity - 1]
@@ -668,10 +668,10 @@ class Pixelate(torch.nn.Module):
         self.size = size
 
     def forward(self, x):
-        """
-        x: PIL.Image
-            Needs to be a PIL image in the range (0-255)
-        """
+        # """
+        # x: PIL.Image
+        #     Needs to be a PIL image in the range (0-255)
+        # """
         if self.severity == 0:
             return x
         c = [0.6, 0.5, 0.4, 0.3, 0.25][self.severity - 1]

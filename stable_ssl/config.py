@@ -30,7 +30,7 @@ from .base import BaseModelConfig
 
 @dataclass
 class OptimConfig:
-    """Configuration for the optimizer used for training the model.
+    """Configuration for the 'optimizer' parameters.
 
     Parameters
     ----------
@@ -69,7 +69,7 @@ class OptimConfig:
     grad_max_norm: Optional[float] = None
 
     def __post_init__(self):
-        """Validates and sets default values for optimizer parameters.
+        """Validate and set default values for optimizer parameters.
 
         Ensures that a valid optimizer is provided and assigns default values
         for parameters like learning rate, weight decay, and others, if they
@@ -105,7 +105,7 @@ class OptimConfig:
 
 @dataclass
 class HardwareConfig:
-    """Hardware configuration for training.
+    """Configuration for the 'hardware' parameters.
 
     Parameters
     ----------
@@ -134,7 +134,7 @@ class HardwareConfig:
 
 @dataclass
 class LogConfig:
-    """Configuration for logging and checkpointing during training.
+    """Configuration for the 'log' parameters.
 
     Parameters
     ----------
@@ -175,7 +175,7 @@ class LogConfig:
     wandb_project: Optional[str] = None
 
     def __post_init__(self):
-        """Initializes logging folder and run settings.
+        """Initialize logging folder and run settings.
 
         If the folder path is not specified, creates a default path under `./logs`.
         The run identifier is set using the current timestamp if not provided.
@@ -241,7 +241,6 @@ _MODEL_CONFIGS = {
 
 def get_args(cfg_dict, model_class=None):
     """Create and return a TrainerConfig from a configuration dictionary."""
-
     kwargs = {
         name: value
         for name, value in cfg_dict.items()

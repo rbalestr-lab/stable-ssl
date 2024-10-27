@@ -50,8 +50,7 @@ from .utils import (
 
 @dataclass
 class BaseModelConfig:
-    """
-    Configuration for the SSL model parameters.
+    """Base configuration for the 'model' parameters.
 
     Parameters
     ----------
@@ -225,8 +224,8 @@ class BaseModel(torch.nn.Module):
                 "scheduler initializations."
             )
 
-        logging.info("Calling load_checkpoint() method.")
-        self.load_checkpoint()
+        logging.info("Calling _load_checkpoint() method.")
+        self._load_checkpoint()
         self.start_time = time.time()
         self.execute()
 
@@ -522,13 +521,7 @@ class BaseModel(torch.nn.Module):
                 writer.write(self._log_buffer)
         self._log_buffer = {}
 
-    def load_checkpoint(self):
-        """load a model and optionnally a scheduler/optimizer/epoch
-        from a given path to checkpoint
-
-        Args:
-            load_from (str): path to checkpoint
-        """
+    def _load_checkpoint(self):
         load_from = Path(self.config.log.load_from)
         if load_from.is_file():
             logging.info(f"\t=> file {load_from} exists\n\t=> loading it.")

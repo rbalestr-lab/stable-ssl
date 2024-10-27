@@ -194,6 +194,8 @@ class DataConfig:
 
 
 class Sampler:
+    """Apply a list of transforms to an input and return all outputs."""
+
     def __init__(self, transforms: list):
         self.transforms = transforms
 
