@@ -163,6 +163,10 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
+# Docs
+docs/source/auto_examples/
+docs/source/gen_modules/
+
 outputs/
 multirun/
 ./data/
