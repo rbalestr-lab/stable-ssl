@@ -11,7 +11,7 @@ import torchvision
 from torchvision import transforms
 
 import stable_ssl as ssl
-from stable_ssl.model.supervised import Supervised
+from stable_ssl.supervised import Supervised
 import numpy as np
 
 

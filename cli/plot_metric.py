@@ -1,10 +1,11 @@
 import argparse
 from pathlib import Path
-import stable_ssl as ssl
 import matplotlib.pyplot as plt
 import numpy as np
 import logging
 import pandas as pd
+
+import stable_ssl as ssl
 
 
 def parse_rules(v):
