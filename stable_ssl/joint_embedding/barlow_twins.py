@@ -24,6 +24,10 @@ class BarlowTwins(JETrainer):
             In International conference on machine learning (pp. 12310-12320). PMLR.
     """
 
+    def initialize_modules(self):
+        super().initialize_modules()
+        self.bn = torch.nn.BatchNorm1d(self.config.model.projector[-1])
+
     def compute_ssl_loss(self, z1, z2):
         # Empirical cross-correlation matrix.
         c = self.bn(z1).T @ self.bn(z2)
