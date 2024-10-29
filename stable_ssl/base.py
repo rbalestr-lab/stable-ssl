@@ -374,19 +374,19 @@ class BaseModel(torch.nn.Module):
             logging.info("No val_loader hence skipping eval epoch.")
             return
 
+        # set-up model in eval mode + reset metrics
+        self.before_eval_epoch()
+        # we do not ensure that the model is still in eval mode to not
+        # override any user desired behavior
+        if self.training:
+            logging.warning(
+                "Starting eval epoch but model is not in "
+                "eval mode after call to before_eval_epoch()."
+            )
+
         for name_loader, loader in self.dataloaders.items():
             if name_loader == self.config.data.train_on:
                 continue
-            # set-up model in eval mode + reset metrics
-            self.before_eval_epoch()
-
-            # we do not ensure that the model is still in eval mode to not
-            # override any user desired behavior
-            if self.training:
-                logging.warning(
-                    "Starting eval epoch but model is not in "
-                    "eval mode after call to before_eval_epoch()."
-                )
 
             try:
                 max_steps = len(loader)
@@ -419,8 +419,8 @@ class BaseModel(torch.nn.Module):
             # be sure to clean up to avoid silent bugs
             self.data = None
 
-            # call any user specified post-epoch function
-            self.after_eval_epoch()
+        # call any user specified post-epoch function
+        self.after_eval_epoch()
 
     def train_step(self):
         self.optimizer.zero_grad(set_to_none=True)
