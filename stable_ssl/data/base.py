@@ -192,6 +192,11 @@ class DataConfig:
         """
         return {name: d.get_dataloader() for name, d in self.datasets.items()}
 
+    @property
+    def batch_size_train(self):
+        """Return the batch size for training."""
+        return self.datasets[self.train_on].batch_size
+
 
 class Sampler:
     """Apply a list of transforms to an input and return all outputs."""
