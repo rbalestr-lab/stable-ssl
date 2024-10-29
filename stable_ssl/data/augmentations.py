@@ -1,10 +1,11 @@
 from dataclasses import dataclass
-from torchvision.transforms import v2
 import torch
 from PIL import Image
 from io import BytesIO
 import numpy as np
 from scipy.ndimage import zoom as scizoom
+from torchvision.transforms import v2
+from torchvision.transforms.functional import InterpolationMode
 
 # some are from
 # https://github.com/hendrycks/robustness/blob/master/ImageNet-C/imagenet_c/imagenet_c/corruptions.py
@@ -46,6 +47,15 @@ class TransformsConfig:
         return self._transform(x)
 
 
+def get_interpolation_mode(mode_str: str) -> InterpolationMode:
+    try:
+        return InterpolationMode(mode_str)
+    except ValueError:
+        raise ValueError(
+            f"{mode_str} is not a valid interpolation mode. Choose from {list(InterpolationMode)}."
+        )
+
+
 @dataclass
 class TransformConfig:
     """Configuration for the data used for training the model.
@@ -73,6 +83,12 @@ class TransformConfig:
         self.name = name
         self.args = args or []
         self.kwargs = kwargs or {}
+
+        if "interpolation" in self.kwargs:
+            self.kwargs["interpolation"] = get_interpolation_mode(
+                self.kwargs["interpolation"]
+            )
+
         self.p = p
         if self.name is not None:
             if self.name in v2.__dict__:
