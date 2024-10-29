@@ -48,6 +48,7 @@ class TransformsConfig:
 
 
 def get_interpolation_mode(mode_str: str) -> InterpolationMode:
+    """Get the interpolation mode from a string."""
     try:
         return InterpolationMode(mode_str)
     except ValueError:
