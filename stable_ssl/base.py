@@ -242,6 +242,7 @@ class BaseModel(torch.nn.Module):
             try:
                 self.before_train_all_epochs()
                 self._train_all_epochs()
+                self.after_train_all_epochs()
                 self.eval_epoch()  # always eval the model after training
             except BreakAllEpochs:
                 self.cleanup()
@@ -374,19 +375,24 @@ class BaseModel(torch.nn.Module):
             logging.info("No val_loader hence skipping eval epoch.")
             return
 
+        self.eval()  # Set model in eval mode.
+        self.before_eval_epoch()
+        # We do not ensure that the model is still in eval mode to not
+        # override any user desired behavior.
+        if self.training:
+            logging.warning(
+                "Starting eval epoch but model is not in "
+                "eval mode after call to before_eval_epoch()."
+            )
+
+        # Reset the metrics for the epoch.
+        for name, metric in self.metrics.items():
+            if name.startswith("eval/epoch/"):
+                metric.reset()
+
         for name_loader, loader in self.dataloaders.items():
             if name_loader == self.config.data.train_on:
                 continue
-            # set-up model in eval mode + reset metrics
-            self.before_eval_epoch()
-
-            # we do not ensure that the model is still in eval mode to not
-            # override any user desired behavior
-            if self.training:
-                logging.warning(
-                    "Starting eval epoch but model is not in "
-                    "eval mode after call to before_eval_epoch()."
-                )
 
             try:
                 max_steps = len(loader)
@@ -399,16 +405,16 @@ class BaseModel(torch.nn.Module):
                         self.batch_idx = step
                         self.data = to_device(data, self.this_device)
 
-                        # call any user specified pre-step function
+                        # Call any user specified pre-step function.
                         self.before_eval_step()
 
-                        # call the eval step
+                        # Call the eval step.
                         with torch.amp.autocast(
                             "cuda", enabled=self.config.hardware.float16
                         ):
                             self.eval_step(name_loader=name_loader)
 
-                        # call any user specified post-step function
+                        # Call any user specified post-step function.
                         self.after_eval_step()
             except BreakEpoch:
                 logging.info("Eval epoch interrupted by user.")
@@ -416,11 +422,18 @@ class BaseModel(torch.nn.Module):
                 logging.exception("An unexpected error occurred during evaluation.")
                 raise
 
-            # be sure to clean up to avoid silent bugs
+            # Be sure to clean up to avoid silent bugs.
             self.data = None
 
-            # call any user specified post-epoch function
-            self.after_eval_epoch()
+        # Compute the final metrics for the epoch.
+        packet = {}
+        for name, metric in self.metrics.items():
+            if name.startswith("eval/epoch/"):
+                packet[name] = metric.compute()
+        self.log(packet, commit=True)
+
+        # Call any user specified post-epoch function.
+        self.after_eval_epoch()
 
     def train_step(self):
         self.optimizer.zero_grad(set_to_none=True)
@@ -430,13 +443,8 @@ class BaseModel(torch.nn.Module):
         if np.isnan(loss.item()):
             raise NanError
 
-        self.log(
-            {"train/loss": loss.item(), "epoch": self.epoch, "step": self.batch_idx},
-            commit=False,
-        )
-
         self.scaler.scale(loss).backward()
-        # Unscales the gradients of optimizer's assigned params in-place
+        # Unscales the gradients of optimizer's assigned params in-place.
         self.scaler.unscale_(self.optimizer)
         if self.config.optim.grad_max_norm is not None:
             # Since the gradients of optimizer's assigned params are unscaled,
@@ -450,11 +458,12 @@ class BaseModel(torch.nn.Module):
         self.scheduler.step()
         self.log(
             {
+                "train/loss": loss.item(),
                 "train/lr": self.scheduler.get_last_lr()[0],
                 "step": self.batch_idx,
                 "epoch": self.epoch,
             },
-            commit=False,
+            commit=True,
         )
 
     def _set_device(self):
@@ -705,38 +714,34 @@ class BaseModel(torch.nn.Module):
         self._data = value
 
     def before_train_all_epochs(self):
-        return
+        pass
+
+    def after_train_all_epochs(self):
+        pass
 
     def before_train_epoch(self):
-        return
-
-    def before_train_step(self):
-        return
-
-    def after_train_step(self):
-        self.log(commit=True)
+        pass
 
     def after_train_epoch(self):
-        return
+        pass
+
+    def before_train_step(self):
+        pass
+
+    def after_train_step(self):
+        pass
 
     def before_eval_epoch(self):
-        self.eval()
-        for name, metric in self.metrics.items():
-            if name.startswith("eval/epoch/"):
-                metric.reset()
+        pass
 
     def after_eval_epoch(self):
-        packet = {}
-        for name, metric in self.metrics.items():
-            if name.startswith("eval/epoch/"):
-                packet[name] = metric.compute()
-        self.log(packet, commit=True)
+        pass
 
     def before_eval_step(self):
-        return
+        pass
 
     def after_eval_step(self):
-        return
+        pass
 
     def eval_step(self, name_loader):
         output = self.forward(self.data[0])
