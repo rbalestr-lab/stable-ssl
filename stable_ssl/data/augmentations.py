@@ -52,7 +52,8 @@ def get_interpolation_mode(mode_str: str) -> InterpolationMode:
         return InterpolationMode(mode_str)
     except ValueError:
         raise ValueError(
-            f"{mode_str} is not a valid interpolation mode. Choose from {list(InterpolationMode)}."
+            f"{mode_str} is not a valid interpolation mode. "
+            f"Choose from {list(InterpolationMode)}."
         )
 
 
