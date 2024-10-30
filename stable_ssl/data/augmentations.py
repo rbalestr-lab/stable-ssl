@@ -423,7 +423,7 @@ class ZoomBlur(torch.nn.Module):
             np.arange(1, 1.31, 0.03),
         ][self.severity - 1]
 
-        if x.size[0]!=32:
+        if x.size[0] != 32:
             # imagenet needs resize & center-crop before corruption
             x = x.resize((256, 256))
             x = v2.CenterCrop(224)(x)
@@ -461,17 +461,22 @@ class Fog(torch.nn.Module):
             return x
         c = [(1.5, 2), (2.0, 2), (2.5, 1.7), (2.5, 1.5), (3.0, 1.4)][self.severity - 1]
 
-        if x.size[0]==32:
+        if x.size[0] == 32:
             idx = 32
-            mapsize=32
+            mapsize = 32
         else:
-            idx=224
-            mapsize=256
+            idx = 224
+            mapsize = 256
             x = x.resize((256, 256))
             x = v2.CenterCrop(224)(x)
         x = np.array(x) / 255.0
         max_val = x.max()
-        x += c[0] * plasma_fractal(mapsize=mapsize, wibbledecay=c[1])[:idx, :idx][..., np.newaxis]
+        x += (
+            c[0]
+            * plasma_fractal(mapsize=mapsize, wibbledecay=c[1])[:idx, :idx][
+                ..., np.newaxis
+            ]
+        )
         x = np.clip(x * max_val / (max_val + c[0]), 0, 1) * 255
         x = Image.fromarray(np.uint8(x))
         return x
@@ -703,7 +708,7 @@ class Pixelate(torch.nn.Module):
         # x: PIL.Image
         #     Needs to be a PIL image in the range (0-255)
         # """
-        self.size = x.size[0] if x.size[0]==32 else 224 # cifar or imagenet
+        self.size = x.size[0] if x.size[0] == 32 else 224  # cifar or imagenet
         if self.severity == 0:
             return x
         c = [0.6, 0.5, 0.4, 0.3, 0.25][self.severity - 1]
