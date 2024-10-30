@@ -144,8 +144,8 @@ class DatasetConfig:
             num_workers=num_workers,
             pin_memory=True,
             sampler=self.sampler,
-            shuffle=self.shuffle and sampler is None,
-            drop_last=self.drop_last and sampler is None,
+            shuffle=self.shuffle and self.sampler is None,
+            drop_last=self.drop_last and self.sampler is None,
         )
 
         return loader
