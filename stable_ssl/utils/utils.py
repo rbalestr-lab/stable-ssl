@@ -44,15 +44,16 @@ def setup_distributed(args):
         host_name = subprocess.check_output(cmd).decode().splitlines()[0]
         dist_url = f"tcp://{host_name}:{args.port}"
     else:
-        dist_url = f"tcp://localhost:{args.port}"
+        host_name = "localhost"
+        dist_url = f"tcp://{host_name}:{args.port}"
     logging.info(f"Process group:\n\t{dist_env.num_tasks} tasks")
     logging.info(f"\tmaster: {dist_url}")
     logging.info(f"\trank: {dist_env.global_rank}")
     logging.info(f"\tworld size: {dist_env.num_nodes*dist_env.num_tasks}")
     logging.info(f"\tlocal rank: {dist_env.local_rank}")
-    # ToDo ?
-    # os.environ["MASTER_ADDR"] = cluster_environment.main_address
-    # os.environ["MASTER_PORT"] = str(cluster_environment.main_port)
+
+    os.environ["MASTER_ADDR"] = host_name
+    os.environ["MASTER_PORT"] = args.port
     if not torch.distributed.is_available():
         raise RuntimeError(
             "torch.distributed is not available. Cannot initialize "
