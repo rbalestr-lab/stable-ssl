@@ -33,7 +33,7 @@ class BarlowTwins(JETrainer):
         c = self.bn(z1).T @ self.bn(z2)
 
         # Sum the cross-correlation matrix between all gpus.
-        c.div_(self.config.data.batch_size_train)
+        c.div_(self.config.data.train_dataset.batch_size)
         torch.distributed.all_reduce(c)
 
         on_diag = torch.diagonal(c).add_(-1).pow_(2).sum()

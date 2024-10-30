@@ -280,8 +280,7 @@ class BaseModel(torch.nn.Module):
     def _train_all_epochs(self):
         while self.epoch < self.config.optim.epochs:
 
-            if hasattr(self, "train_sampler"):
-                self.train_sampler.set_epoch(self.epoch)
+            self.config.data.set_epoch_train_sampler(epoch)
 
             try:
                 self._train_epoch()
