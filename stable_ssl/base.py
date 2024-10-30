@@ -245,8 +245,12 @@ class BaseModel(torch.nn.Module):
                 self.after_train_all_epochs()
                 self.eval_epoch()  # always eval the model after training
             except BreakAllEpochs:
-                self.cleanup()
+                logging.exception("Exception during training (self.evaluate).")
+                raise
+            if self.use_wandb and (wandb is not None):
                 wandb.finish()
+            self.cleanup()
+
 
     def initialize_metrics(self):
         nc = self.config.data.datasets[self.config.data.train_on].num_classes
@@ -311,8 +315,6 @@ class BaseModel(torch.nn.Module):
             )
         # Remove any temporary checkpoint.
         (self.config.log.dump_path / "tmp_checkpoint.ckpt").unlink(missing_ok=True)
-
-        wandb.finish()
 
     def _train_epoch(self):
 
