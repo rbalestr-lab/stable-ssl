@@ -129,11 +129,14 @@ class DatasetConfig:
                 num_workers = int(os.environ.get("SLURM_JOB_CPUS_PER_NODE", 1))
             else:
                 num_workers = os.cpu_count()
+            # the pattern of use is to have n_tasks=n_gpus,
+            # hence all of cpus per task/node are available to gpus.
+            # if torch.distributed.is_available() and \
+            #     torch.distributed.is_initialized():
+            #     num_workers = max(num_workers // world_size, 1)  # workers per GPU
             logging.info(
                 f"Using {num_workers} workers (maximum available) for data loading."
             )
-            if torch.distributed.is_available() and torch.distributed.is_initialized():
-                num_workers = max(num_workers // world_size, 1)  # workers per GPU
 
         else:
             num_workers = self.num_workers

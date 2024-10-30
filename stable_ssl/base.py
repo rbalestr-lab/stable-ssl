@@ -154,7 +154,9 @@ class BaseModel(torch.nn.Module):
 
         # Set up the dataloaders.
         logging.info("Creating dataloaders.")
-        dataloaders = self.config.data.get_dataloaders()
+        dataloaders = self.config.data.get_dataloaders(
+            world_size=self.config.hardware.world_size
+        )
         for name, loader in dataloaders.items():
             logging.info(f"\t=> Found dataloader `{name}` with length {len(loader)}.")
         if self.config.log.eval_only:
@@ -171,7 +173,7 @@ class BaseModel(torch.nn.Module):
         logging.info("Calling initialize_modules() method.")
         self.initialize_modules()
 
-        # Set up the metrics. Should be implemented by the child class.
+        # Set up fthe metrics. Should be implemented by the child class.
         if hasattr(self, "metrics"):
             raise RuntimeError(
                 "You can't assign any value to `self.metrics`, this will be "
@@ -250,7 +252,6 @@ class BaseModel(torch.nn.Module):
             if self.use_wandb and (wandb is not None):
                 wandb.finish()
             self.cleanup()
-
 
     def initialize_metrics(self):
         nc = self.config.data.datasets[self.config.data.train_on].num_classes
