@@ -98,7 +98,7 @@ class DatasetConfig:
             transform=Sampler(self.transforms),
         )
 
-    def get_dataloader(self):
+    def get_dataloader(self, world_size=1):
         """Return a DataLoader for the dataset.
 
         Returns
@@ -108,18 +108,19 @@ class DatasetConfig:
         """
         dataset = self.get_dataset()
 
-        # FIXME: handle those cases
-        # if self.config.hardware.world_size > 1:
-        #     sampler = torch.utils.data.distributed.DistributedSampler(
-        #         dataset, shuffle=not train, drop_last=train
-        #     )
-        #     assert self.config.optim.batch_size % self.config.hardware.world_size == 0
-        # else:
-        #     sampler = None
+        if world_size > 1:
+            sampler = torch.utils.data.distributed.DistributedSampler(dataset)
+        else:
+            sampler = None
 
-        # per_device_batch_size = (
-        #     self.config.optim.batch_size // self.config.hardware.world_size
-        # )
+        if self.batch_size % world_size != 0:
+            logging.warning(
+                f"Batch size ({self.batch_size}) is not divisible by world size "
+                f"({world_size}). Setting per-device batch size to "
+                f"{self.batch_size // world_size}."
+            )
+        per_device_batch_size = self.batch_size // world_size
+
         if self.num_workers == -1:
             if os.environ.get("SLURM_JOB_ID"):
                 num_workers = int(os.environ.get("SLURM_JOB_CPUS_PER_NODE", 1))
@@ -182,7 +183,7 @@ class DataConfig:
         """
         return {name: d.get_dataset() for name, d in self.datasets.items()}
 
-    def get_dataloaders(self):
+    def get_dataloaders(self, world_size=1):
         """Get dataloaders for the datasets.
 
         Returns
@@ -190,7 +191,10 @@ class DataConfig:
         dict
             A dictionary containing dataloaders.
         """
-        return {name: d.get_dataloader() for name, d in self.datasets.items()}
+        return {
+            name: d.get_dataloader(world_size=world_size)
+            for name, d in self.datasets.items()
+        }
 
     @property
     def batch_size_train(self):
