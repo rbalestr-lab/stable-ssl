@@ -42,39 +42,41 @@ def setup_distributed(args):
     logging.info("Exporting PyTorch distributed environment variables.")
     # logging.info(f"Launching with: {args.launcher}.")
 
-    submitit_env = submitit.JobEnvironment()
-    world_size = submitit_env.num_nodes * submitit_env.num_tasks
-    dist_env = {
-        "num_tasks": world_size,
-        "global_rank": submitit_env.global_rank,
-        "local_rank": submitit_env.local_rank,
-    }
-
-    if "SLURM_JOB_NODELIST" in os.environ:
-        logging.info("SLURM detected!")
-        # slurm manager being used irrespective of hydra
-        cmd = ["scontrol", "show", "hostnames", os.getenv("SLURM_JOB_NODELIST")]
-        host_name = subprocess.check_output(cmd).decode().splitlines()[0]
-        # dist_env = {
-        #     "num_tasks": int(os.getenv("SLURM_NTASKS", 1)),
-        #     "global_rank": int(os.getenv("SLURM_PROCID", 0)),
-        #     "local_rank": int(os.getenv("SLURM_LOCALID", 0)),
-        # }
-        # world_size = dist_env.get("num_tasks", 1)
-    else:
-        logging.info("Running on local machine!")
-        # local host being used irrespective of hydra
-        host_name = "localhost"
-        # cmd = "nvidia-smi --query-gpu=name --format=csv,noheader | wc -l"
-        # num_gpus = subprocess.check_output(cmd, shell=True).decode().splitlines()[0]
-        # # find other procs, sort them based on their pid and then assign ranks
-        # rank = find_local_rank()
-        # dist_env = {
-        #     "num_tasks": int(num_gpus),
-        #     "global_rank": rank,
-        #     "local_rank": rank,
-        # }
-        # world_size = dist_env.get("num_tasks", 1)
+    try:
+        submitit_env = submitit.JobEnvironment()
+        world_size = submitit_env.num_nodes * submitit_env.num_tasks
+        dist_env = {
+            "num_tasks": world_size,
+            "global_rank": submitit_env.global_rank,
+            "local_rank": submitit_env.local_rank,
+        }
+    except Exception as e:
+        logging.warning(f"Submitit environment not detected: {e}")
+        if "SLURM_JOB_NODELIST" in os.environ:
+            logging.info("SLURM detected!")
+            # slurm manager being used irrespective of hydra
+            cmd = ["scontrol", "show", "hostnames", os.getenv("SLURM_JOB_NODELIST")]
+            host_name = subprocess.check_output(cmd).decode().splitlines()[0]
+            dist_env = {
+                "num_tasks": int(os.getenv("SLURM_NTASKS", 1)),
+                "global_rank": int(os.getenv("SLURM_PROCID", 0)),
+                "local_rank": int(os.getenv("SLURM_LOCALID", 0)),
+            }
+            world_size = dist_env.get("num_tasks", 1)
+        else:
+            logging.info("Running on local machine!")
+            # local host being used irrespective of hydra
+            host_name = "localhost"
+            cmd = "nvidia-smi --query-gpu=name --format=csv,noheader | wc -l"
+            num_gpus = subprocess.check_output(cmd, shell=True).decode().splitlines()[0]
+            # find other procs, sort them based on their pid and then assign ranks
+            rank = find_local_rank()
+            dist_env = {
+                "num_tasks": int(num_gpus),
+                "global_rank": rank,
+                "local_rank": rank,
+            }
+            world_size = dist_env.get("num_tasks", 1)
 
     if dist_env.get("global_rank", 0) == 0:
         dist_url = f"tcp://{host_name}:{args.port}"
