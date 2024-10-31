@@ -41,6 +41,7 @@ def setup_distributed(args, launcher="submitit_local"):
     logging.info("Setting up Distributed model...")
     logging.info("exporting PyTorch distributed environment variables")
     dist_env = None
+    logging.info(f"Launcher: {launcher}")
     if launcher is not None and "submitit" in launcher:
         # hydra's laucher pluging being used
         logging.info(f"Launching with {launcher}!")
@@ -48,6 +49,7 @@ def setup_distributed(args, launcher="submitit_local"):
         world_size = dist_env.num_nodes * dist_env.num_tasks
 
     if "SLURM_JOB_NODELIST" in os.environ:
+        logging.info("SLURM detected!")
         # slurm manager being used irrespective of hydra
         cmd = ["scontrol", "show", "hostnames", os.getenv("SLURM_JOB_NODELIST")]
         host_name = subprocess.check_output(cmd).decode().splitlines()[0]
@@ -59,6 +61,7 @@ def setup_distributed(args, launcher="submitit_local"):
             }
             world_size = dist_env.get("num_tasks", 1)
     else:
+        logging.info("Running on local machine!")
         # local host being used irrespective of hydra
         host_name = "127.0.0.1"
         if dist_env is None:
@@ -80,6 +83,7 @@ def setup_distributed(args, launcher="submitit_local"):
         with open("dist_url.txt", "w") as f:
             f.write(dist_url)
     else:
+        logging.info("\tWorker Proc: waiting for main proc")
         # wait for the master to write the port file
         timeout = 300  # seconds
         start_time = time.time()
@@ -98,6 +102,8 @@ def setup_distributed(args, launcher="submitit_local"):
     os.environ["MASTER_ADDR"] = host_name
     os.environ["MASTER_PORT"] = str(args.port)
 
+    logging.info(f"MASTER_ADDR:\n\t{os.getenv['MASTER_ADDR']}")
+    logging.info(f"MASTER_PORT:\n\t{os.getenv['MASTER_PORT']}")
     logging.info(f"Process group:\n\t{dist_env.get('num_tasks', 1)} tasks")
     logging.info(f"\tmaster: {dist_url}")
     logging.info(f"\trank: {dist_env.get('global_rank', 0)}")
