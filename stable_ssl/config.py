@@ -112,23 +112,51 @@ class HardwareConfig:
         Random seed for reproducibility. Default is None.
     float16 : bool, optional
         Whether to use mixed precision (float16) for training. Default is False.
-    gpu : int, optional
+    gpu_id : int, optional
         GPU device ID to use for training. Default is 0.
     world_size : int, optional
         Number of processes participating in distributed training. Default is 1.
     port : int, optional
         Local proc's port number for distributed training. Default is None.
+    launcher: str, optional
+        Distributed training launcher. Default is "local".
+        Pick from "torch_distributed", "submitit_local", "submitit_slurm".
+    cpus_per_task: int, optional
+        Number of CPUs per task for distributed training. Default is 1.
+    gpus_per_task: int, optional
+        Number of GPUs per task for distributed training. Default is 1.
+    tasks_per_node: int, optional
+        Number of tasks per node for distributed training. Default is 1.
+    timeout_min: int, optional
+        Timeout in minutes for distributed training. Default is 60.
+    partition: str, optional
+        Partition to use for distributed training. Default is "gpu".
+    mem_gb: int, optional
+        Memory in GB to allocate for distributed training per task. Default is 30.
     """
 
     seed: Optional[int] = None
     float16: bool = False
-    gpu: int = 0
+    gpu_id: int = 0
     world_size: int = 1
     port: Optional[int] = None
+    launcher: str = "torch_distributed"
+    cpus_per_task: int = 1
+    gpus_per_task: int = 1
+    tasks_per_node: int = 1
+    timeout_min: int = 60
+    partition: str = "gpu"
+    mem_gb: int = 30
 
     def __post_init__(self):
         """Set a random port for distributed training if not provided."""
         self.port = self.port or get_open_port()
+        assert self.world_size == self.tasks_per_node * self.gpus_per_task
+        assert self.launcher in [
+            "submitit_slurm",
+            "submitit_local",
+            "torch_distributed"
+        ]
 
 
 @dataclass

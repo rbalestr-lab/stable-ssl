@@ -18,7 +18,6 @@ import socket
 import torch.distributed as dist
 import submitit
 import torch
-from hydra.core.hydra_config import HydraConfig
 
 
 class FullGatherLayer(torch.autograd.Function):
@@ -43,12 +42,12 @@ def setup_distributed(args):
     logging.info("exporting PyTorch distributed environment variables")
 
     dist_env = None
-    launcher = HydraConfig.get().runtime.choices["hydra/launcher"]
-    logging.info(f"Launcher: {launcher}")
+    logging.info(f"Launching with: {args.launcher}")
 
-    if launcher is not None and "submitit" in launcher:
+    if args.launcher is not None and "submitit" in args.launcher:
         # hydra's laucher pluging being used
-        logging.info(f"Launching with {launcher}!")
+        logging.info("Using submitit to request resources.")
+        # TODO: set the environment variables for submitit using args
         submitit_env = submitit.JobEnvironment()
         world_size = submitit_env.num_nodes * submitit_env.num_tasks
         dist_env = {
@@ -56,6 +55,11 @@ def setup_distributed(args):
             "global_rank": submitit_env.global_rank,
             "local_rank": submitit_env.local_rank,
         }
+    else:
+        logging.info(
+            "Using the already allocated resources {args}\
+                (slurm/local) to spawn distributed procs."
+        )
 
     if "SLURM_JOB_NODELIST" in os.environ:
         logging.info("SLURM detected!")
@@ -96,6 +100,7 @@ def setup_distributed(args):
         # wait for the master to write the port file
         timeout = 300  # seconds
         start_time = time.time()
+        # TODO: is the dist_url.txt available to all?
         while not os.path.exists("dist_url.txt"):
             elapsed_time = time.time() - start_time
             if elapsed_time > timeout:

@@ -105,6 +105,9 @@ class BaseModel(torch.nn.Module):
     def __init__(self, config, *args, **kwargs):
         super().__init__()
 
+    def __post_init__(self):
+        self._set_device()
+
     @abstractmethod
     def initialize_modules(self):
         """Initialize the modules required for the model."""
@@ -150,7 +153,6 @@ class BaseModel(torch.nn.Module):
             )
 
         self.scaler = torch.amp.GradScaler("cuda", enabled=self.config.hardware.float16)
-        self._set_device()
 
         # Set up the dataloaders.
         logging.info("Creating dataloaders.")
