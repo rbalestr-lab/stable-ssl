@@ -18,6 +18,7 @@ import socket
 import torch.distributed as dist
 import submitit
 import torch
+from hydra.core.hydra_config import HydraConfig
 
 
 class FullGatherLayer(torch.autograd.Function):
@@ -36,17 +37,25 @@ class FullGatherLayer(torch.autograd.Function):
         return all_gradients[dist.get_rank()]
 
 
-def setup_distributed(args, launcher="submitit_local"):
+def setup_distributed(args):
     """Set up the distributed environment for PyTorch."""
     logging.info("Setting up Distributed model...")
     logging.info("exporting PyTorch distributed environment variables")
+
     dist_env = None
+    launcher = HydraConfig.get().runtime.choices['hydra/launcher']
     logging.info(f"Launcher: {launcher}")
+
     if launcher is not None and "submitit" in launcher:
         # hydra's laucher pluging being used
         logging.info(f"Launching with {launcher}!")
-        dist_env = submitit.JobEnvironment()
-        world_size = dist_env.num_nodes * dist_env.num_tasks
+        submitit_env = submitit.JobEnvironment()
+        world_size = submitit_env.num_nodes * submitit_env.num_tasks
+        dist_env = {
+                "num_tasks": world_size,
+                "global_rank": submitit_env.global_rank,
+                "local_rank": submitit_env.local_rank,
+            }
 
     if "SLURM_JOB_NODELIST" in os.environ:
         logging.info("SLURM detected!")
