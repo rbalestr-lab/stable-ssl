@@ -40,8 +40,6 @@ def setup_distributed(args):
     """Set up the distributed environment for PyTorch."""
     logging.info("Setting up Distributed model.")
     logging.info("Exporting PyTorch distributed environment variables.")
-
-    dist_env = None
     logging.info(f"Launching with: {args.launcher}.")
 
     if "submitit" in args.launcher:
@@ -60,24 +58,22 @@ def setup_distributed(args):
             "Using the already allocated resources {args}\
                 (slurm/local) to spawn distributed procs."
         )
-
-    if "SLURM_JOB_NODELIST" in os.environ:
-        logging.info("SLURM detected!")
-        # slurm manager being used irrespective of hydra
-        cmd = ["scontrol", "show", "hostnames", os.getenv("SLURM_JOB_NODELIST")]
-        host_name = subprocess.check_output(cmd).decode().splitlines()[0]
-        if dist_env is None:
+        
+        if "SLURM_JOB_NODELIST" in os.environ:
+            logging.info("SLURM detected!")
+            # slurm manager being used irrespective of hydra
+            cmd = ["scontrol", "show", "hostnames", os.getenv("SLURM_JOB_NODELIST")]
+            host_name = subprocess.check_output(cmd).decode().splitlines()[0]
             dist_env = {
                 "num_tasks": int(os.getenv("SLURM_NTASKS", 1)),
                 "global_rank": int(os.getenv("SLURM_PROCID", 0)),
                 "local_rank": int(os.getenv("SLURM_LOCALID", 0)),
             }
             world_size = dist_env.get("num_tasks", 1)
-    else:
-        logging.info("Running on local machine!")
-        # local host being used irrespective of hydra
-        host_name = "127.0.0.1"
-        if dist_env is None:
+        else:
+            logging.info("Running on local machine!")
+            # local host being used irrespective of hydra
+            host_name = "localhost"
             cmd = "nvidia-smi --query-gpu=name --format=csv,noheader | wc -l"
             num_gpus = subprocess.check_output(cmd, shell=True).decode().splitlines()[0]
             # find other procs, sort them based on their pid and then assign ranks
