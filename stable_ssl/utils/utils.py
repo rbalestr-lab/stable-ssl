@@ -43,7 +43,7 @@ def setup_distributed(args):
     logging.info("exporting PyTorch distributed environment variables")
 
     dist_env = None
-    launcher = HydraConfig.get().runtime.choices['hydra/launcher']
+    launcher = HydraConfig.get().runtime.choices["hydra/launcher"]
     logging.info(f"Launcher: {launcher}")
 
     if launcher is not None and "submitit" in launcher:
@@ -52,10 +52,10 @@ def setup_distributed(args):
         submitit_env = submitit.JobEnvironment()
         world_size = submitit_env.num_nodes * submitit_env.num_tasks
         dist_env = {
-                "num_tasks": world_size,
-                "global_rank": submitit_env.global_rank,
-                "local_rank": submitit_env.local_rank,
-            }
+            "num_tasks": world_size,
+            "global_rank": submitit_env.global_rank,
+            "local_rank": submitit_env.local_rank,
+        }
 
     if "SLURM_JOB_NODELIST" in os.environ:
         logging.info("SLURM detected!")

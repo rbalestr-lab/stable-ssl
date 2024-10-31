@@ -153,11 +153,6 @@ class DatasetConfig:
 
         return loader
 
-    @property
-    def sampler(self):
-        """Return the sampler for the dataset."""
-        return self.sampler
-
 
 @dataclass
 class DataConfig:
