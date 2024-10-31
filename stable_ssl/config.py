@@ -13,10 +13,9 @@ import logging
 from omegaconf import OmegaConf
 from pathlib import Path
 from datetime import datetime
-import random
 import torch
 
-from .utils import LARS
+from .utils import LARS, get_open_port
 from .joint_embedding import (
     BarlowTwinsConfig,
     SimCLRConfig,
@@ -118,7 +117,7 @@ class HardwareConfig:
     world_size : int, optional
         Number of processes participating in distributed training. Default is 1.
     port : int, optional
-        Port number for distributed training. Default is None.
+        Local proc's port number for distributed training. Default is None.
     """
 
     seed: Optional[int] = None
@@ -129,7 +128,7 @@ class HardwareConfig:
 
     def __post_init__(self):
         """Set a random port for distributed training if not provided."""
-        self.port = self.port or random.randint(49152, 65535)
+        self.port = self.port or get_open_port()
 
 
 @dataclass

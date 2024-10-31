@@ -9,10 +9,12 @@
 
 import random
 import os
+import time
 import numpy as np
 import subprocess
-from time import time
 import logging
+from contextlib import closing
+import socket
 import torch.distributed as dist
 import submitit
 import torch
@@ -62,7 +64,8 @@ def setup_distributed(args, launcher="submitit_local"):
         if dist_env is None:
             cmd = "nvidia-smi --query-gpu=name --format=csv,noheader | wc -l"
             num_gpus = subprocess.check_output(cmd, shell=True).decode().splitlines()[0]
-            rank = 0  # hardcoding rank to 0 for local host
+            # find other procs, sort them based on their pid and then assign ranks
+            rank = find_local_rank()
             dist_env = {
                 "num_tasks": int(num_gpus),
                 "global_rank": rank,
@@ -75,8 +78,29 @@ def setup_distributed(args, launcher="submitit_local"):
     logging.info(f"\tworld size: {world_size}")
     logging.info(f"\tlocal rank: {dist_env.get('local_rank', 0)}")
 
-    os.environ["MASTER_ADDR"] = host_name
-    os.environ["MASTER_PORT"] = args.port
+    if dist_env.get("global_rank", 0) == 0:
+        os.environ["MASTER_ADDR"] = host_name
+        os.environ["MASTER_PORT"] = str(args.port)
+        logging.info(f"\tMain Proc: {dist_url}")
+        # write to a special port file
+        with open("dist_url.txt", "w") as f:
+            f.write(dist_url)
+    else:
+        # wait for the master to write the port file
+        timeout = 300  # seconds
+        start_time = time.time()
+        while not os.path.exists("dist_url.txt"):
+            elapsed_time = time.time() - start_time
+            if elapsed_time > timeout:
+                raise TimeoutError(
+                    "Timed out waiting for the master to write the port file."
+                )
+            time.sleep(1)
+        with open("dist_url.txt", "r") as f:
+            dist_url = f.read().strip()
+        os.environ["MASTER_ADDR"] = dist_url.split(":")[1].replace("/", "")
+        os.environ["MASTER_PORT"] = dist_url.split(":")[2]
+
     if not torch.distributed.is_available():
         raise RuntimeError(
             "torch.distributed is not available. Cannot initialize "
@@ -116,7 +140,7 @@ def count_SLURM_jobs(pending=True, running=True):
 def seed_everything(seed, fast=True):
     """Seed all random number generators."""
     if seed is None:
-        seed = int(time())
+        seed = int(time.time())
     random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
     np.random.seed(seed)
@@ -178,3 +202,36 @@ def off_diagonal(x):
     n, m = x.shape
     assert n == m
     return x.flatten()[:-1].view(n - 1, n + 1)[:, 1:].flatten()
+
+
+def get_open_port():
+    """Request the OS for any unusued port."""
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(("", 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        return s.getsockname()[1]
+
+
+def find_local_rank():
+    """Find the local rank of the current process.
+
+    Find other procs with the same start command,
+    sort them based on their pid and then assign ranks.
+    Return the rank of the current process.
+    """
+    current_pid = os.getpid()
+    cmd = f"ps -p {current_pid} -o command="
+    current_command = subprocess.check_output(cmd, shell=True).decode().strip()
+
+    cmd = f"ps -eo pid,command | grep '{current_command}' | grep -v grep"
+    processes = subprocess.check_output(cmd, shell=True).decode().splitlines()
+    processes = [p.split(None, 1) for p in processes]
+    processes = [(int(p[0]), p[1:]) for p in processes]
+    processes = sorted(processes, key=lambda x: x[0])
+
+    rank = 0
+    for p in processes:
+        if p[0] == current_pid:
+            break
+        rank += 1
+    return rank
