@@ -43,13 +43,14 @@ def setup_distributed(args, launcher="submitit_local"):
     dist_env = None
     if launcher is not None and "submitit" in launcher:
         # hydra's laucher pluging being used
+        logging.info(f"Launching with {launcher}!")
         dist_env = submitit.JobEnvironment()
         world_size = dist_env.num_nodes * dist_env.num_tasks
+
     if "SLURM_JOB_NODELIST" in os.environ:
         # slurm manager being used irrespective of hydra
         cmd = ["scontrol", "show", "hostnames", os.getenv("SLURM_JOB_NODELIST")]
         host_name = subprocess.check_output(cmd).decode().splitlines()[0]
-        dist_url = f"tcp://{host_name}:{args.port}"
         if dist_env is None:
             dist_env = {
                 "num_tasks": int(os.getenv("SLURM_NTASKS", 1)),
@@ -60,7 +61,6 @@ def setup_distributed(args, launcher="submitit_local"):
     else:
         # local host being used irrespective of hydra
         host_name = "localhost"
-        dist_url = f"tcp://{host_name}:{args.port}"
         if dist_env is None:
             cmd = "nvidia-smi --query-gpu=name --format=csv,noheader | wc -l"
             num_gpus = subprocess.check_output(cmd, shell=True).decode().splitlines()[0]
@@ -72,15 +72,11 @@ def setup_distributed(args, launcher="submitit_local"):
                 "local_rank": rank,
             }
             world_size = dist_env.get("num_tasks", 1)
-    logging.info(f"Process group:\n\t{dist_env.get('num_tasks', 1)} tasks")
-    logging.info(f"\tmaster: {dist_url}")
-    logging.info(f"\trank: {dist_env.get('global_rank', 0)}")
-    logging.info(f"\tworld size: {world_size}")
-    logging.info(f"\tlocal rank: {dist_env.get('local_rank', 0)}")
 
     if dist_env.get("global_rank", 0) == 0:
         os.environ["MASTER_ADDR"] = host_name
         os.environ["MASTER_PORT"] = str(args.port)
+        dist_url = f"tcp://{host_name}:{args.port}"
         logging.info(f"\tMain Proc: {dist_url}")
         # write to a special port file
         with open("dist_url.txt", "w") as f:
@@ -100,6 +96,12 @@ def setup_distributed(args, launcher="submitit_local"):
             dist_url = f.read().strip()
         os.environ["MASTER_ADDR"] = dist_url.split(":")[1].replace("/", "")
         os.environ["MASTER_PORT"] = dist_url.split(":")[2]
+
+    logging.info(f"Process group:\n\t{dist_env.get('num_tasks', 1)} tasks")
+    logging.info(f"\tmaster: {dist_url}")
+    logging.info(f"\trank: {dist_env.get('global_rank', 0)}")
+    logging.info(f"\tworld size: {world_size}")
+    logging.info(f"\tlocal rank: {dist_env.get('local_rank', 0)}")
 
     if not torch.distributed.is_available():
         raise RuntimeError(
