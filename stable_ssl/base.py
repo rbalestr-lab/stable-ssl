@@ -103,10 +103,8 @@ class BaseModel(torch.nn.Module):
         return trainer
 
     def __init__(self, config, *args, **kwargs):
-        super().__init__()
-
-    def __post_init__(self):
         self._set_device()
+        super().__init__()
 
     @abstractmethod
     def initialize_modules(self):
@@ -203,7 +201,7 @@ class BaseModel(torch.nn.Module):
                 has_parameters = True
             if self.config.hardware.world_size > 1 and has_parameters:
                 module = torch.nn.parallel.DistributedDataParallel(
-                    module, device_ids=[self.config.hardware.gpu]
+                    module, device_ids=[self.config.hardware.gpu_id]
                 )
             setattr(self, name, module)
 
@@ -479,7 +477,7 @@ class BaseModel(torch.nn.Module):
         try:
             # Setup distributed hardware configuration.
             self.config.hardware = setup_distributed(self.config.hardware)
-            self._device = f"cuda:{self.config.hardware.gpu}"
+            self._device = f"cuda:{self.config.hardware.gpu_id}"
         except RuntimeError:
             # Log the error and set the device to default GPU (cuda:0) as a fallback.
             logging.exception(
@@ -487,11 +485,11 @@ class BaseModel(torch.nn.Module):
                 "Falling back to default GPU configuration."
             )
             self._device = "cuda:0"
-            self.config.hardware.gpu = 0
+            self.config.hardware.gpu_id = 0
             self.config.hardware.world_size = 1
 
         # Set the CUDA device.
-        torch.cuda.set_device(self.config.hardware.gpu)
+        torch.cuda.set_device(self.config.hardware.gpu_id)
 
     def checkpoint(self):
         # the checkpoint method is called asynchroneously when the slurm manager

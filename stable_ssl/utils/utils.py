@@ -58,7 +58,7 @@ def setup_distributed(args):
             "Using the already allocated resources {args}\
                 (slurm/local) to spawn distributed procs."
         )
-        
+
         if "SLURM_JOB_NODELIST" in os.environ:
             logging.info("SLURM detected!")
             # slurm manager being used irrespective of hydra
@@ -112,8 +112,8 @@ def setup_distributed(args):
     os.environ["MASTER_ADDR"] = host_name
     os.environ["MASTER_PORT"] = str(args.port)
 
-    logging.info(f"MASTER_ADDR:\n\t{os.getenv['MASTER_ADDR']}")
-    logging.info(f"MASTER_PORT:\n\t{os.getenv['MASTER_PORT']}")
+    logging.info(f"MASTER_ADDR:\n\t{os.getenv('MASTER_ADDR')}")
+    logging.info(f"MASTER_PORT:\n\t{os.getenv('MASTER_PORT')}")
     logging.info(f"Process group:\n\t{dist_env.get('num_tasks', 1)} tasks")
     logging.info(f"\tmaster: {dist_url}")
     logging.info(f"\trank: {dist_env.get('global_rank', 0)}")
