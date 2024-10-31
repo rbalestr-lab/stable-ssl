@@ -34,23 +34,46 @@ class FullGatherLayer(torch.autograd.Function):
         return all_gradients[dist.get_rank()]
 
 
-def setup_distributed(args):
+def setup_distributed(args, launcher="submitit_local"):
     """Set up the distributed environment for PyTorch."""
     logging.info("Setting up Distributed model...")
     logging.info("exporting PyTorch distributed environment variables")
-    dist_env = submitit.JobEnvironment()
+    dist_env = None
+    if launcher is not None and "submitit" in launcher:
+        # hydra's laucher pluging being used
+        dist_env = submitit.JobEnvironment()
+        world_size = dist_env.num_nodes * dist_env.num_tasks
     if "SLURM_JOB_NODELIST" in os.environ:
+        # slurm manager being used irrespective of hydra
         cmd = ["scontrol", "show", "hostnames", os.getenv("SLURM_JOB_NODELIST")]
         host_name = subprocess.check_output(cmd).decode().splitlines()[0]
         dist_url = f"tcp://{host_name}:{args.port}"
+        if dist_env is None:
+            dist_env = {
+                "num_tasks": int(os.getenv("SLURM_NTASKS", 1)),
+                "global_rank": int(os.getenv("SLURM_PROCID", 0)),
+                "local_rank": int(os.getenv("SLURM_LOCALID", 0)),
+            }
+            world_size = dist_env.get("num_tasks", 1)
     else:
+        # local host being used irrespective of hydra
         host_name = "localhost"
         dist_url = f"tcp://{host_name}:{args.port}"
-    logging.info(f"Process group:\n\t{dist_env.num_tasks} tasks")
+        if dist_env is None:
+            cmd = "nvidia-smi --query-gpu=name --format=csv,noheader | wc -l"
+            num_gpus = subprocess.check_output(cmd, shell=True).decode().splitlines()[0]
+            rank = 0  # hardcoding rank to 0 for local host
+            dist_env = {
+                "num_tasks": int(num_gpus),
+                "global_rank": rank,
+                "local_rank": rank,
+            }
+            world_size = dist_env.get("num_tasks", 1)
+    logging.info(f"Process group:\n\t{dist_env.get('num_tasks', 1)} tasks")
     logging.info(f"\tmaster: {dist_url}")
-    logging.info(f"\trank: {dist_env.global_rank}")
-    logging.info(f"\tworld size: {dist_env.num_nodes*dist_env.num_tasks}")
-    logging.info(f"\tlocal rank: {dist_env.local_rank}")
+    logging.info(f"\trank: {dist_env.get('global_rank', 0)}")
+    logging.info(f"\tworld size: {world_size}")
+    logging.info(f"\tlocal rank: {dist_env.get('local_rank', 0)}")
 
     os.environ["MASTER_ADDR"] = host_name
     os.environ["MASTER_PORT"] = args.port
@@ -63,15 +86,13 @@ def setup_distributed(args):
         torch.distributed.init_process_group(
             "nccl",
             init_method=dist_url,
-            rank=dist_env.global_rank,
-            world_size=dist_env.num_nodes * dist_env.num_tasks,
+            rank=dist_env.get("global_rank", 0),
+            world_size=world_size,
         )
-        args.world_size = dist_env.num_nodes * dist_env.num_tasks
-        args.gpu = dist_env.local_rank
-        assert dist_env.global_rank == torch.distributed.get_rank()
-        assert (
-            dist_env.num_nodes * dist_env.num_tasks
-        ) == torch.distributed.get_world_size()
+        args.world_size = world_size
+        args.gpu = dist_env.get("local_rank", 0)
+        assert dist_env.get("global_rank", 0) == torch.distributed.get_rank()
+        assert (world_size) == torch.distributed.get_world_size()
     return args
 
 

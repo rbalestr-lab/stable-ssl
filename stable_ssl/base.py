@@ -476,7 +476,9 @@ class BaseModel(torch.nn.Module):
 
         try:
             # Setup distributed hardware configuration.
-            self.config.hardware = setup_distributed(self.config.hardware)
+            self.config.hardware = setup_distributed(
+                self.config.hardware, launcher=self.hydra.get("launcher", None)
+            )
             self._device = f"cuda:{self.config.hardware.gpu}"
         except RuntimeError:
             # Log the error and set the device to default GPU (cuda:0) as a fallback.
