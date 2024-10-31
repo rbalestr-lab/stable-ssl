@@ -140,23 +140,23 @@ class HardwareConfig:
     gpu_id: int = 0
     world_size: int = 1
     port: Optional[int] = None
-    launcher: str = "torch_distributed"
-    cpus_per_task: int = 1
-    gpus_per_task: int = 1
-    tasks_per_node: int = 1
-    timeout_min: int = 60
-    partition: str = "gpu"
-    mem_gb: int = 30
+    # launcher: str = "torch_distributed"
+    # cpus_per_task: int = 1
+    # gpus_per_task: int = 1
+    # tasks_per_node: int = 1
+    # timeout_min: int = 60
+    # partition: str = "gpu"
+    # mem_gb: int = 30
 
     def __post_init__(self):
         """Set a random port for distributed training if not provided."""
         self.port = self.port or get_open_port()
-        assert self.world_size == self.tasks_per_node * self.gpus_per_task
-        assert self.launcher in [
-            "submitit_slurm",
-            "submitit_local",
-            "torch_distributed"
-        ]
+        # assert self.world_size == self.tasks_per_node * self.gpus_per_task
+        # assert self.launcher in [
+        #     "submitit_slurm",
+        #     "submitit_local",
+        #     "torch_distributed"
+        # ]
 
 
 @dataclass

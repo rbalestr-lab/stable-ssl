@@ -66,10 +66,10 @@ hardware:
   float16: true
   gpu_id: 0
   world_size: 1
-  launcher: torch_distributed
-  cpus_per_task: 1
-  gpus_per_task: 1
-  tasks_per_node: 1
-  timeout_min: 60
-  partition: gpu
-  mem_gb: 30
+  # launcher: torch_distributed
+  # cpus_per_task: 1
+  # gpus_per_task: 1
+  # tasks_per_node: 1
+  # timeout_min: 60
+  # partition: gpu
+  # mem_gb: 30
