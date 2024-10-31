@@ -38,13 +38,13 @@ class FullGatherLayer(torch.autograd.Function):
 
 def setup_distributed(args):
     """Set up the distributed environment for PyTorch."""
-    logging.info("Setting up Distributed model...")
-    logging.info("exporting PyTorch distributed environment variables")
+    logging.info("Setting up Distributed model.")
+    logging.info("Exporting PyTorch distributed environment variables.")
 
     dist_env = None
-    logging.info(f"Launching with: {args.launcher}")
+    logging.info(f"Launching with: {args.launcher}.")
 
-    if args.launcher is not None and "submitit" in args.launcher:
+    if "submitit" in args.launcher:
         # hydra's laucher pluging being used
         logging.info("Using submitit to request resources.")
         # TODO: set the environment variables for submitit using args
