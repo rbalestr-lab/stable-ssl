@@ -60,7 +60,7 @@ def setup_distributed(args, launcher="submitit_local"):
             world_size = dist_env.get("num_tasks", 1)
     else:
         # local host being used irrespective of hydra
-        host_name = "localhost"
+        host_name = "127.0.0.1"
         if dist_env is None:
             cmd = "nvidia-smi --query-gpu=name --format=csv,noheader | wc -l"
             num_gpus = subprocess.check_output(cmd, shell=True).decode().splitlines()[0]
@@ -74,8 +74,6 @@ def setup_distributed(args, launcher="submitit_local"):
             world_size = dist_env.get("num_tasks", 1)
 
     if dist_env.get("global_rank", 0) == 0:
-        os.environ["MASTER_ADDR"] = host_name
-        os.environ["MASTER_PORT"] = str(args.port)
         dist_url = f"tcp://{host_name}:{args.port}"
         logging.info(f"\tMain Proc: {dist_url}")
         # write to a special port file
@@ -94,8 +92,11 @@ def setup_distributed(args, launcher="submitit_local"):
             time.sleep(1)
         with open("dist_url.txt", "r") as f:
             dist_url = f.read().strip()
-        os.environ["MASTER_ADDR"] = dist_url.split(":")[1].replace("/", "")
-        os.environ["MASTER_PORT"] = dist_url.split(":")[2]
+        host_name = dist_url.split(":")[1].replace("/", "")
+        args.port = int(dist_url.split(":")[2])
+
+    os.environ["MASTER_ADDR"] = host_name
+    os.environ["MASTER_PORT"] = str(args.port)
 
     logging.info(f"Process group:\n\t{dist_env.get('num_tasks', 1)} tasks")
     logging.info(f"\tmaster: {dist_url}")
