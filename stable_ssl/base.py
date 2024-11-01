@@ -45,6 +45,7 @@ from .utils import (
     LARS,
     LinearWarmupCosineAnnealing,
     to_device,
+    get_gpu_info,
 )
 
 
@@ -100,11 +101,13 @@ class BaseModel(torch.nn.Module):
             bases=(type(config),),
         )
         trainer._config = copy.deepcopy(config)
+        get_gpu_info()
         return trainer
 
     def __init__(self, config, *args, **kwargs):
         self._set_device()
         super().__init__()
+        get_gpu_info()
 
     @abstractmethod
     def initialize_modules(self):
@@ -126,6 +129,7 @@ class BaseModel(torch.nn.Module):
         logging.basicConfig(
             level=self.config.log.level, format="[stable-SSL] %(message)s"
         )
+        get_gpu_info()
         seed_everything(self.config.hardware.seed)
 
         # Use WandB if an entity or project name is provided.
