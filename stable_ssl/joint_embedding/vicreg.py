@@ -29,27 +29,27 @@ class VICReg(JETrainer):
 
         repr_loss = torch.nn.functional.mse_loss(z1, z2)
 
-        if self.config.hardware.world_size > 1:
-            x = torch.cat(FullGatherLayer.apply(z1), dim=0)
-            y = torch.cat(FullGatherLayer.apply(z2), dim=0)
-        else:
-            x = z1
-            y = z2
-        x = x - x.mean(dim=0)
-        y = y - y.mean(dim=0)
+        # if self.config.hardware.world_size > 1:
+        #     x = torch.cat(FullGatherLayer.apply(z1), dim=0)
+        #     y = torch.cat(FullGatherLayer.apply(z2), dim=0)
+        # else:
+        #     x = z1
+        #     y = z2
+        z1 = z1 - z1.mean(dim=0)
+        z2 = z2 - z2.mean(dim=0)
 
-        std_x = torch.sqrt(x.var(dim=0) + self.config.model.epsilon)
-        std_y = torch.sqrt(y.var(dim=0) + self.config.model.epsilon)
+        std_z1 = torch.sqrt(z1.var(dim=0) + self.config.model.epsilon)
+        std_z2 = torch.sqrt(z2.var(dim=0) + self.config.model.epsilon)
         std_loss = (
-            torch.mean(torch.nn.functional.relu(1 - std_x)) / 2
-            + torch.mean(torch.nn.functional.relu(1 - std_y)) / 2
+            torch.mean(torch.nn.functional.relu(1 - std_z1)) / 2
+            + torch.mean(torch.nn.functional.relu(1 - std_z2)) / 2
         )
 
-        cov_x = (x.T @ x) / (x.size(0) - 1)
-        cov_y = (y.T @ y) / (x.size(0) - 1)
-        cov_loss = off_diagonal(cov_x).pow_(2).sum().div(x.size(1)) + off_diagonal(
-            cov_y
-        ).pow_(2).sum().div(x.size(1))
+        cov_z1 = (z1.T @ z1) / (z1.size(0) - 1)
+        cov_y = (z2.T @ z2) / (z2.size(0) - 1)
+        cov_loss = off_diagonal(cov_z1).pow_(2).sum().div(z1.size(1)) + off_diagonal(
+            cov_z2
+        ).pow_(2).sum().div(z1.size(1))
 
         loss = (
             self.config.model.sim_coeff * repr_loss
