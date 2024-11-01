@@ -81,6 +81,10 @@ class JETrainer(BaseModel):
         embed_i = self.backbone(self.data[0][0])
         embed_j = self.backbone(self.data[0][1])
 
+        if self.world_size > 1:
+            embed_i = torch.cat(GatherLayer.apply(embed_i), dim=0)
+            embed_j = torch.cat(GatherLayer.apply(embed_j), dim=0)
+
         h_i = self.projector(embed_i)
         h_j = self.projector(embed_j)
 
