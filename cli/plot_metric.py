@@ -30,7 +30,7 @@ if __name__ == "__main__":
     if args.hparams is None:
         args.hparams = []
         for name, series in configs.items():
-            if len(np.unique(series.astype(str))) > 1 and "port" not in name:
+            if len(np.unique(series.astype(str))) > 1 and ("port" not in name):
                 args.hparams.append(name)
         logging.info("No hparams was given...")
         logging.info(f"We automatically detected the following ones: {args.hparams}")

@@ -4,6 +4,8 @@ from .utils import (
     seed_everything,
     to_device,
     off_diagonal,
+    get_open_port,
+    get_gpu_info,
 )
 from .schedulers import LinearWarmupCosineAnnealing
 from .optim import LARS
@@ -24,4 +26,6 @@ __all__ = [
     "load_nn",
     "to_device",
     "off_diagonal",
+    "get_open_port",
+    "get_gpu_info",
 ]

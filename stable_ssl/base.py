@@ -45,6 +45,7 @@ from .utils import (
     LARS,
     LinearWarmupCosineAnnealing,
     to_device,
+    get_gpu_info,
 )
 
 
@@ -100,10 +101,13 @@ class BaseModel(torch.nn.Module):
             bases=(type(config),),
         )
         trainer._config = copy.deepcopy(config)
+        get_gpu_info()
         return trainer
 
     def __init__(self, config, *args, **kwargs):
+        self._set_device()
         super().__init__()
+        get_gpu_info()
 
     @abstractmethod
     def initialize_modules(self):
@@ -125,6 +129,7 @@ class BaseModel(torch.nn.Module):
         logging.basicConfig(
             level=self.config.log.level, format="[stable-SSL] %(message)s"
         )
+        get_gpu_info()
         seed_everything(self.config.hardware.seed)
 
         # Use WandB if an entity or project name is provided.
@@ -150,7 +155,6 @@ class BaseModel(torch.nn.Module):
             )
 
         self.scaler = torch.amp.GradScaler("cuda", enabled=self.config.hardware.float16)
-        self._set_device()
 
         # Set up the dataloaders.
         logging.info("Creating dataloaders.")
@@ -201,7 +205,7 @@ class BaseModel(torch.nn.Module):
                 has_parameters = True
             if self.config.hardware.world_size > 1 and has_parameters:
                 module = torch.nn.parallel.DistributedDataParallel(
-                    module, device_ids=[self.config.hardware.gpu]
+                    module, device_ids=[self.config.hardware.gpu_id]
                 )
             setattr(self, name, module)
 
@@ -477,7 +481,7 @@ class BaseModel(torch.nn.Module):
         try:
             # Setup distributed hardware configuration.
             self.config.hardware = setup_distributed(self.config.hardware)
-            self._device = f"cuda:{self.config.hardware.gpu}"
+            self._device = f"cuda:{self.config.hardware.gpu_id}"
         except RuntimeError:
             # Log the error and set the device to default GPU (cuda:0) as a fallback.
             logging.exception(
@@ -485,11 +489,11 @@ class BaseModel(torch.nn.Module):
                 "Falling back to default GPU configuration."
             )
             self._device = "cuda:0"
-            self.config.hardware.gpu = 0
+            self.config.hardware.gpu_id = 0
             self.config.hardware.world_size = 1
 
         # Set the CUDA device.
-        torch.cuda.set_device(self.config.hardware.gpu)
+        torch.cuda.set_device(self.config.hardware.gpu_id)
 
     def checkpoint(self):
         # the checkpoint method is called asynchroneously when the slurm manager
