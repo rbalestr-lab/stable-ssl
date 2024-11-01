@@ -42,6 +42,7 @@ def setup_distributed(args):
     logging.info("Exporting PyTorch distributed environment variables.")
     # logging.info(f"Launching with: {args.launcher}.")
 
+    os.environ['NCCL_DEBUG'] = 'INFO'
     try:
         submitit_env = submitit.JobEnvironment()
         world_size = submitit_env.num_nodes * submitit_env.num_tasks
