@@ -233,7 +233,6 @@ def get_gpu_info():
 
     Torch information & CUDA_VISIBLE_DEVICES can be incomplete.
     """
-
     cmd = (
         "nvidia-smi --query-gpu="
         "name,memory.total,pstate,pcie.link.gen.max,uuid,pci.bus_id "
