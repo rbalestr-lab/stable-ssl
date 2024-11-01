@@ -3,42 +3,52 @@ data:
   train_on: base
   base:
     name: CIFAR10
-    batch_size: 32
+    batch_size: 256
     drop_last: True
     shuffle: True
     split: train
+    num_workers: 10
     transforms:
-      - view1:
-        - name: RandomResizedCrop
-          kwargs:
-            scale: (0.1,0.2)
-          p: 1.0
-        - name: RandomHorizontalFlip
-        - name: GaussianBlur
-          kwargs:
-            kernel_size: 5
-          p: 0.2
-      - view2:
-        - name: RandomResizedCrop
-          kwargs:
-            scale: (0.1,0.2)
-          p: 1.0
-        - name: RandomHorizontalFlip
+      view1:
+      - name: RandomResizedCrop
+        kwargs:
+          size: 32
+          scale:
+            - 0.1
+            - 0.2
+      - name: RandomHorizontalFlip
+      - name: SpeckleNoise
+        kwargs:
+          severity: 2
+        p: 0.5
+      - name: GaussianBlur
+        kwargs:
+          kernel_size: 5
+        p: 0.2
+      view2:
+      - name: RandomResizedCrop
+        kwargs:
+          size: 32
+          scale:
+            - 0.1
+            - 0.2
+      - name: RandomHorizontalFlip
   test_in:
     name: CIFAR10
     batch_size: 32
     drop_last: False
-    split: test
+    split: train
+    num_workers: 10
   test_out:
-    name: SVHN
+    name: CIFAR10
     batch_size: 32
     drop_last: False
+    num_workers: 10
     split: test
 
-
 model:
-  model: Supervised
-  backbone_model: resnet9
+  name: Supervised
+  backbone_model: resnet18
 
 optim:
   epochs: 100
@@ -48,13 +58,11 @@ optim:
 
 log:
   folder: "./new_logs"
-  project: "supervised_cifar10"
+  wandb_project: "supervised_cifar10"
 
 hardware:
   seed: 0
   float16: true
-  gpu_id: 0
-  world_size: 1
   # launcher: torch_distributed
   # cpus_per_task: 1
   # gpus_per_task: 1
