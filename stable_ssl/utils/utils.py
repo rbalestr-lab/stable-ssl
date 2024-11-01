@@ -42,15 +42,16 @@ def setup_distributed(args):
     logging.info("Exporting PyTorch distributed environment variables.")
     # logging.info(f"Launching with: {args.launcher}.")
 
-    os.environ["NCCL_DEBUG"] = "INFO"
     try:
-        submitit_env = submitit.JobEnvironment()
-        world_size = submitit_env.num_nodes * submitit_env.num_tasks
+        submitit_env = submitit.helpers.TorchDistributedEnvironment().export()
         dist_env = {
-            "num_tasks": world_size,
-            "global_rank": submitit_env.global_rank,
+            "num_tasks": submitit_env.world_size,
+            # TODO? TorchDistributedEnvironment() does not have global_rank
+            "global_rank": submitit_env.local_rank,
             "local_rank": submitit_env.local_rank,
         }
+        host_name = submitit_env.master_addr
+        args.port = submitit_env.master_port
     except Exception as e:
         logging.warning(f"Submitit environment not detected: {e}")
     if "SLURM_JOB_NODELIST" in os.environ:
@@ -79,29 +80,7 @@ def setup_distributed(args):
         }
         world_size = dist_env.get("num_tasks", 1)
 
-    if dist_env.get("global_rank", 0) == 0:
-        dist_url = f"tcp://{host_name}:{args.port}"
-        logging.info(f"\tMain Proc: {dist_url}")
-        # write to a special port file
-        with open("dist_url.txt", "w") as f:
-            f.write(dist_url)
-    else:
-        logging.info("\tWorker Proc: waiting for main proc")
-        # wait for the master to write the port file
-        timeout = 300  # seconds
-        start_time = time.time()
-        # TODO: is the dist_url.txt available to all?
-        while not os.path.exists("dist_url.txt"):
-            elapsed_time = time.time() - start_time
-            if elapsed_time > timeout:
-                raise TimeoutError(
-                    "Timed out waiting for the master to write the port file."
-                )
-            time.sleep(1)
-        with open("dist_url.txt", "r") as f:
-            dist_url = f.read().strip()
-        host_name = dist_url.split(":")[1].replace("/", "")
-        args.port = int(dist_url.split(":")[2])
+    dist_url = f"tcp://{host_name}:{args.port}"
 
     os.environ["MASTER_ADDR"] = host_name
     os.environ["MASTER_PORT"] = str(args.port)
@@ -109,7 +88,6 @@ def setup_distributed(args):
     logging.info(f"MASTER_ADDR:\n\t{os.getenv('MASTER_ADDR')}")
     logging.info(f"MASTER_PORT:\n\t{os.getenv('MASTER_PORT')}")
     logging.info(f"Process group:\n\t{dist_env.get('num_tasks', 1)} tasks")
-    logging.info(f"\tmaster: {dist_url}")
     logging.info(f"\trank: {dist_env.get('global_rank', 0)}")
     logging.info(f"\tworld size: {world_size}")
     logging.info(f"\tlocal rank: {dist_env.get('local_rank', 0)}")
@@ -127,7 +105,7 @@ def setup_distributed(args):
             world_size=world_size,
         )
         args.world_size = world_size
-        args.gpu = dist_env.get("local_rank", 0)
+        args.gpu_id = dist_env.get("local_rank", 0)
         assert dist_env.get("global_rank", 0) == torch.distributed.get_rank()
         assert (world_size) == torch.distributed.get_world_size()
     return args
@@ -255,12 +233,18 @@ def get_gpu_info():
 
     Torch information & CUDA_VISIBLE_DEVICES can be incomplete.
     """
+
+    cmd = (
+        "nvidia-smi --query-gpu="
+        "name,memory.total,pstate,pcie.link.gen.max,uuid,pci.bus_id "
+        "--format=csv,noheader"
+    )
+
     try:
         complete_process = subprocess.run(
-            "nvidia-smi -L", shell=True, capture_output=True, text=True
+            cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
         )
-        logging.debug("GPU info (nvidia-smi -L):")
-        logging.debug(f"\tstdout: {complete_process.stdout}")
-        logging.debug(f"\tstderr: {complete_process.stderr}")
+        logging.info("GPU info (nvidia-smi):")
+        logging.info(f"\t{complete_process.stdout}")
     except subprocess.SubprocessError as e:
-        logging.debug("nvidia-smi -L failed.", exc_info=e)
+        logging.info("nvidia-smi failed.", exc_info=e)
