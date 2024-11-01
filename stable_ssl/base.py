@@ -101,13 +101,11 @@ class BaseModel(torch.nn.Module):
             bases=(type(config),),
         )
         trainer._config = copy.deepcopy(config)
-        get_gpu_info()
         return trainer
 
     def __init__(self, config, *args, **kwargs):
         self._set_device()
         super().__init__()
-        get_gpu_info()
 
     @abstractmethod
     def initialize_modules(self):
@@ -493,7 +491,7 @@ class BaseModel(torch.nn.Module):
             self.config.hardware.world_size = 1
 
         # Set the CUDA device.
-        torch.cuda.set_device(self.config.hardware.gpu_id)
+        torch.cuda.set_device(self._device)
 
     def checkpoint(self):
         # the checkpoint method is called asynchroneously when the slurm manager
