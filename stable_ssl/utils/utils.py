@@ -250,6 +250,10 @@ def find_local_rank():
 
 
 def get_gpu_info():
+    """Get the GPU device information using nvidia-smi -L.
+
+    Torch information & CUDA_VISIBLE_DEVICES can be incomplete.
+    """
     try:
         complete_process = subprocess.run(
             "nvidia-smi -L", shell=True, capture_output=True, text=True
