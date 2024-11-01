@@ -229,7 +229,7 @@ def find_local_rank():
 
 
 def get_gpu_info():
-    """Get the GPU device information using nvidia-smi -L.
+    """Get the GPU device information using `nvidia-smi`.
 
     Torch information & CUDA_VISIBLE_DEVICES can be incomplete.
     """
