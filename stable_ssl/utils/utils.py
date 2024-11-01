@@ -247,3 +247,18 @@ def find_local_rank():
             break
         rank += 1
     return rank
+
+
+def get_gpu_info():
+    try:
+        complete_process = subprocess.run(
+            "nvidia-smi -L",
+            shell=True,
+            capture_output=True,
+            text=True
+            )
+        logging.debug("GPU info (nvidia-smi -L):")
+        logging.debug(f"\tstdout: {complete_process.stdout}")
+        logging.debug(f"\tstderr: {complete_process.stderr}")
+    except subprocess.SubprocessError as e:
+        logging.debug("nvidia-smi -L failed.", exc_info=e)

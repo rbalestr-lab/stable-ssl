@@ -26,4 +26,5 @@ __all__ = [
     "to_device",
     "off_diagonal",
     "get_open_port",
+    "get_gpu_info",
 ]
