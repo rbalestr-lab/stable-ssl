@@ -12,7 +12,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from stable_ssl.utils import load_nn
+from stable_ssl.utils import load_nn, FullGatherLayer
 from stable_ssl.base import BaseModel, BaseModelConfig
 
 
@@ -81,31 +81,33 @@ class JETrainer(BaseModel):
         embed_i = self.backbone(self.data[0][0])
         embed_j = self.backbone(self.data[0][1])
 
-        # if self.world_size > 1:
-        #     embed_i = torch.cat(GatherLayer.apply(embed_i), dim=0)
-        #     embed_j = torch.cat(GatherLayer.apply(embed_j), dim=0)
-
         h_i = self.projector(embed_i)
         h_j = self.projector(embed_j)
 
-        # compute SSL loss to train the backbone and the projector
-        loss_ssl = self.compute_ssl_loss(h_i, h_j)
-
         # compute backbone loss to train the backbone classifier
-        loss_backbone = F.cross_entropy(
+        loss_backbone_i = F.cross_entropy(
             self.backbone_classifier(embed_i.detach()), self.data[1]
         )
-        loss_backbone += F.cross_entropy(
+        loss_backbone_j = F.cross_entropy(
             self.backbone_classifier(embed_j.detach()), self.data[1]
         )
+        loss_backbone = loss_backbone_i + loss_backbone_j
 
         # compute projector loss to train the projector classifier
-        loss_proj = F.cross_entropy(
+        loss_proj_i = F.cross_entropy(
             self.projector_classifier(h_i.detach()), self.data[1]
         )
-        loss_proj += F.cross_entropy(
+        loss_proj_j = F.cross_entropy(
             self.projector_classifier(h_j.detach()), self.data[1]
         )
+        loss_proj = loss_proj_i + loss_proj_j
+
+        if self.config.hardware.world_size > 1:
+            h_i_gather = torch.cat(FullGatherLayer.apply(h_i), dim=0)
+            h_j_gather = torch.cat(FullGatherLayer.apply(h_j), dim=0)
+
+        # compute SSL loss to train the backbone and the projector
+        loss_ssl = self.compute_ssl_loss(h_i_gather, h_j_gather)
 
         self.log(
             {
@@ -115,6 +117,7 @@ class JETrainer(BaseModel):
             },
             commit=False,
         )
+
         return loss_ssl + loss_proj + loss_backbone
 
     def compute_ssl_loss(self, embeds):

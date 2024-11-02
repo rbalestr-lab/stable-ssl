@@ -41,7 +41,7 @@ class SimCLR(JETrainer):
         """
         z = torch.cat([h_i, h_j], 0)
 
-        N = z.size(0) * self.config.hardware.world_size
+        N = z.size(0)
 
         features = F.normalize(z, dim=1)
         sim = torch.matmul(features, features.T) / self.config.model.temperature
