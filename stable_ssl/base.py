@@ -20,6 +20,7 @@ from pathlib import Path
 from tqdm import tqdm
 from dataclasses import dataclass, make_dataclass
 from torchmetrics.classification import MulticlassAccuracy
+import os
 
 from .reader import jsonl_run
 
@@ -132,12 +133,15 @@ class BaseModel(torch.nn.Module):
 
         # Use WandB if an entity or project name is provided.
         self.use_wandb = bool(
-            self.config.log.wandb_entity or self.config.log.wandb_project
+            (self.config.log.wandb_entity or self.config.log.wandb_project)
+            and (torch.distributed.get_rank() == 0)
         )
         if self.use_wandb:
             logging.info(
                 f"\t=> Initializating wandb for logging in {self.config.log.dump_path}."
             )
+            if os.environ.get("HOME") is None:
+                os.environ["HOME"] = "/users/hvanasse"
             wandb.init(
                 entity=self.config.log.wandb_entity,
                 project=self.config.log.wandb_project,

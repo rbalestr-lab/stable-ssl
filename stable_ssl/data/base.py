@@ -118,7 +118,12 @@ class DatasetConfig:
                     f"{self.batch_size // world_size}."
                 )
             per_device_batch_size = max(self.batch_size // world_size, 1)
-
+            logging.info(
+                f"Loading data using DDP, "
+                f"world size {world_size}, "
+                f"batch size {per_device_batch_size}."
+                f"Length of sampler: {len(self.sampler)}."
+            )
         else:
             self.sampler = None
             per_device_batch_size = self.batch_size
