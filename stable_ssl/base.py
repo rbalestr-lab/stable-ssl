@@ -684,11 +684,8 @@ class BaseModel(torch.nn.Module):
         return bucket
 
     def cleanup(self):
-        if self.config.hardware.world_size > 1:
-            logging.info("Cleaning distributed processes.")
-            torch.distributed.destroy_process_group()
-        else:
-            logging.info("Not using distributed. Nothing to clean.")
+        logging.info("Cleaning distributed processes.")
+        torch.distributed.destroy_process_group()
 
     def gather(self, x):
         return FullGatherLayer.apply(x)
