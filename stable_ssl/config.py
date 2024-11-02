@@ -197,7 +197,7 @@ class LogConfig:
     load_from: str = "ckpt"
     level: int = logging.INFO
     checkpoint_frequency: int = 10
-    save_final_model: bool = False
+    save_final_model: bool = True
     final_model_name: str = "final_model"
     eval_only: bool = False
     eval_epoch_freq: int = 1

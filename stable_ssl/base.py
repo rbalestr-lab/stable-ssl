@@ -659,7 +659,9 @@ class BaseModel(torch.nn.Module):
 
     def save_checkpoint(self, name, model_only):
         if self.config.hardware.world_size > 1:
-            if torch.distributed.get_rank() != 0:
+            curr_rank = torch.distributed.get_rank()
+            if curr_rank != 0:
+                logging.info(f"On rank {curr_rank}, only rank 0 saves the checkpoint.")
                 return
         saving_name = self.config.log.dump_path / name
         state = {}
@@ -667,6 +669,7 @@ class BaseModel(torch.nn.Module):
             state[subname] = model.state_dict()
         if model_only:
             torch.save(state, saving_name)
+            logging.info(f"Model saved at {saving_name}.")
             return
         if hasattr(self, "optimizer"):
             state["optimizer"] = self.optimizer.state_dict()
@@ -675,6 +678,9 @@ class BaseModel(torch.nn.Module):
         state["epoch"] = self.epoch
 
         torch.save(state, saving_name)
+        logging.info(
+            f"Checkpoint (model, optimizer, scheduler, epoch) saved at {saving_name}."
+        )
 
     def generate_logging_default_bucket(self):
         cur_time = time.time()
