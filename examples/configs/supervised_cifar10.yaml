@@ -1,12 +1,14 @@
 defaults:
   - override hydra/launcher: submitit_slurm
 
+num_of_gpus_per_job: 1
+
 hydra:
   launcher:
-    tasks_per_node: 1
+    tasks_per_node: ${num_of_gpus_per_job}
     timeout_min: 60
-    cpus_per_task: 4
-    gpus_per_task: 1
+    cpus_per_task: 10
+    gpus_per_node: ${num_of_gpus_per_job}
     partition: gpu
 
 data:
@@ -59,14 +61,10 @@ model:
   backbone_model: resnet9
 
 optim:
-  epochs: 100
+  epochs: 200
   batch_size: 256
   lr: 1.0
   optimizer: LARS
-
-log:
-  folder: ./new_logs
-  wandb_project: supervised_cifar10
 
 hardware:
   seed: 0

@@ -1,6 +1,8 @@
 defaults:
   - override hydra/launcher: submitit_slurm
 
+num_of_gpus_per_job: 1
+
 hydra:
   launcher:
     tasks_per_node: ${hardware.world_size}

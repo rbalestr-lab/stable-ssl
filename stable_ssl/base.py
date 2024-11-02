@@ -141,7 +141,7 @@ class BaseModel(torch.nn.Module):
                 f"\t=> Initializating wandb for logging in {self.config.log.dump_path}."
             )
             if os.environ.get("HOME") is None:
-                os.environ["HOME"] = "/users/hvanasse"
+                os.environ["HOME"] = "/users/hvanasse"  # TODO: remove hardcoded home
             wandb.init(
                 entity=self.config.log.wandb_entity,
                 project=self.config.log.wandb_project,
@@ -164,15 +164,23 @@ class BaseModel(torch.nn.Module):
             world_size=self.config.hardware.world_size
         )
         for name, loader in dataloaders.items():
-            logging.info(f"\t=> Found dataloader `{name}` with length {len(loader)}.")
-        if self.config.log.eval_only:
-            for name in dataloaders:
-                if name in self.config.data.train_on:
+            logging.info(
+                f"\t=> Found dataloader `{name}` with length/batches {len(loader)}."
+                f"\n\t=> Per GPU Data `{name}`: {len(loader)*loader.batch_size}."
+            )
+            if name in self.config.data.train_on:
+                if self.config.log.eval_only:
                     logging.info(f"\t=> `{name}` will be ignored (eval_only=True).")
-        else:
-            assert len(self.config.data.train_on)
+            assert len(loader), logging.error(f"Length of dataset {name} is 0.")
+
+        if not self.config.log.eval_only:
+            assert len(self.config.data.train_on), logging.error(
+                f"{self.config.data.train_on} train datasets supplied."
+            )
             if self.config.data.train_on not in dataloaders:
-                raise RuntimeError(f"eval_only=False and `{name}` not given.")
+                raise RuntimeError(
+                    f"eval_only=False and `{self.config.data.train_on}` not given."
+                )
         self.dataloaders = dataloaders
 
         # Set up the model's modules. Should be implemented by the child class.
@@ -528,7 +536,9 @@ class BaseModel(torch.nn.Module):
 
         # Update the log buffer with the new packet.
         packet = packet or {}
-        assert "_global_step" not in packet
+        assert "_global_step" not in packet, logging.error(
+            "'_global_step' is reserved but present in log packet."
+        )
         self._log_buffer.update(packet)
         if not commit or len(self._log_buffer) == 0:
             return
@@ -658,7 +668,9 @@ class BaseModel(torch.nn.Module):
 
     def save_checkpoint(self, name, model_only):
         if self.config.hardware.world_size > 1:
-            if torch.distributed.get_rank() != 0:
+            curr_rank = torch.distributed.get_rank()
+            if curr_rank != 0:
+                logging.info(f"On rank {curr_rank}, only rank 0 saves the checkpoint.")
                 return
         saving_name = self.config.log.dump_path / name
         state = {}
@@ -666,6 +678,7 @@ class BaseModel(torch.nn.Module):
             state[subname] = model.state_dict()
         if model_only:
             torch.save(state, saving_name)
+            logging.info(f"Model saved at {saving_name}.")
             return
         if hasattr(self, "optimizer"):
             state["optimizer"] = self.optimizer.state_dict()
@@ -674,6 +687,9 @@ class BaseModel(torch.nn.Module):
         state["epoch"] = self.epoch
 
         torch.save(state, saving_name)
+        logging.info(
+            f"Checkpoint (model, optimizer, scheduler, epoch) saved at {saving_name}."
+        )
 
     def generate_logging_default_bucket(self):
         cur_time = time.time()
@@ -693,11 +709,8 @@ class BaseModel(torch.nn.Module):
         return bucket
 
     def cleanup(self):
-        if self.config.hardware.world_size > 1:
-            logging.info("Cleaning distributed processes.")
-            torch.distributed.destroy_process_group()
-        else:
-            logging.info("Not using distributed. Nothing to clean.")
+        logging.info("Cleaning distributed processes.")
+        torch.distributed.destroy_process_group()
 
     def gather(self, x):
         return FullGatherLayer.apply(x)
