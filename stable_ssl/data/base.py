@@ -117,11 +117,11 @@ class DatasetConfig:
                     f"({world_size}). Setting per-device batch size to "
                     f"{self.batch_size // world_size}."
                 )
-            per_device_batch_size = max(self.batch_size // world_size, 1)
+            self.batch_size = max(self.batch_size // world_size, 1)
             logging.info(
                 f"Loading {self.name} using DDP, "
                 f"world size {world_size}, "
-                f"batch size {per_device_batch_size}. "
+                f"batch size {self.batch_size}. "
             )
             logging.info(
                 f"Length of sample: {len(self.sampler)}, whole dataset: {len(dataset)}."
@@ -130,34 +130,25 @@ class DatasetConfig:
             )
         else:
             self.sampler = None
-            per_device_batch_size = self.batch_size
 
         # Use all available CPUs if num_workers is set to -1.
         if self.num_workers == -1:
             if os.environ.get("SLURM_JOB_ID"):
-                num_workers = int(os.environ.get("SLURM_CPUS_PER_TASK", 1))
+                self.num_workers = int(os.environ.get("SLURM_CPUS_PER_TASK", 1))
             else:
-                num_workers = os.cpu_count()
-            # the pattern of use is to have n_tasks=n_gpus,
-            # hence all of cpus per task are available to gpus.
-            # if torch.distributed.is_available() and \
-            #     torch.distributed.is_initialized():
-            #     num_workers = max(num_workers // world_size, 1)  # workers per GPU
+                self.num_workers = os.cpu_count()
             logging.info(
-                f"Using {num_workers} workers (CPUS_PER_TASK) for data loading."
+                f"Using {self.num_workers} workers (CPUS_PER_TASK) for data loading."
             )
-
-        else:
-            num_workers = self.num_workers
 
         loader = torch.utils.data.DataLoader(
             dataset,
-            batch_size=per_device_batch_size,
-            num_workers=num_workers,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
             pin_memory=True,
             sampler=self.sampler,
-            shuffle=self.shuffle and self.sampler is None,
-            drop_last=self.drop_last and self.sampler is None,
+            shuffle=self.shuffle and (self.sampler is None),
+            drop_last=self.drop_last and (self.sampler is None),
         )
 
         return loader
