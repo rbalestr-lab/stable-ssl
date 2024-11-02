@@ -1,14 +1,14 @@
 defaults:
   - override hydra/launcher: submitit_slurm
 
+world_size: 1
+
 hydra:
   launcher:
-    tasks_per_node: 1
+    tasks_per_node: {world_size}
+    gpus_per_node: {world_size}
     timeout_min: 60
-    cpus_per_task: 4
-    gpus_per_task: 1
     partition: gpu
-
 
 data:
   train_on: base
@@ -31,6 +31,13 @@ data:
       - name: RandomHorizontalFlip
         kwargs:
           p: 0.5
+      - name: ColorJitter
+        kwargs:
+          brightness: 0.4
+          contrast: 0.4
+          saturation: 0.2
+          hue: 0.1
+        p: 0.8
       - name: RandomGrayscale
         kwargs:
           p: 0.2
@@ -45,6 +52,13 @@ data:
       - name: RandomHorizontalFlip
         kwargs:
           p: 0.5
+      - name: ColorJitter
+        kwargs:
+          brightness: 0.4
+          contrast: 0.4
+          saturation: 0.2
+          hue: 0.1
+        p: 0.8
       - name: RandomGrayscale
         kwargs:
           p: 0.2
@@ -74,6 +88,6 @@ optim:
 
 hardware:
   seed: 0
-  float16: false
+  float16: true
   gpu_id: 0
-  world_size: 1
+  world_size: world_size

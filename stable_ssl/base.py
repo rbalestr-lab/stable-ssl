@@ -136,7 +136,7 @@ class BaseModel(torch.nn.Module):
             self.config.log.wandb_entity or self.config.log.wandb_project
         )
 
-        if self.use_wandb:
+        if self.use_wandb and self.rank == 0:
             logging.info(
                 f"\t=> Initializating wandb for logging in {self.config.log.dump_path}."
             )
@@ -255,7 +255,7 @@ class BaseModel(torch.nn.Module):
             except BreakAllEpochs:
                 logging.exception("Exception during training (self.evaluate).")
                 raise
-            if self.use_wandb and (wandb is not None):
+            if self.use_wandb and (wandb is not None) and self.rank == 0:
                 wandb.finish()
             self.cleanup()
 
@@ -713,13 +713,6 @@ class BaseModel(torch.nn.Module):
         if not hasattr(self, "_epoch"):
             return None
         return self._epoch
-
-    @property
-    def logs(self):
-        if self.use_wandb:
-            raise NotImplementedError
-        else:
-            return jsonl_run(self.config.log.dump_path)[1]
 
     @property
     def config(self):

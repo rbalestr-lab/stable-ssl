@@ -56,9 +56,6 @@ class SimCLR(JETrainer):
         attraction = -positive_samples.mean()
         repulsion = torch.logsumexp(negative_samples, dim=1).mean()
 
-        print("Attraction and repulsion values:")
-        print(attraction, repulsion)
-
         return attraction + repulsion
 
 

@@ -81,26 +81,24 @@ class JETrainer(BaseModel):
         embed_i = self.backbone(self.data[0][0])
         embed_j = self.backbone(self.data[0][1])
 
+        # compute backbone loss to train the backbone classifier
+        loss_backbone = F.cross_entropy(
+            self.backbone_classifier(embed_i.detach()), self.data[1]
+        )
+        loss_backbone += F.cross_entropy(
+            self.backbone_classifier(embed_j.detach()), self.data[1]
+        )
+
         z_i = self.projector(embed_i)
         z_j = self.projector(embed_j)
 
-        # compute backbone loss to train the backbone classifier
-        loss_backbone_i = F.cross_entropy(
-            self.backbone_classifier(embed_i.detach()), self.data[1]
-        )
-        loss_backbone_j = F.cross_entropy(
-            self.backbone_classifier(embed_j.detach()), self.data[1]
-        )
-        loss_backbone = loss_backbone_i + loss_backbone_j
-
         # compute projector loss to train the projector classifier
-        loss_proj_i = F.cross_entropy(
+        loss_proj = F.cross_entropy(
             self.projector_classifier(z_i.detach()), self.data[1]
         )
-        loss_proj_j = F.cross_entropy(
+        loss_proj += F.cross_entropy(
             self.projector_classifier(z_j.detach()), self.data[1]
         )
-        loss_proj = loss_proj_i + loss_proj_j
 
         if self.config.hardware.world_size > 1:
             z_i = torch.cat(self.gather(z_i), dim=0)
