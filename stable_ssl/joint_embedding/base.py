@@ -81,31 +81,36 @@ class JETrainer(BaseModel):
         embed_i = self.backbone(self.data[0][0])
         embed_j = self.backbone(self.data[0][1])
 
-        # compute backbone loss to train the backbone classifier
-        loss_backbone = F.cross_entropy(
+        # Compute backbone loss to train the backbone classifier.
+        loss_backbone_i = F.cross_entropy(
             self.backbone_classifier(embed_i.detach()), self.data[1]
         )
-        loss_backbone += F.cross_entropy(
+        loss_backbone_j = F.cross_entropy(
             self.backbone_classifier(embed_j.detach()), self.data[1]
         )
+        loss_backbone = loss_backbone_i + loss_backbone_j
 
         z_i = self.projector(embed_i)
         z_j = self.projector(embed_j)
 
-        # compute projector loss to train the projector classifier
-        loss_proj = F.cross_entropy(
+        # Compute projector loss to train the projector classifier.
+        loss_proj_i = F.cross_entropy(
             self.projector_classifier(z_i.detach()), self.data[1]
         )
-        loss_proj += F.cross_entropy(
+        loss_proj_j = F.cross_entropy(
             self.projector_classifier(z_j.detach()), self.data[1]
         )
+        loss_proj = loss_proj_i + loss_proj_j
 
         if self.config.hardware.world_size > 1:
-            z_i = torch.cat(self.gather(z_i), dim=0)
-            z_j = torch.cat(self.gather(z_j), dim=0)
+            z_i_gather = torch.cat(self.gather(z_i), dim=0)
+            z_j_gather = torch.cat(self.gather(z_j), dim=0)
+        else:
+            z_i_gather = z_i
+            z_j_gather = z_j
 
-        # compute SSL loss to train the backbone and the projector
-        loss_ssl = self.compute_ssl_loss(z_i, z_j)
+        # Compute SSL loss to train the backbone and the projector.
+        loss_ssl = self.compute_ssl_loss(z_i_gather, z_j_gather)
 
         self.log(
             {

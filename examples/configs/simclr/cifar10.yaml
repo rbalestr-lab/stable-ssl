@@ -1,15 +1,12 @@
 defaults:
   - override hydra/launcher: submitit_slurm
 
-num_of_gpus_per_job: 1
-
 hydra:
   launcher:
     tasks_per_node: ${hardware.world_size}
     gpus_per_node: ${hardware.world_size}
-    timeout_min: 60
     partition: gpu
-    cpus_per_task: 8
+    cpus_per_task: 4
 
 data:
   train_on: base
