@@ -1,0 +1,95 @@
+defaults:
+  - override hydra/launcher: submitit_slurm
+
+hydra:
+  launcher:
+    tasks_per_node: 1
+    timeout_min: 60
+    cpus_per_task: 4
+    gpus_per_task: 1
+    partition: gpu
+
+data:
+  train_on: base
+  base:
+    name: CIFAR10
+    batch_size: 256
+    drop_last: True
+    shuffle: True
+    split: train
+    num_workers: -1
+    transforms:
+      view1:
+      - name: RandomResizedCrop
+        kwargs:
+          size: 32
+          scale:
+            - 0.2
+            - 1.0
+          interpolation: bicubic
+      - name: RandomHorizontalFlip
+        kwargs:
+          p: 0.5
+      - name: RandomGrayscale
+        kwargs:
+          p: 0.2
+      - name: ToTensor
+      - name: Normalize
+        kwargs:
+          mean: [0.4914, 0.4822, 0.4465]
+          std: [0.2023, 0.1994, 0.2010]
+      # view2:
+      # - name: RandomResizedCrop
+      #   kwargs:
+      #     size: 32
+      #     scale:
+      #       - 0.2
+      #       - 1.0
+      #     interpolation: bicubic
+      # - name: RandomHorizontalFlip
+      #   kwargs:
+      #     p: 0.5
+      # - name: RandomGrayscale
+      #   kwargs:
+      #     p: 0.2
+      # - name: RandomSolarize
+      #   kwargs:
+      #     threshold: 128
+      #     p: 0.2
+      # - name: ToTensor
+      # - name: Normalize
+      #   kwargs:
+      #     mean: [0.4914, 0.4822, 0.4465]
+      #     std: [0.2023, 0.1994, 0.2010]
+  test_out:
+    name: CIFAR10
+    batch_size: 256
+    drop_last: False
+    num_workers: -1
+    split: test
+    transforms:
+      view1:
+        - name: ToTensor
+        - name: Normalize
+          kwargs:
+            mean: [0.4914, 0.4822, 0.4465]
+            std: [0.2023, 0.1994, 0.2010]
+
+model:
+  name: Supervised
+  backbone_model: resnet9
+
+optim:
+  epochs: 100
+  batch_size: 256
+  lr: 1.0
+  optimizer: LARS
+
+log:
+  folder: ./new_logs
+  wandb_project: supervised_cifar10
+
+hardware:
+  seed: 0
+  float16: true
+  
