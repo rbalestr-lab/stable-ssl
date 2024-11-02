@@ -136,7 +136,7 @@ class BaseModel(torch.nn.Module):
             self.config.log.wandb_entity or self.config.log.wandb_project
         )
 
-        if self.use_wandb and self.rank == 0:
+        if self.use_wandb:
             logging.info(
                 f"\t=> Initializating wandb for logging in {self.config.log.dump_path}."
             )
@@ -255,7 +255,7 @@ class BaseModel(torch.nn.Module):
             except BreakAllEpochs:
                 logging.exception("Exception during training (self.evaluate).")
                 raise
-            if self.use_wandb and (wandb is not None) and self.rank == 0:
+            if self.use_wandb:
                 wandb.finish()
             self.cleanup()
 
