@@ -474,6 +474,15 @@ class BaseModel(torch.nn.Module):
             commit=True,
         )
 
+    def eval_step(self, name_loader):
+        output = self.forward(self.data[0])
+        for name, metric in self.metrics.items():
+            if name.startswith(f"eval/{name_loader}/"):
+                metric.update(output, self.data[1])
+            elif name.startswith(f"eval/{name_loader}/"):
+                self.log({name: metric(output, self.data[1])}, commit=False)
+        self.log(commit=True)
+
     def _set_device(self):
         # Check if CUDA is available, otherwise set to CPU.
         if not torch.cuda.is_available():
@@ -771,15 +780,6 @@ class BaseModel(torch.nn.Module):
 
     def after_eval_step(self):
         pass
-
-    def eval_step(self, name_loader):
-        output = self.forward(self.data[0])
-        for name, metric in self.metrics.items():
-            if name.startswith(f"eval/{name_loader}/"):
-                metric.update(output, self.data[1])
-            elif name.startswith(f"eval/{name_loader}/"):
-                self.log({name: metric(output, self.data[1])}, commit=False)
-        self.log(commit=True)
 
     # FIXME: to remove since this is now handled by the data config
     # def dataset_to_loader(self, dataset, train):

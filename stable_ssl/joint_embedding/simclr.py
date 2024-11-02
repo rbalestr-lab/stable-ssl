@@ -24,14 +24,14 @@ class SimCLR(JETrainer):
             In International Conference on Machine Learning (pp. 1597-1607). PMLR.
     """
 
-    def compute_ssl_loss(self, h_i, h_j):
+    def compute_ssl_loss(self, z_i, z_j):
         """Compute the contrastive loss for SimCLR.
 
         Parameters
         ----------
-        h_i : torch.Tensor
+        z_i : torch.Tensor
             Latent representation of the first augmented view of the batch.
-        h_j : torch.Tensor
+        z_j : torch.Tensor
             Latent representation of the second augmented view of the batch.
 
         Returns
@@ -39,8 +39,7 @@ class SimCLR(JETrainer):
         float
             The computed contrastive loss.
         """
-        z = torch.cat([h_i, h_j], 0)
-
+        z = torch.cat([z_i, z_j], 0)
         N = z.size(0)
 
         features = F.normalize(z, dim=1)
