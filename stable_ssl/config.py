@@ -187,6 +187,9 @@ class LogConfig:
         Name of the (Weights & Biases) entity. Default is None.
     wandb_project : str, optional
         Name of the (Weights & Biases) project. Default is None.
+    log_process: int, optional
+        Which process to log. If negative, logs all processes.
+        Default is -1.
     """
 
     folder: Optional[str] = None
@@ -200,6 +203,7 @@ class LogConfig:
     eval_epoch_freq: int = 1
     wandb_entity: Optional[str] = None
     wandb_project: Optional[str] = None
+    log_process: int = -1
 
     def __post_init__(self):
         """Initialize logging folder and run settings.

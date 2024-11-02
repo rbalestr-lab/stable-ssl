@@ -477,6 +477,7 @@ class BaseModel(torch.nn.Module):
     def _set_device(self):
         # Check if CUDA is available, otherwise set to CPU.
         if not torch.cuda.is_available():
+            logging.warning("CUDA is not available. Setting device to CPU.")
             self._device = "cpu"
             return
 
@@ -510,32 +511,53 @@ class BaseModel(torch.nn.Module):
         return submitit.helpers.DelayedSubmission(model)
 
     def log(self, packet=None, commit=True):
+        # Check if the process should be logged.
+        if self.config.log.log_process > 0 and (
+            self.config.log.log_process != self.rank
+        ):
+            return
+
+        # Update the log buffer with the new packet.
         packet = packet or {}
         assert "_global_step" not in packet
         self._log_buffer.update(packet)
         if not commit or len(self._log_buffer) == 0:
             return
-        # make values JSON serializable
+
+        # Make values JSON serializable.
         for name, value in self._log_buffer.items():
             if torch.is_tensor(value):
                 if torch.numel(value) == 1:
                     self._log_buffer[name] = value.item()
                 else:
                     self._log_buffer[name] = value.tolist()
-        # log in wandb
+
+        # Log in WandB.
         if self.use_wandb:
+            rank_prefix = f"rank_{self.rank}"
             for name, value in self._log_buffer.items():
+                # Add the rank as the first category to the variable name.
+                prefixed_name = f"{rank_prefix}/{name}"
+
                 if isinstance(value, list):
-                    table = wandb.Table(columns=["epoch", name])
+                    # Create a WandB table if the value is a list.
+                    table = wandb.Table(columns=["epoch", prefixed_name])
                     for i, v in enumerate(np.asarray(value).flatten()):
                         table.add_data(i, v)
-                    self._log_buffer[name] = table
+                    self._log_buffer[prefixed_name] = table
+                else:
+                    self._log_buffer[prefixed_name] = value
+
             wandb.log(self._log_buffer, step=self.global_step.item())
+
+        # Log in jsonl.
         else:
             with jsonlines.open(
-                self.config.log.dump_path / "csv_logs.jsonl", mode="a"
+                self.config.log.dump_path / f"logs_rank_{self.rank}.jsonl", mode="a"
             ) as writer:
                 writer.write(self._log_buffer)
+
+        # Clear the log buffer.
         self._log_buffer = {}
 
     def _load_checkpoint(self):
@@ -664,7 +686,7 @@ class BaseModel(torch.nn.Module):
 
     def cleanup(self):
         if self.config.hardware.world_size > 1:
-            logging.info("Cleaning distributed processes...")
+            logging.info("Cleaning distributed processes.")
             torch.distributed.destroy_process_group()
         else:
             logging.info("Not using distributed. Nothing to clean.")

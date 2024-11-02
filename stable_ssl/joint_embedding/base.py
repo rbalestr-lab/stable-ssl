@@ -12,7 +12,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from stable_ssl.utils import load_nn, FullGatherLayer
+from stable_ssl.utils import load_nn
 from stable_ssl.base import BaseModel, BaseModelConfig
 
 
@@ -103,8 +103,8 @@ class JETrainer(BaseModel):
         loss_proj = loss_proj_i + loss_proj_j
 
         if self.config.hardware.world_size > 1:
-            h_i_gather = torch.cat(FullGatherLayer.apply(h_i), dim=0)
-            h_j_gather = torch.cat(FullGatherLayer.apply(h_j), dim=0)
+            h_i_gather = torch.cat(self.gather(h_i), dim=0)
+            h_j_gather = torch.cat(self.gather(h_j), dim=0)
 
         # compute SSL loss to train the backbone and the projector
         loss_ssl = self.compute_ssl_loss(h_i_gather, h_j_gather)
