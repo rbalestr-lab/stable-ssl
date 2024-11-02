@@ -527,7 +527,9 @@ class BaseModel(torch.nn.Module):
 
         # Update the log buffer with the new packet.
         packet = packet or {}
-        assert "_global_step" not in packet
+        assert "_global_step" not in packet, logging.error(
+            "'_global_step' is reserved but present in log packet."
+        )
         self._log_buffer.update(packet)
         if not commit or len(self._log_buffer) == 0:
             return

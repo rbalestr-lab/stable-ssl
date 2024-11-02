@@ -179,7 +179,7 @@ class DataConfig:
         datasets : dict
             A dictionary of dataset configurations.
         """
-        assert len(args) == 0
+        assert len(args) == 0, logging.error("DataConfig takes only keyword arguments.")
         self.train_on = train_on
         self.datasets = {name: DatasetConfig(**d) for name, d in datasets.items()}
 

@@ -106,8 +106,16 @@ def setup_distributed(args):
         )
         args.world_size = world_size
         args.gpu_id = dist_env.get("local_rank", 0)
-        assert dist_env.get("global_rank", 0) == torch.distributed.get_rank()
-        assert (world_size) == torch.distributed.get_world_size()
+        assert (
+            dist_env.get("global_rank", 0) == torch.distributed.get_rank()
+        ), logging.error(
+            "Torch and submitit global ranks do not match. "
+            f"{dist_env.get('global_rank', 0)}, {torch.distributed.get_rank()}"
+        )
+        assert (world_size) == torch.distributed.get_world_size(), logging.error(
+            "Torch and submitit world size do not match. "
+            f"{world_size}, {torch.distributed.get_world_size()}"
+        )
     return args
 
 
@@ -191,7 +199,7 @@ def to_device(obj, device, non_blocking=True):
 def off_diagonal(x):
     """Return a flattened view of the off-diagonal elements of a square matrix."""
     n, m = x.shape
-    assert n == m
+    assert n == m, logging.error("Input tensor must be square.")
     return x.flatten()[:-1].view(n - 1, n + 1)[:, 1:].flatten()
 
 
