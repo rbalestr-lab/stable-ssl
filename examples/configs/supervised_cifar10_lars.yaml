@@ -25,14 +25,6 @@ data:
         kwargs:
           kernel_size: 5
         p: 0.2
-      view2:
-      - name: RandomResizedCrop
-        kwargs:
-          size: 32
-          scale:
-            - 0.1
-            - 0.2
-      - name: RandomHorizontalFlip
   test_in:
     name: CIFAR10
     batch_size: 32
@@ -48,7 +40,7 @@ data:
 
 model:
   name: Supervised
-  backbone_model: resnet18
+  backbone_model: resnet9
 
 optim:
   epochs: 100
@@ -58,7 +50,7 @@ optim:
 
 log:
   folder: "./new_logs"
-  wandb_project: "supervised_cifar10"
+  # wandb_project: "supervised_cifar10"
 
 hardware:
   seed: 0
