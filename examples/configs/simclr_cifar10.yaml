@@ -1,14 +1,12 @@
 defaults:
   - override hydra/launcher: submitit_slurm
 
-num_of_gpus_per_job: 1
-
 hydra:
   launcher:
-    tasks_per_node: ${num_of_gpus_per_job}
+    tasks_per_node: ${hardware.world_size}
     timeout_min: 60
     cpus_per_task: 4
-    gpus_per_node: ${num_of_gpus_per_job}
+    gpus_per_node: ${hardware.world_size}
     partition: gpu
 
 data:
@@ -95,4 +93,4 @@ hardware:
   seed: 0
   float16: true
   gpu_id: 0
-  world_size: 1
+  world_size: 2
