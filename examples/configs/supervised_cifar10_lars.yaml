@@ -49,8 +49,8 @@ optim:
   optimizer: LARS
 
 log:
-  folder: "./new_logs"
-  # wandb_project: "supervised_cifar10"
+  folder: ./new_logs
+  wandb_project: supervised_cifar10
 
 hardware:
   seed: 0
