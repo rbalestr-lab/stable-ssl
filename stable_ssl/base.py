@@ -133,9 +133,9 @@ class BaseModel(torch.nn.Module):
 
         # Use WandB if an entity or project name is provided.
         self.use_wandb = bool(
-            (self.config.log.wandb_entity or self.config.log.wandb_project)
-            and (torch.distributed.get_rank() == 0)
+            self.config.log.wandb_entity or self.config.log.wandb_project
         )
+
         if self.use_wandb:
             logging.info(
                 f"\t=> Initializating wandb for logging in {self.config.log.dump_path}."

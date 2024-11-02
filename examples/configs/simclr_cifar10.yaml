@@ -8,7 +8,7 @@ hydra:
     cpus_per_task: 4
     gpus_per_task: 1
     partition: gpu
-    
+
 
 data:
   train_on: base
@@ -34,11 +34,6 @@ data:
       - name: RandomGrayscale
         kwargs:
           p: 0.2
-      - name: ToTensor
-      - name: Normalize
-        kwargs:
-          mean: [0.4914, 0.4822, 0.4465]
-          std: [0.2023, 0.1994, 0.2010]
       view2:
       - name: RandomResizedCrop
         kwargs:
@@ -57,29 +52,16 @@ data:
         kwargs:
           threshold: 128
           p: 0.2
-      - name: ToTensor
-      - name: Normalize
-        kwargs:
-          mean: [0.4914, 0.4822, 0.4465]
-          std: [0.2023, 0.1994, 0.2010]
   test_out:
     name: CIFAR10
     batch_size: 256
     drop_last: False
     num_workers: -1
     split: test
-    transforms:
-      view1:
-        - name: ToTensor
-        - name: Normalize
-          kwargs:
-            mean: [0.4914, 0.4822, 0.4465]
-            std: [0.2023, 0.1994, 0.2010]
-
 
 model:
   name: SimCLR
-  backbone_model: resnet18
+  backbone_model: resnet50
   projector: 2048-128
   temperature: 0.5
 
@@ -92,6 +74,6 @@ optim:
 
 hardware:
   seed: 0
-  float16: true
+  float16: false
   gpu_id: 0
   world_size: 1
