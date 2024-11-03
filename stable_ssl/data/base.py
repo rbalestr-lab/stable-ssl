@@ -23,10 +23,10 @@ class DatasetConfig:
         Path to the directory containing the training data.
         Default is "data".
     name : str, optional
-        Name of the dataset to use (e.g., "CIFAR10", "CIFAR100").
+        Name of the dataset to use (e.g., "CIFAR10", "CIFAR100", "ImageNet", "ImageFolder").
         Default is "CIFAR10".
     split : str, optional
-        Name of the dataset split to use (e.g., "train", "test").
+        Name of the dataset split to use (e.g., "train", "test", "val").
         Default is "train".
     num_workers : int, optional
         Number of workers to use for data loading.
@@ -66,12 +66,24 @@ class DatasetConfig:
             return 10
         elif self.name == "CIFAR100":
             return 100
+        elif self.name == "ImageNet":
+            return 1000
+        elif self.name == "ImageFolder":
+            dataset = self.get_dataset()
+            return len(dataset.classes)
+        else:
+            return None
 
     @property
     def resolution(self):
         """Return the resolution of the images in the dataset."""
         if self.name in ["CIFAR10", "CIFAR100"]:
             return 32
+        elif self.name == "ImageNet" or self.name == "ImageFolder":
+            # Default resolution for ImageNet; adjust if necessary
+            return 224
+        else:
+            return None
 
     @property
     def data_path(self):
@@ -86,17 +98,33 @@ class DatasetConfig:
         ValueError
             If the dataset is not found in torchvision.datasets.
         """
-        if not hasattr(torchvision.datasets, self.name):
-            raise ValueError(f"Dataset {self.name} not found in torchvision.datasets.")
+        if self.name == "ImageFolder":
+            dataset = torchvision.datasets.ImageFolder(
+                root=self.data_path,
+                transform=Sampler(self.transforms),
+            )
+            return dataset
+        elif self.name == "ImageNet":
+            dataset = torchvision.datasets.ImageNet(
+                root=self.data_path,
+                split=self.split,
+                transform=Sampler(self.transforms),
+            )
+            return dataset
+        else:
+            if not hasattr(torchvision.datasets, self.name):
+                raise ValueError(
+                    f"Dataset {self.name} not found in torchvision.datasets."
+                )
 
-        torchvision_dataset = getattr(torchvision.datasets, self.name)
+            torchvision_dataset = getattr(torchvision.datasets, self.name)
 
-        return torchvision_dataset(
-            root=self.data_path,
-            train=self.split == "train",
-            download=True,
-            transform=Sampler(self.transforms),
-        )
+            return torchvision_dataset(
+                root=self.data_path,
+                train=self.split == "train",
+                download=True,
+                transform=Sampler(self.transforms),
+            )
 
     def get_dataloader(self, world_size=1):
         """Return a DataLoader for the dataset.
@@ -124,7 +152,7 @@ class DatasetConfig:
                 f"batch size {self.batch_size}. "
             )
             logging.info(
-                f"Length of sample: {len(self.sampler)}, whole dataset: {len(dataset)}."
+                f"Length of sampler: {len(self.sampler)}, whole dataset: {len(dataset)}."
                 f"\nSampler rank: {self.sampler.rank}, "
                 f"torch rank: {torch.distributed.get_rank()}."
             )
