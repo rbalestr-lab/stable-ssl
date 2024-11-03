@@ -87,6 +87,6 @@ optim:
 
 hardware:
   seed: 0
-  float16: false
+  float16: true
   gpu_id: 0
   world_size: 2
