@@ -15,6 +15,8 @@ def main(cfg):
     print("--- Arguments ---")
     print(args)
 
+    torch.autograd.set_detect_anomaly(True)
+
     stable_ssl.utils.get_gpu_info()
     model = getattr(stable_ssl, args.model.name)(args)  # Create model
     model()  # Call model

@@ -189,7 +189,7 @@ class LogConfig:
         Name of the (Weights & Biases) project. Default is None.
     log_process: int, optional
         Which process to log. If negative, logs all processes.
-        Default is -1.
+        Default is 0.
     """
 
     folder: Optional[str] = None
@@ -203,7 +203,7 @@ class LogConfig:
     eval_epoch_freq: int = 1
     wandb_entity: Optional[str] = None
     wandb_project: Optional[str] = None
-    log_process: int = -1
+    log_process: int = 0
 
     def __post_init__(self):
         """Initialize logging folder and run settings.
@@ -218,6 +218,11 @@ class LogConfig:
         if self.run is None:
             self.run = datetime.now().strftime("%Y%m%d_%H%M%S.%f")
         (self.folder / self.run).mkdir(parents=True, exist_ok=True)
+
+        if self.log_process < 0 and (
+            self.wandb_entity is not None or self.wandb_project is not None
+        ):
+            raise ValueError("Cannot log all processes to Weights & Biases.")
 
     @property
     def dump_path(self):

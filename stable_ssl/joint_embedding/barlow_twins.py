@@ -28,9 +28,9 @@ class BarlowTwins(JETrainer):
         super().initialize_modules()
         self.bn = torch.nn.BatchNorm1d(self.config.model.projector[-1])
 
-    def compute_ssl_loss(self, z1, z2):
+    def compute_ssl_loss(self, z_i, z_j):
         # Empirical cross-correlation matrix.
-        c = self.bn(z1).T @ self.bn(z2)
+        c = self.bn(z_i).T @ self.bn(z_j)
 
         # Sum the cross-correlation matrix between all gpus.
         c.div_(self.config.data.train_dataset.batch_size)
