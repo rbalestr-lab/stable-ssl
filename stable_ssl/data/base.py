@@ -15,15 +15,15 @@ from .augmentations import TransformsConfig
 
 @dataclass
 class DatasetConfig:
-    """Configuration for the data used for training the model.
+    """Configuration for the dataset.
 
     Parameters
     ----------
-    dir : str, optional
-        Path to the directory containing the training data.
+    data_path : str, optional
+        Path to the directory containing the data.
         Default is "data".
     name : str, optional
-        Name of the dataset to use (e.g., "CIFAR10", "CIFAR100", "ImageNet", "ImageFolder").
+        Name of the dataset to use (e.g., "CIFAR10", "CIFAR100", "ImageNet" etc.).
         Default is "CIFAR10".
     split : str, optional
         Name of the dataset split to use (e.g., "train", "test", "val").
@@ -41,7 +41,7 @@ class DatasetConfig:
         Whether to shuffle the data. Default is False.
     """
 
-    dir: str = "data"
+    data_path: str = "data"
     name: str = "CIFAR10"
     split: str = "train"
     num_workers: int = -1
@@ -98,25 +98,7 @@ class DatasetConfig:
         ValueError
             If the dataset is not found in torchvision.datasets.
         """
-        if self.name == "ImageFolder":
-            dataset = torchvision.datasets.ImageFolder(
-                root=self.data_path,
-                transform=Sampler(self.transforms),
-            )
-            return dataset
-        elif self.name == "ImageNet":
-            dataset = torchvision.datasets.ImageNet(
-                root=self.data_path,
-                split=self.split,
-                transform=Sampler(self.transforms),
-            )
-            return dataset
-        else:
-            if not hasattr(torchvision.datasets, self.name):
-                raise ValueError(
-                    f"Dataset {self.name} not found in torchvision.datasets."
-                )
-
+        if hasattr(torchvision.datasets, self.name):
             torchvision_dataset = getattr(torchvision.datasets, self.name)
 
             return torchvision_dataset(
@@ -125,6 +107,12 @@ class DatasetConfig:
                 download=True,
                 transform=Sampler(self.transforms),
             )
+        else:
+            dataset = torchvision.datasets.ImageFolder(
+                root=self.data_path,
+                transform=Sampler(self.transforms),
+            )
+            return dataset
 
     def get_dataloader(self, world_size=1):
         """Return a DataLoader for the dataset.
@@ -152,7 +140,8 @@ class DatasetConfig:
                 f"batch size {self.batch_size}. "
             )
             logging.info(
-                f"Length of sampler: {len(self.sampler)}, whole dataset: {len(dataset)}."
+                f"Length of sampler: {len(self.sampler)}, "
+                f"whole dataset: {len(dataset)}."
                 f"\nSampler rank: {self.sampler.rank}, "
                 f"torch rank: {torch.distributed.get_rank()}."
             )
