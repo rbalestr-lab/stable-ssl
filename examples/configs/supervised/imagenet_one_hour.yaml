@@ -1,3 +1,8 @@
+# reproduces the training setup of the paper:
+# 'Accurate, Large Minibatch SGD: Training ImageNet in 1 Hour'
+# https://arxiv.org/abs/1706.02677
+
+
 defaults:
   - override hydra/launcher: submitit_slurm
 
@@ -34,7 +39,7 @@ data:
           p: 0.5
   test_out:
     name: ImageNet
-    path: /oscar/data/shared/imagenet/ILSVRC2012/eval
+    path: /oscar/data/shared/imagenet/ILSVRC2012/test
     batch_size: 256
     drop_last: False
     num_workers: -1
