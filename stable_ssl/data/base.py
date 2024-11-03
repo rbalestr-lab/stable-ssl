@@ -9,7 +9,6 @@ import torchvision
 from torchvision import transforms
 from torch.utils.data import Dataset
 from torchvision.transforms.functional import to_pil_image
-from torchvision.datasets import ImageFolder
 
 from .augmentations import TransformsConfig
 
