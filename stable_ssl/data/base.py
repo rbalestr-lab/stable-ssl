@@ -80,7 +80,10 @@ class DatasetConfig:
     @property
     def data_path(self):
         """Return the path to the dataset."""
-        return os.path.join(hydra.utils.get_original_cwd(), self.path, self.name)
+        if self.name == "ImageNet":
+            return os.path.join(hydra.utils.get_original_cwd(), self.path)
+        else:
+            return os.path.join(hydra.utils.get_original_cwd(), self.path, self.name)
 
     def get_dataset(self):
         """Load a dataset with torchvision.datasets.
