@@ -22,9 +22,6 @@ from dataclasses import dataclass, make_dataclass
 from torchmetrics.classification import MulticlassAccuracy
 import os
 
-from .reader import jsonl_run
-
-
 try:
     import wandb
 except ModuleNotFoundError:
