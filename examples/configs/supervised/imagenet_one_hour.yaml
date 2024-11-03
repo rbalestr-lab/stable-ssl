@@ -12,6 +12,7 @@ data:
   train_on: base
   base:
     name: ImageNet
+    data_path: /oscar/data/shared/imagenet/
     batch_size: 256
     drop_last: True
     shuffle: True
@@ -34,6 +35,7 @@ data:
           p: 0.5
   test_out:
     name: ImageNet
+    data_path: /oscar/data/shared/imagenet/
     batch_size: 256
     drop_last: False
     num_workers: -1
@@ -66,4 +68,4 @@ hardware:
   seed: 0
   float16: true
   gpu_id: 0
-  world_size: 8
+  world_size: 2
