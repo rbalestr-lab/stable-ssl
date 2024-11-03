@@ -17,8 +17,9 @@ data:
   train_on: base
   base:
     name: ImageNet
-    path: /oscar/data/shared/imagenet/ILSVRC2012/train
+    path: /oscar/data/shared/imagenet/ILSVRC2012/
     batch_size: 256
+    split: train
     drop_last: True
     shuffle: True
     num_workers: -1
@@ -39,8 +40,9 @@ data:
           p: 0.5
   test_out:
     name: ImageNet
-    path: /oscar/data/shared/imagenet/ILSVRC2012/test
+    path: /oscar/data/shared/imagenet/ILSVRC2012/
     batch_size: 256
+    split: val
     drop_last: False
     num_workers: -1
     transforms:

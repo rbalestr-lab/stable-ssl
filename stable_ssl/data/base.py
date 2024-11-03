@@ -80,26 +80,33 @@ class DatasetConfig:
     @property
     def data_path(self):
         """Return the path to the dataset."""
-        return os.path.join(hydra.utils.get_original_cwd(), self.dir, self.name)
+        return os.path.join(hydra.utils.get_original_cwd(), self.path, self.name)
 
     def get_dataset(self):
-        """Load a dataset from torchvision.datasets.
+        """Load a dataset with torchvision.datasets.
 
         Raises
         ------
         ValueError
             If the dataset is not found in torchvision.datasets.
         """
-        if hasattr(torchvision.datasets, self.name) and self.name != "ImageNet":
-            dataset = getattr(torchvision.datasets, self.name)(
-                root=self.path,
-                train=self.split == "train",
-                download=True,
-                transform=Sampler(self.transforms),
-            )
+        if hasattr(torchvision.datasets, self.name):
+            if self.name == "ImageNet":
+                dataset = torchvision.datasets.ImageNet(
+                    root=self.data_path,
+                    split=self.split,
+                    transform=Sampler(self.transforms),
+                )
+            else:
+                dataset = getattr(torchvision.datasets, self.name)(
+                    root=self.data_path,
+                    train=self.split == "train",
+                    download=True,
+                    transform=Sampler(self.transforms),
+                )
         else:
-            dataset = ImageFolder(
-                root=self.path,
+            dataset = torchvision.datasets.ImageFolder(
+                root=self.data_path,
                 transform=Sampler(self.transforms),
             )
         return dataset
