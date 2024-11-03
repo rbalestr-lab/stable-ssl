@@ -22,9 +22,6 @@ from dataclasses import dataclass, make_dataclass
 from torchmetrics.classification import MulticlassAccuracy
 import os
 
-from .reader import jsonl_run
-
-
 try:
     import wandb
 except ModuleNotFoundError:
@@ -61,7 +58,7 @@ class BaseModelConfig:
     backbone_model : str
         Neural network architecture to use for the backbone. Default is "resnet9".
     sync_batchnorm : bool, optional
-        Whether to use synchronized batch normalization. Default is False.
+        Whether to use synchronized batch normalization. Default is True.
     memory_format : str, optional
         Memory format for tensors (e.g., "channels_last"). Default is "channels_last".
     pretrained : bool, optional
@@ -73,7 +70,7 @@ class BaseModelConfig:
 
     name: str = "Supervised"
     backbone_model: str = "resnet18"
-    sync_batchnorm: bool = False
+    sync_batchnorm: bool = True
     memory_format: str = "channels_last"
     pretrained: bool = False
     with_classifier: bool = True
@@ -134,8 +131,9 @@ class BaseModel(torch.nn.Module):
         # Use WandB if an entity or project name is provided.
         self.use_wandb = bool(
             (self.config.log.wandb_entity or self.config.log.wandb_project)
-            and (torch.distributed.get_rank() == 0)
+            and (self.rank == self.config.log.log_process)
         )
+
         if self.use_wandb:
             logging.info(
                 f"\t=> Initializating wandb for logging in {self.config.log.dump_path}."
@@ -263,7 +261,7 @@ class BaseModel(torch.nn.Module):
             except BreakAllEpochs:
                 logging.exception("Exception during training (self.evaluate).")
                 raise
-            if self.use_wandb and (wandb is not None):
+            if self.use_wandb:
                 wandb.finish()
             self.cleanup()
 
@@ -482,6 +480,15 @@ class BaseModel(torch.nn.Module):
             commit=True,
         )
 
+    def eval_step(self, name_loader):
+        output = self.forward(self.data[0])
+        for name, metric in self.metrics.items():
+            if name.startswith(f"eval/{name_loader}/"):
+                metric.update(output, self.data[1])
+            elif name.startswith(f"eval/{name_loader}/"):
+                self.log({name: metric(output, self.data[1])}, commit=False)
+        self.log(commit=True)
+
     def _set_device(self):
         # Check if CUDA is available, otherwise set to CPU.
         if not torch.cuda.is_available():
@@ -520,7 +527,7 @@ class BaseModel(torch.nn.Module):
 
     def log(self, packet=None, commit=True):
         # Check if the process should be logged.
-        if self.config.log.log_process > 0 and (
+        if self.config.log.log_process >= 0 and (
             self.config.log.log_process != self.rank
         ):
             return
@@ -553,11 +560,6 @@ class BaseModel(torch.nn.Module):
                     self._log_buffer[name] = table
                 else:
                     self._log_buffer[name] = value
-
-            # Add the rank suffix to the log.
-            for name, value in self._log_buffer.items():
-                suffix_name = f"{name}/rank_{self.rank}"
-                wandb.log({suffix_name: value}, step=self.global_step.item())
 
         # Log in jsonl.
         else:
@@ -719,13 +721,6 @@ class BaseModel(torch.nn.Module):
         return self._epoch
 
     @property
-    def logs(self):
-        if self.use_wandb:
-            raise NotImplementedError
-        else:
-            return jsonl_run(self.config.log.dump_path)[1]
-
-    @property
     def config(self):
         return self._config
 
@@ -784,60 +779,3 @@ class BaseModel(torch.nn.Module):
 
     def after_eval_step(self):
         pass
-
-    def eval_step(self, name_loader):
-        output = self.forward(self.data[0])
-        for name, metric in self.metrics.items():
-            if name.startswith(f"eval/{name_loader}/"):
-                metric.update(output, self.data[1])
-            elif name.startswith(f"eval/{name_loader}/"):
-                self.log({name: metric(output, self.data[1])}, commit=False)
-        self.log(commit=True)
-
-    # FIXME: to remove since this is now handled by the data config
-    # def dataset_to_loader(self, dataset, train):
-    #     if self.config.hardware.world_size > 1:
-    #         sampler = torch.utils.data.distributed.DistributedSampler(
-    #             dataset, shuffle=not train, drop_last=train
-    #         )
-    #         assert self.config.optim.batch_size % self.config.hardware.world_size == 0
-    #         drop_last = None
-    #         shuffle = None
-    #     else:
-    #         sampler = None
-    #         drop_last = train
-    #         shuffle = not train
-
-    #     per_device_batch_size = (
-    #         self.config.optim.batch_size // self.config.hardware.world_size
-    #     )
-
-    #     loader = torch.utils.data.DataLoader(
-    #         dataset,
-    #         batch_size=per_device_batch_size,
-    #         num_workers=self.config.data.num_workers,
-    #         pin_memory=True,
-    #         sampler=sampler,
-    #         drop_last=drop_last,
-    #         shuffle=shuffle,
-    #     )
-
-    #     return loader
-
-    # def initialize_train_loader(self):
-    #     train_dataset = load_dataset(
-    #         dataset_name=self.config.data.dataset,
-    #         data_path=self.config.data.data_path,
-    #         train=True,
-    #     )
-
-    #     return self.dataset_to_loader(train_dataset, True)
-
-    # def initialize_val_loader(self):
-    #     eval_dataset = load_dataset(
-    #         dataset_name=self.config.data.dataset,
-    #         data_path=self.config.data.data_path,
-    #         train=False,
-    #     )
-
-    #     return self.dataset_to_loader(eval_dataset, False)
