@@ -1,22 +1,21 @@
-# defaults:
-#   - override hydra/launcher: submitit_local
+defaults:
+  - override hydra/launcher: submitit_slurm
 
-# hydra:
-#   launcher:
-    # tasks_per_node: ${hardware.world_size}
-    # gpus_per_node: ${hardware.world_size}
-    # partition: gpu
-    # cpus_per_task: 4
+hydra:
+  launcher:
+    tasks_per_node: ${hardware.world_size}
+    gpus_per_node: ${hardware.world_size}
+    partition: gpu
+    cpus_per_task: 4
 
 data:
   train_on: base
   base:
     name: ImageNet
-    data_path: /oscar/data/shared/imagenet/
+    path: /oscar/data/shared/imagenet/ILSVRC2012/train
     batch_size: 256
     drop_last: True
     shuffle: True
-    split: train
     num_workers: -1
     transforms:
       view1:
@@ -35,11 +34,10 @@ data:
           p: 0.5
   test_out:
     name: ImageNet
-    data_path: /oscar/data/shared/imagenet/
+    path: /oscar/data/shared/imagenet/ILSVRC2012/eval
     batch_size: 256
     drop_last: False
     num_workers: -1
-    split: test
     transforms:
       view1:
       - name: Normalize

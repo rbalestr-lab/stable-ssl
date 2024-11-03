@@ -9,24 +9,25 @@ import torchvision
 from torchvision import transforms
 from torch.utils.data import Dataset
 from torchvision.transforms.functional import to_pil_image
+from torchvision.datasets import ImageFolder
 
 from .augmentations import TransformsConfig
 
 
 @dataclass
 class DatasetConfig:
-    """Configuration for the dataset.
+    """Configuration for the data.
 
     Parameters
     ----------
-    data_path : str, optional
+    name : str, optional
+        Name of the dataset to use (e.g., "CIFAR10", "CIFAR100").
+        Default is "CIFAR10".
+    path : str, optional
         Path to the directory containing the data.
         Default is "data".
-    name : str, optional
-        Name of the dataset to use (e.g., "CIFAR10", "CIFAR100", "ImageNet" etc.).
-        Default is "CIFAR10".
     split : str, optional
-        Name of the dataset split to use (e.g., "train", "test", "val").
+        Name of the dataset split to use (e.g., "train", "test").
         Default is "train".
     num_workers : int, optional
         Number of workers to use for data loading.
@@ -41,8 +42,8 @@ class DatasetConfig:
         Whether to shuffle the data. Default is False.
     """
 
-    data_path: str = "data"
     name: str = "CIFAR10"
+    path: str = "data"
     split: str = "train"
     num_workers: int = -1
     batch_size: int = 256
@@ -66,24 +67,15 @@ class DatasetConfig:
             return 10
         elif self.name == "CIFAR100":
             return 100
-        elif self.name == "ImageNet":
-            return 1000
-        elif self.name == "ImageFolder":
+        else:
             dataset = self.get_dataset()
             return len(dataset.classes)
-        else:
-            return None
 
     @property
     def resolution(self):
         """Return the resolution of the images in the dataset."""
         if self.name in ["CIFAR10", "CIFAR100"]:
             return 32
-        # elif self.name == "ImageNet" or self.name == "ImageFolder":
-        #     # Default resolution for ImageNet; adjust if necessary
-        #     return 224
-        else:
-            return None
 
     @property
     def data_path(self):
@@ -98,27 +90,19 @@ class DatasetConfig:
         ValueError
             If the dataset is not found in torchvision.datasets.
         """
-        if hasattr(torchvision.datasets, self.name):
-
-            if self.name == "ImageNet":
-                dataset = torchvision.datasets.ImageNet(
-                    root=self.data_path,
-                    split=self.split == "train",
-                    transform=Sampler(self.transforms),
-                )
-            else:
-                dataset = getattr(torchvision.datasets, self.name)(
-                    root=self.data_path,
-                    train=self.split == "train",
-                    download=True,
-                    transform=Sampler(self.transforms),
-                )
-        else:
-            dataset = torchvision.datasets.ImageFolder(
-                root=self.data_path,
+        if hasattr(torchvision.datasets, self.name) and self.name != "ImageNet":
+            dataset = getattr(torchvision.datasets, self.name)(
+                root=self.path,
+                train=self.split == "train",
+                download=True,
                 transform=Sampler(self.transforms),
             )
-            return dataset
+        else:
+            dataset = ImageFolder(
+                root=self.path,
+                transform=Sampler(self.transforms),
+            )
+        return dataset
 
     def get_dataloader(self, world_size=1):
         """Return a DataLoader for the dataset.
@@ -146,8 +130,7 @@ class DatasetConfig:
                 f"batch size {self.batch_size}. "
             )
             logging.info(
-                f"Length of sampler: {len(self.sampler)}, "
-                f"whole dataset: {len(dataset)}."
+                f"Length of sample: {len(self.sampler)}, whole dataset: {len(dataset)}."
                 f"\nSampler rank: {self.sampler.rank}, "
                 f"torch rank: {torch.distributed.get_rank()}."
             )
