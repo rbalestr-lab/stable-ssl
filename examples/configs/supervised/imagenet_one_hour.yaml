@@ -1,12 +1,12 @@
-defaults:
-  - override hydra/launcher: submitit_slurm
+# defaults:
+#   - override hydra/launcher: submitit_local
 
-hydra:
-  launcher:
-    tasks_per_node: ${hardware.world_size}
-    gpus_per_node: ${hardware.world_size}
-    partition: gpu
-    cpus_per_task: 4
+# hydra:
+#   launcher:
+    # tasks_per_node: ${hardware.world_size}
+    # gpus_per_node: ${hardware.world_size}
+    # partition: gpu
+    # cpus_per_task: 4
 
 data:
   train_on: base

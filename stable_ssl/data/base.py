@@ -79,9 +79,9 @@ class DatasetConfig:
         """Return the resolution of the images in the dataset."""
         if self.name in ["CIFAR10", "CIFAR100"]:
             return 32
-        elif self.name == "ImageNet" or self.name == "ImageFolder":
-            # Default resolution for ImageNet; adjust if necessary
-            return 224
+        # elif self.name == "ImageNet" or self.name == "ImageFolder":
+        #     # Default resolution for ImageNet; adjust if necessary
+        #     return 224
         else:
             return None
 
@@ -99,14 +99,20 @@ class DatasetConfig:
             If the dataset is not found in torchvision.datasets.
         """
         if hasattr(torchvision.datasets, self.name):
-            torchvision_dataset = getattr(torchvision.datasets, self.name)
 
-            return torchvision_dataset(
-                root=self.data_path,
-                train=self.split == "train",
-                download=True,
-                transform=Sampler(self.transforms),
-            )
+            if self.name == "ImageNet":
+                dataset = torchvision.datasets.ImageNet(
+                    root=self.data_path,
+                    split=self.split == "train",
+                    transform=Sampler(self.transforms),
+                )
+            else:
+                dataset = getattr(torchvision.datasets, self.name)(
+                    root=self.data_path,
+                    train=self.split == "train",
+                    download=True,
+                    transform=Sampler(self.transforms),
+                )
         else:
             dataset = torchvision.datasets.ImageFolder(
                 root=self.data_path,
