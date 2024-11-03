@@ -134,7 +134,7 @@ class BaseModel(torch.nn.Module):
         # Use WandB if an entity or project name is provided.
         self.use_wandb = bool(
             (self.config.log.wandb_entity or self.config.log.wandb_project)
-            and self.rank == self.config.log.log_process
+            and (self.rank == self.config.log.log_process)
         )
 
         if self.use_wandb:
