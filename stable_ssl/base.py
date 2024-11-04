@@ -48,7 +48,7 @@ from .utils import (
 
 
 @dataclass
-class BaseModelConfig:
+class ModelConfig:
     """Base configuration for the 'model' parameters.
 
     Parameters
@@ -56,24 +56,20 @@ class BaseModelConfig:
     model : str
         Type of model to use. Default is "Supervised".
     backbone_model : str
-        Neural network architecture to use for the backbone. Default is "resnet9".
+        Neural network architecture to use for the backbone. Default is "resnet50".
     sync_batchnorm : bool, optional
         Whether to use synchronized batch normalization. Default is True.
     memory_format : str, optional
         Memory format for tensors (e.g., "channels_last"). Default is "channels_last".
     pretrained : bool, optional
         Whether to use the torchvision pretrained weights or use random initialization.
-    with_classifier : bool, optional
-        Whether to keep the last layer(s) of the backbone (classifier)
-        when loading the model. Default is True.
     """
 
     name: str = "Supervised"
-    backbone_model: str = "resnet18"
+    backbone_model: str = "resnet50"
     sync_batchnorm: bool = True
     memory_format: str = "channels_last"
     pretrained: bool = False
-    with_classifier: bool = True
 
 
 class BaseModel(torch.nn.Module):
@@ -129,9 +125,10 @@ class BaseModel(torch.nn.Module):
         seed_everything(self.config.hardware.seed)
 
         # Use WandB if an entity or project name is provided.
-        self.use_wandb = bool(
-            (self.config.log.wandb_entity or self.config.log.wandb_project)
-            and (self.rank == self.config.log.log_process)
+        self.use_wandb = (
+            (self.config.log.api is not None)
+            and (self.config.log.api.lower() == "wandb")
+            and (self.rank == self.config.log.rank_to_log)
         )
 
         if self.use_wandb:
@@ -141,18 +138,18 @@ class BaseModel(torch.nn.Module):
             if os.environ.get("HOME") is None:
                 os.environ["HOME"] = "/users/hvanasse"  # TODO: remove hardcoded home
             wandb.init(
-                entity=self.config.log.wandb_entity,
-                project=self.config.log.wandb_project,
+                entity=self.config.log.entity,
+                project=self.config.log.project,
                 config=dataclasses.asdict(self.config),
                 name=self.config.log.run,
                 dir=str(self.config.log.dump_path),
                 resume="allow",
             )
-        else:
-            logging.info(f"\t=> Dumping config file in {self.config.log.dump_path}")
-            omegaconf.OmegaConf.save(
-                self.config, self.config.log.dump_path / "hparams.yaml"
-            )
+
+        logging.info(f"\t=> Dumping config file in {self.config.log.dump_path}.")
+        omegaconf.OmegaConf.save(
+            self.config, self.config.log.dump_path / "hparams.yaml"
+        )
 
         self.scaler = torch.amp.GradScaler("cuda", enabled=self.config.hardware.float16)
 
@@ -267,10 +264,11 @@ class BaseModel(torch.nn.Module):
 
     def initialize_metrics(self):
         nc = self.config.data.datasets[self.config.data.train_on].num_classes
-        train_acc1 = MulticlassAccuracy(num_classes=nc, top_k=1)
 
         # Initialize the metrics dictionary with the train metric.
-        self.metrics = torch.nn.ModuleDict({"train/acc1": train_acc1})
+        self.metrics = torch.nn.ModuleDict(
+            {"train/acc1": MulticlassAccuracy(num_classes=nc, top_k=1)}
+        )
 
         # Add unique evaluation metrics for each eval dataset.
         name_eval_loaders = set(self.dataloaders.keys()) - set(
@@ -526,12 +524,6 @@ class BaseModel(torch.nn.Module):
         return submitit.helpers.DelayedSubmission(model)
 
     def log(self, packet=None, commit=True):
-        # Check if the process should be logged.
-        if self.config.log.log_process >= 0 and (
-            self.config.log.log_process != self.rank
-        ):
-            return
-
         # Update the log buffer with the new packet.
         packet = packet or {}
         assert "_global_step" not in packet, logging.error(

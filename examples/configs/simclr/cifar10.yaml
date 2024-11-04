@@ -79,7 +79,6 @@ model:
 
 optim:
   epochs: 1000
-  batch_size: 256
   lr: 5
   optimizer: LARS
   weight_decay: 1e-6

@@ -17,7 +17,7 @@ data:
   train_on: base
   base:
     name: ImageNet
-    path: /oscar/data/shared/imagenet/ILSVRC2012/
+    path: /sss/jobtmp/hvanasse/ImageNet
     batch_size: 256
     split: train
     drop_last: True
@@ -25,6 +25,7 @@ data:
     num_workers: -1
     transforms:
       view1:
+      - name: ToTensor
       - name: Normalize
         kwargs:
           mean: [0.485, 0.456, 0.406]
@@ -40,13 +41,14 @@ data:
           p: 0.5
   test_out:
     name: ImageNet
-    path: /oscar/data/shared/imagenet/ILSVRC2012/
+    path: /sss/jobtmp/hvanasse/ImageNet
     batch_size: 256
     split: val
     drop_last: False
     num_workers: -1
     transforms:
       view1:
+      - name: ToTensor
       - name: Normalize
         kwargs:
           mean: [0.485, 0.456, 0.406]
@@ -65,7 +67,6 @@ model:
 optim:
   optimizer: SGD
   epochs: 90
-  batch_size: 256
   lr: 0.256
   weight_decay: 3.0517578125e-05
 

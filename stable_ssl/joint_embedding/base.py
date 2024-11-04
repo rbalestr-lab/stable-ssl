@@ -13,11 +13,11 @@ import torch.nn.functional as F
 from torch import nn
 
 from stable_ssl.utils import load_nn
-from stable_ssl.base import BaseModel, BaseModelConfig
+from stable_ssl.base import BaseModel, ModelConfig
 
 
 @dataclass
-class JEConfig(BaseModelConfig):
+class JEConfig(ModelConfig):
     """Configuration for the joint-embedding model parameters.
 
     Parameters
@@ -48,10 +48,8 @@ class JETrainer(BaseModel):
         # backbone
         backbone, fan_in = load_nn(
             backbone_model=self.config.model.backbone_model,
-            n_classes=self.config.data.datasets[self.config.data.train_on].num_classes,
-            with_classifier=False,
             pretrained=False,
-            dataset=self.config.data.datasets[self.config.data.train_on].name,
+            dataset=self.config.data.train_dataset.name,
         )
         self.backbone = backbone.train()
 
@@ -67,11 +65,11 @@ class JETrainer(BaseModel):
 
         # linear probes
         self.backbone_classifier = torch.nn.Linear(
-            fan_in, self.config.data.datasets[self.config.data.train_on].num_classes
+            fan_in, self.config.data.train_dataset.num_classes
         )
         self.projector_classifier = torch.nn.Linear(
             self.config.model.projector[-1],
-            self.config.data.datasets[self.config.data.train_on].num_classes,
+            self.config.data.train_dataset.num_classes,
         )
 
     def forward(self, x):
