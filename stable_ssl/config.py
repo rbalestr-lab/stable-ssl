@@ -24,32 +24,7 @@ from .joint_embedding import (
 )
 from .supervised import Supervised
 from .data import DataConfig
-from .base import BaseModelConfig
-
-
-@dataclass
-class ModelConfig:
-    """Base configuration for the 'model' parameters.
-
-    Parameters
-    ----------
-    model : str
-        Type of model to use. Default is "Supervised".
-    backbone_model : str
-        Neural network architecture to use for the backbone. Default is "resnet50".
-    sync_batchnorm : bool, optional
-        Whether to use synchronized batch normalization. Default is True.
-    memory_format : str, optional
-        Memory format for tensors (e.g., "channels_last"). Default is "channels_last".
-    pretrained : bool, optional
-        Whether to use the torchvision pretrained weights or use random initialization.
-    """
-
-    name: str = "Supervised"
-    backbone_model: str = "resnet50"
-    sync_batchnorm: bool = True
-    memory_format: str = "channels_last"
-    pretrained: bool = False
+from .base import ModelConfig
 
 
 @dataclass
@@ -258,7 +233,7 @@ class GlobalConfig:
 
     Parameters
     ----------
-    model : BaseModelConfig
+    model : ModelConfig
         Model configuration.
     data : DataConfig
         Data configuration.
@@ -270,7 +245,7 @@ class GlobalConfig:
         Logging and checkpointing configuration.
     """
 
-    model: BaseModelConfig = field(default_factory=BaseModelConfig)
+    model: ModelConfig = field(default_factory=ModelConfig)
     data: DataConfig = field(default_factory=DataConfig)
     optim: OptimConfig = field(default_factory=OptimConfig)
     hardware: HardwareConfig = field(default_factory=HardwareConfig)
@@ -286,9 +261,9 @@ class GlobalConfig:
 
 
 _MODEL_CONFIGS = {
+    "Supervised": ModelConfig,
     "SimCLR": SimCLRConfig,
     "Barlowtwins": BarlowTwinsConfig,
-    "Supervised": BaseModelConfig,
     "VICReg": VICRegConfig,
     "WMSE": WMSEConfig,
 }

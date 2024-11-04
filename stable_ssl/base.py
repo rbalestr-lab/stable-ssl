@@ -47,6 +47,31 @@ from .utils import (
 )
 
 
+@dataclass
+class ModelConfig:
+    """Base configuration for the 'model' parameters.
+
+    Parameters
+    ----------
+    model : str
+        Type of model to use. Default is "Supervised".
+    backbone_model : str
+        Neural network architecture to use for the backbone. Default is "resnet50".
+    sync_batchnorm : bool, optional
+        Whether to use synchronized batch normalization. Default is True.
+    memory_format : str, optional
+        Memory format for tensors (e.g., "channels_last"). Default is "channels_last".
+    pretrained : bool, optional
+        Whether to use the torchvision pretrained weights or use random initialization.
+    """
+
+    name: str = "Supervised"
+    backbone_model: str = "resnet50"
+    sync_batchnorm: bool = True
+    memory_format: str = "channels_last"
+    pretrained: bool = False
+
+
 class BaseModel(torch.nn.Module):
     r"""Base class for training a model.
 
@@ -100,9 +125,8 @@ class BaseModel(torch.nn.Module):
         seed_everything(self.config.hardware.seed)
 
         # Use WandB if an entity or project name is provided.
-        self.use_wandb = bool(
-            (self.config.log.entity or self.config.log.project)
-            and (self.rank == self.config.log.log_process)
+        self.use_wandb = (self.config.log.api.lower() == "wandb") and (
+            self.rank == self.config.log.rank_to_log
         )
 
         if self.use_wandb:
@@ -498,12 +522,6 @@ class BaseModel(torch.nn.Module):
         return submitit.helpers.DelayedSubmission(model)
 
     def log(self, packet=None, commit=True):
-        # Check if the process should be logged.
-        if self.config.log.log_process >= 0 and (
-            self.config.log.log_process != self.rank
-        ):
-            return
-
         # Update the log buffer with the new packet.
         packet = packet or {}
         assert "_global_step" not in packet, logging.error(

@@ -13,11 +13,11 @@ import torch.nn.functional as F
 from torch import nn
 
 from stable_ssl.utils import load_nn
-from stable_ssl.base import BaseModel, BaseModelConfig
+from stable_ssl.base import BaseModel, ModelConfig
 
 
 @dataclass
-class JEConfig(BaseModelConfig):
+class JEConfig(ModelConfig):
     """Configuration for the joint-embedding model parameters.
 
     Parameters
