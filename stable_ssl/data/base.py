@@ -15,16 +15,16 @@ from .augmentations import TransformsConfig
 
 @dataclass
 class DatasetConfig:
-    """Configuration for the data used for training the model.
+    """Configuration for the data.
 
     Parameters
     ----------
-    dir : str, optional
-        Path to the directory containing the training data.
-        Default is "data".
     name : str, optional
         Name of the dataset to use (e.g., "CIFAR10", "CIFAR100").
         Default is "CIFAR10".
+    path : str, optional
+        Path to the directory containing the data.
+        Default is "data".
     split : str, optional
         Name of the dataset split to use (e.g., "train", "test").
         Default is "train".
@@ -41,8 +41,8 @@ class DatasetConfig:
         Whether to shuffle the data. Default is False.
     """
 
-    dir: str = "data"
     name: str = "CIFAR10"
+    path: str = "data"
     split: str = "train"
     num_workers: int = -1
     batch_size: int = 256
@@ -66,6 +66,9 @@ class DatasetConfig:
             return 10
         elif self.name == "CIFAR100":
             return 100
+        else:
+            dataset = self.get_dataset()
+            return len(dataset.classes)
 
     @property
     def resolution(self):
@@ -76,27 +79,39 @@ class DatasetConfig:
     @property
     def data_path(self):
         """Return the path to the dataset."""
-        return os.path.join(hydra.utils.get_original_cwd(), self.dir, self.name)
+        if self.name == "ImageNet":
+            return os.path.join(hydra.utils.get_original_cwd(), self.path)
+        else:
+            return os.path.join(hydra.utils.get_original_cwd(), self.path, self.name)
 
     def get_dataset(self):
-        """Load a dataset from torchvision.datasets.
+        """Load a dataset with torchvision.datasets.
 
         Raises
         ------
         ValueError
             If the dataset is not found in torchvision.datasets.
         """
-        if not hasattr(torchvision.datasets, self.name):
-            raise ValueError(f"Dataset {self.name} not found in torchvision.datasets.")
-
-        torchvision_dataset = getattr(torchvision.datasets, self.name)
-
-        return torchvision_dataset(
-            root=self.data_path,
-            train=self.split == "train",
-            download=True,
-            transform=Sampler(self.transforms),
-        )
+        if hasattr(torchvision.datasets, self.name):
+            if self.name == "ImageNet":
+                dataset = torchvision.datasets.ImageNet(
+                    root=self.data_path,
+                    split=self.split,
+                    transform=Sampler(self.transforms),
+                )
+            else:
+                dataset = getattr(torchvision.datasets, self.name)(
+                    root=self.data_path,
+                    train=self.split == "train",
+                    download=True,
+                    transform=Sampler(self.transforms),
+                )
+        else:
+            dataset = torchvision.datasets.ImageFolder(
+                root=self.data_path,
+                transform=Sampler(self.transforms),
+            )
+        return dataset
 
     def get_dataloader(self, world_size=1):
         """Return a DataLoader for the dataset.

@@ -560,6 +560,7 @@ class BaseModel(torch.nn.Module):
                     self._log_buffer[name] = table
                 else:
                     self._log_buffer[name] = value
+            wandb.log(self._log_buffer, step=self.global_step.item())
 
         # Log in jsonl.
         else:
