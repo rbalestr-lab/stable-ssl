@@ -12,7 +12,6 @@ from typing import Optional, Tuple
 import logging
 from omegaconf import OmegaConf
 from pathlib import Path
-from datetime import datetime
 import torch
 
 from .utils import LARS, get_open_port
@@ -197,11 +196,10 @@ class LogConfig:
 
 @dataclass
 class WandbConfig(LogConfig):
-    """
-    Configuration for the Weights & Biases logging.
+    """Configuration for the Weights & Biases logging.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     entity : str, optional
         Name of the (Weights & Biases) entity. Default is None.
     project : str, optional
@@ -209,7 +207,7 @@ class WandbConfig(LogConfig):
     run : str, optional
         Name of the Weights & Biases run. Default is None.
     rank_to_log: int, optional
-        Specifies the rank of the GPU/process to log in a multi-GPU setting for WandB tracking.
+        Specifies the rank of the GPU/process to log for WandB tracking.
         - Set to an integer value (e.g., 0, 1, 2) to log a specific GPU/process.
         - Set to a negative value (e.g., -1) to log all processes.
         Default is 0, which logs only the primary process.
@@ -221,6 +219,7 @@ class WandbConfig(LogConfig):
     rank_to_log: int = 0
 
     def __post_init__(self):
+        """Check the rank to log for Weights & Biases."""
         super().__post_init__()
 
         if self.rank_to_log < 0:
@@ -278,7 +277,6 @@ _LOG_CONFIGS = {
 
 def get_args(cfg_dict, model_class=None):
     """Create and return a GlobalConfig from a configuration dictionary."""
-
     # Retrieves the named arguments that are not from known categories.
     kwargs = {
         name: value
