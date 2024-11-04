@@ -65,7 +65,6 @@ model:
 optim:
   optimizer: SGD
   epochs: 90
-  batch_size: 256
   lr: 0.256
   weight_decay: 3.0517578125e-05
 
