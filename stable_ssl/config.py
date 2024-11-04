@@ -142,7 +142,8 @@ class LogConfig:
         Default is None.
     folder : str, optional
         Path to the folder where logs and checkpoints will be saved.
-        Default is the current directory + random hash folder.
+        If None is provided, a default path is created under `./logs`.
+        Default is None.
     load_from : str, optional
         Path to a checkpoint from which to load the model, optimizer, and scheduler.
         Default is "ckpt".
@@ -162,7 +163,6 @@ class LogConfig:
 
     api: Optional[str] = None
     folder: Optional[str] = None
-    run: Optional[str] = None
     load_from: str = "ckpt"
     level: int = logging.INFO
     checkpoint_frequency: int = 10
@@ -181,9 +181,10 @@ class LogConfig:
             self.folder = Path("./logs")
         else:
             self.folder = Path(self.folder)
-        if self.run is None:
-            self.run = datetime.now().strftime("%Y%m%d_%H%M%S.%f")
-        (self.folder / self.run).mkdir(parents=True, exist_ok=True)
+        # TODO: decide if we add another level of folder at this point.
+        # if self.run is None:
+        #     self.run = datetime.now().strftime("%Y%m%d_%H%M%S.%f")
+        self.folder.mkdir(parents=True, exist_ok=True)
 
     @property
     def dump_path(self):
@@ -191,7 +192,7 @@ class LogConfig:
 
         This path includes the base folder and the run identifier.
         """
-        return self.folder / self.run
+        return self.folder
 
 
 @dataclass
@@ -220,6 +221,8 @@ class WandbConfig(LogConfig):
     rank_to_log: int = 0
 
     def __post_init__(self):
+        super().__post_init__()
+
         if self.rank_to_log < 0:
             raise ValueError("Cannot (yet) log all processes to Weights & Biases.")
 

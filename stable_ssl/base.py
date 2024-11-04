@@ -125,8 +125,10 @@ class BaseModel(torch.nn.Module):
         seed_everything(self.config.hardware.seed)
 
         # Use WandB if an entity or project name is provided.
-        self.use_wandb = (self.config.log.api.lower() == "wandb") and (
-            self.rank == self.config.log.rank_to_log
+        self.use_wandb = (
+            (self.config.log.api is not None)
+            and (self.config.log.api.lower() == "wandb")
+            and (self.rank == self.config.log.rank_to_log)
         )
 
         if self.use_wandb:
@@ -143,11 +145,11 @@ class BaseModel(torch.nn.Module):
                 dir=str(self.config.log.dump_path),
                 resume="allow",
             )
-        else:
-            logging.info(f"\t=> Dumping config file in {self.config.log.dump_path}")
-            omegaconf.OmegaConf.save(
-                self.config, self.config.log.dump_path / "hparams.yaml"
-            )
+
+        logging.info(f"\t=> Dumping config file in {self.config.log.dump_path}.")
+        omegaconf.OmegaConf.save(
+            self.config, self.config.log.dump_path / "hparams.yaml"
+        )
 
         self.scaler = torch.amp.GradScaler("cuda", enabled=self.config.hardware.float16)
 
