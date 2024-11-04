@@ -80,7 +80,8 @@ class DatasetConfig:
     def data_path(self):
         """Return the path to the dataset."""
         if self.name == "ImageNet":
-            return os.path.join(hydra.utils.get_original_cwd(), self.path)
+            return self.path
+            # return os.path.join(hydra.utils.get_original_cwd(), self.path)
         else:
             return os.path.join(hydra.utils.get_original_cwd(), self.path, self.name)
 
