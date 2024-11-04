@@ -38,8 +38,6 @@ class OptimConfig:
         Default is "LARS".
     lr : float
         Learning rate for the optimizer. Default is 1e0.
-    batch_size : int, optional
-        Batch size for training. Default is 256.
     epochs : int, optional
         Number of epochs to train the model. Default is 1000.
     max_steps : int, optional
@@ -59,7 +57,6 @@ class OptimConfig:
 
     optimizer: str = "LARS"
     lr: float = 1e0
-    batch_size: int = 256
     epochs: int = 1000
     max_steps: int = -1
     weight_decay: float = 0
