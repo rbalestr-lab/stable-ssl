@@ -43,9 +43,6 @@ class ModelConfig:
         Memory format for tensors (e.g., "channels_last"). Default is "channels_last".
     pretrained : bool, optional
         Whether to use the torchvision pretrained weights or use random initialization.
-    with_classifier : bool, optional
-        Whether to keep the last layer(s) of the backbone (classifier)
-        when loading the model. Default is True.
     """
 
     name: str = "Supervised"
@@ -53,7 +50,6 @@ class ModelConfig:
     sync_batchnorm: bool = True
     memory_format: str = "channels_last"
     pretrained: bool = False
-    with_classifier: bool = True
 
 
 @dataclass

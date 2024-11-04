@@ -18,7 +18,6 @@ class Supervised(BaseModel):
         backbone, fan_in = load_nn(
             backbone_model=self.config.model.backbone_model,
             n_classes=self.config.data.datasets[self.config.data.train_on].num_classes,
-            with_classifier=True,
             pretrained=False,
             dataset=self.config.data.datasets[self.config.data.train_on].name,
         )

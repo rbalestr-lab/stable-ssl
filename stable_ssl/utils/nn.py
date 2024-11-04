@@ -13,8 +13,7 @@ import torch.nn as nn
 
 def load_nn(
     backbone_model,
-    n_classes,
-    with_classifier=True,
+    n_classes=None,
     pretrained=False,
     dataset="CIFAR10",
     **kwargs,
@@ -27,8 +26,8 @@ def load_nn(
         Name of the backbone model.
     n_classes : int
         Number of classes in the dataset.
-    with_classifier : bool, optional
-        Whether to include a classifier layer, by default True.
+        If None, the model is loaded without the classifier.
+        Default is None.
     pretrained : bool, optional
         Whether to load a pretrained model, by default False.
     dataset : str, optional
@@ -57,8 +56,8 @@ def load_nn(
             raise ValueError(f"Unknown model: {backbone_model}.")
 
     # Adapt the last layer, either linear or identity.
-    def last_layer(n_classes, with_classifier, in_features):
-        if with_classifier:
+    def last_layer(n_classes, in_features):
+        if n_classes is not None:
             return nn.Linear(in_features, n_classes)
         else:
             return nn.Identity()
@@ -66,22 +65,23 @@ def load_nn(
     # For models like ResNet.
     if hasattr(model, "fc"):
         in_features = model.fc.in_features
-        model.fc = last_layer(n_classes, with_classifier, in_features)
+        model.fc = last_layer(n_classes, in_features)
     # For models like VGG or AlexNet.
     elif hasattr(model, "classifier"):
         in_features = model.classifier[-1].in_features
-        model.classifier[-1] = last_layer(n_classes, with_classifier, in_features)
+        model.classifier[-1] = last_layer(n_classes, in_features)
     # For models like ViT.
     elif hasattr(model, "heads"):
         in_features = model.heads.head.in_features
-        model.heads.head = last_layer(n_classes, with_classifier, in_features)
+        model.heads.head = last_layer(n_classes, in_features)
     # For models like Swin Transformer.
     elif hasattr(model, "head"):
         in_features = model.head.in_features
-        model.head = last_layer(n_classes, with_classifier, in_features)
+        model.head = last_layer(n_classes, in_features)
     else:
         raise ValueError(f"Unknown model structure for : '{backbone_model}'.")
 
+    # TODO: enhance flexibility, this is too hardcoded.
     # Adapt the resolution of the model if using CIFAR with resnet.
     if (
         "CIFAR" in dataset
