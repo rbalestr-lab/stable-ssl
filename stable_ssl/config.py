@@ -28,6 +28,35 @@ from .base import BaseModelConfig
 
 
 @dataclass
+class ModelConfig:
+    """Base configuration for the 'model' parameters.
+
+    Parameters
+    ----------
+    model : str
+        Type of model to use. Default is "Supervised".
+    backbone_model : str
+        Neural network architecture to use for the backbone. Default is "resnet50".
+    sync_batchnorm : bool, optional
+        Whether to use synchronized batch normalization. Default is True.
+    memory_format : str, optional
+        Memory format for tensors (e.g., "channels_last"). Default is "channels_last".
+    pretrained : bool, optional
+        Whether to use the torchvision pretrained weights or use random initialization.
+    with_classifier : bool, optional
+        Whether to keep the last layer(s) of the backbone (classifier)
+        when loading the model. Default is True.
+    """
+
+    name: str = "Supervised"
+    backbone_model: str = "resnet50"
+    sync_batchnorm: bool = True
+    memory_format: str = "channels_last"
+    pretrained: bool = False
+    with_classifier: bool = True
+
+
+@dataclass
 class OptimConfig:
     """Configuration for the 'optimizer' parameters.
 
@@ -41,9 +70,10 @@ class OptimConfig:
     batch_size : int, optional
         Batch size for training. Default is 256.
     epochs : int, optional
-        Number of epochs to train the model. Default is 10.
+        Number of epochs to train the model. Default is 1000.
     max_steps : int, optional
-        Maximum number of steps per epoch. Default is -1.
+        Maximum number of steps per epoch. If negative, no limit is set.
+        Default is -1.
     weight_decay : float
         Weight decay for the optimizer. Default is 1e-6.
     momentum : float
@@ -118,21 +148,6 @@ class HardwareConfig:
         Number of processes participating in distributed training. Default is 1.
     port : int, optional
         Local proc's port number for distributed training. Default is None.
-    launcher: str, optional
-        Distributed training launcher. Default is "local".
-        Pick from "torch_distributed", "submitit_local", "submitit_slurm".
-    cpus_per_task: int, optional
-        Number of CPUs per task for distributed training. Default is 1.
-    gpus_per_task: int, optional
-        Number of GPUs per task for distributed training. Default is 1.
-    tasks_per_node: int, optional
-        Number of tasks per node for distributed training. Default is 1.
-    timeout_min: int, optional
-        Timeout in minutes for distributed training. Default is 60.
-    partition: str, optional
-        Partition to use for distributed training. Default is "gpu".
-    mem_gb: int, optional
-        Memory in GB to allocate for distributed training per task. Default is 30.
     """
 
     seed: Optional[int] = None
@@ -140,23 +155,10 @@ class HardwareConfig:
     gpu_id: int = 0
     world_size: int = 1
     port: Optional[int] = None
-    # launcher: str = "torch_distributed"
-    # cpus_per_task: int = 1
-    # gpus_per_task: int = 1
-    # tasks_per_node: int = 1
-    # timeout_min: int = 60
-    # partition: str = "gpu"
-    # mem_gb: int = 30
 
     def __post_init__(self):
         """Set a random port for distributed training if not provided."""
         self.port = self.port or get_open_port()
-        # assert self.world_size == self.tasks_per_node * self.gpus_per_task
-        # assert self.launcher in [
-        #     "submitit_slurm",
-        #     "submitit_local",
-        #     "torch_distributed"
-        # ]
 
 
 @dataclass
@@ -165,6 +167,11 @@ class LogConfig:
 
     Parameters
     ----------
+    api: str, optional
+        Which logging API to use.
+        - Set to "wandb" to use Weights & Biases.
+        - Set to "None" to use jsonlines.
+        Default is None.
     folder : str, optional
         Path to the folder where logs and checkpoints will be saved.
         Default is the current directory + random hash folder.
@@ -176,22 +183,16 @@ class LogConfig:
     checkpoint_frequency : int, optional
         Frequency of saving checkpoints (in terms of epochs). Default is 10.
     save_final_model : bool, optional
-        Whether to save the final trained model. Default is False.
+        Whether to save the final trained model. Default is True.
     final_model_name : str, optional
         Name for the final saved model. Default is "final_model".
     eval_only : bool, optional
         Whether to only evaluate the model without training. Default is False.
     eval_epoch_freq : int, optional
         Frequency of evaluation (in terms of epochs). Default is 1.
-    wandb_entity : str, optional
-        Name of the (Weights & Biases) entity. Default is None.
-    wandb_project : str, optional
-        Name of the (Weights & Biases) project. Default is None.
-    log_process: int, optional
-        Which process to log. If negative, logs all processes.
-        Default is 0.
     """
 
+    api: Optional[str] = None
     folder: Optional[str] = None
     run: Optional[str] = None
     load_from: str = "ckpt"
@@ -201,9 +202,6 @@ class LogConfig:
     final_model_name: str = "final_model"
     eval_only: bool = False
     eval_epoch_freq: int = 1
-    wandb_entity: Optional[str] = None
-    wandb_project: Optional[str] = None
-    log_process: int = 0
 
     def __post_init__(self):
         """Initialize logging folder and run settings.
@@ -219,11 +217,6 @@ class LogConfig:
             self.run = datetime.now().strftime("%Y%m%d_%H%M%S.%f")
         (self.folder / self.run).mkdir(parents=True, exist_ok=True)
 
-        if self.log_process < 0 and (
-            self.wandb_entity is not None or self.wandb_project is not None
-        ):
-            raise ValueError("Cannot log all processes to Weights & Biases.")
-
     @property
     def dump_path(self):
         """Return the full path where logs and checkpoints are stored.
@@ -234,7 +227,37 @@ class LogConfig:
 
 
 @dataclass
-class TrainerConfig:
+class WandbConfig(LogConfig):
+    """
+    Configuration for the Weights & Biases logging.
+
+    Parameters:
+    -----------
+    entity : str, optional
+        Name of the (Weights & Biases) entity. Default is None.
+    project : str, optional
+        Name of the (Weights & Biases) project. Default is None.
+    run : str, optional
+        Name of the Weights & Biases run. Default is None.
+    rank_to_log: int, optional
+        Specifies the rank of the GPU/process to log in a multi-GPU setting for WandB tracking.
+        - Set to an integer value (e.g., 0, 1, 2) to log a specific GPU/process.
+        - Set to a negative value (e.g., -1) to log all processes.
+        Default is 0, which logs only the primary process.
+    """
+
+    entity: Optional[str] = None
+    project: Optional[str] = None
+    run: Optional[str] = None
+    rank_to_log: int = 0
+
+    def __post_init__(self):
+        if self.rank_to_log < 0:
+            raise ValueError("Cannot (yet) log all processes to Weights & Biases.")
+
+
+@dataclass
+class GlobalConfig:
     """Global configuration for training a model.
 
     Parameters
@@ -273,16 +296,26 @@ _MODEL_CONFIGS = {
     "VICReg": VICRegConfig,
     "WMSE": WMSEConfig,
 }
+_LOG_CONFIGS = {
+    "wandb": WandbConfig,
+    None: LogConfig,
+    "None": LogConfig,
+    "json": LogConfig,
+    "jsonlines": LogConfig,
+}
 
 
 def get_args(cfg_dict, model_class=None):
-    """Create and return a TrainerConfig from a configuration dictionary."""
+    """Create and return a GlobalConfig from a configuration dictionary."""
+
+    # Retrieves the named arguments that are not from known categories.
     kwargs = {
         name: value
         for name, value in cfg_dict.items()
         if name not in ["data", "optim", "model", "hardware", "log"]
     }
 
+    # TODO: clean this part.
     model = cfg_dict.get("model", {})
     if model_class is None:
         name = model.get("name", None)
@@ -291,16 +324,21 @@ def get_args(cfg_dict, model_class=None):
             name = "Supervised"
     model = _MODEL_CONFIGS[name](**model)
 
-    args = TrainerConfig(
+    # Get the logging API type and configuration.
+    log_config = cfg_dict.get("log", {})
+    log_api = log_config.get("api", None)
+    log = _LOG_CONFIGS[log_api.lower() if log_api else None](**log_config)
+
+    args = GlobalConfig(
         model=model,
+        log=log,
         data=DataConfig(**cfg_dict.get("data", {})),
         optim=OptimConfig(**cfg_dict.get("optim", {})),
         hardware=HardwareConfig(**cfg_dict.get("hardware", {})),
-        log=LogConfig(**cfg_dict.get("log", {})),
     )
 
     args.__class__ = make_dataclass(
-        "TrainerConfig",
+        "GlobalConfig",
         fields=[(name, type(v), v) for name, v in kwargs.items()],
         bases=(type(args),),
     )

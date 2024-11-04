@@ -47,35 +47,6 @@ from .utils import (
 )
 
 
-@dataclass
-class BaseModelConfig:
-    """Base configuration for the 'model' parameters.
-
-    Parameters
-    ----------
-    model : str
-        Type of model to use. Default is "Supervised".
-    backbone_model : str
-        Neural network architecture to use for the backbone. Default is "resnet9".
-    sync_batchnorm : bool, optional
-        Whether to use synchronized batch normalization. Default is True.
-    memory_format : str, optional
-        Memory format for tensors (e.g., "channels_last"). Default is "channels_last".
-    pretrained : bool, optional
-        Whether to use the torchvision pretrained weights or use random initialization.
-    with_classifier : bool, optional
-        Whether to keep the last layer(s) of the backbone (classifier)
-        when loading the model. Default is True.
-    """
-
-    name: str = "Supervised"
-    backbone_model: str = "resnet18"
-    sync_batchnorm: bool = True
-    memory_format: str = "channels_last"
-    pretrained: bool = False
-    with_classifier: bool = True
-
-
 class BaseModel(torch.nn.Module):
     r"""Base class for training a model.
 
@@ -130,7 +101,7 @@ class BaseModel(torch.nn.Module):
 
         # Use WandB if an entity or project name is provided.
         self.use_wandb = bool(
-            (self.config.log.wandb_entity or self.config.log.wandb_project)
+            (self.config.log.entity or self.config.log.project)
             and (self.rank == self.config.log.log_process)
         )
 
@@ -141,8 +112,8 @@ class BaseModel(torch.nn.Module):
             if os.environ.get("HOME") is None:
                 os.environ["HOME"] = "/users/hvanasse"  # TODO: remove hardcoded home
             wandb.init(
-                entity=self.config.log.wandb_entity,
-                project=self.config.log.wandb_project,
+                entity=self.config.log.entity,
+                project=self.config.log.project,
                 config=dataclasses.asdict(self.config),
                 name=self.config.log.run,
                 dir=str(self.config.log.dump_path),
@@ -267,10 +238,11 @@ class BaseModel(torch.nn.Module):
 
     def initialize_metrics(self):
         nc = self.config.data.datasets[self.config.data.train_on].num_classes
-        train_acc1 = MulticlassAccuracy(num_classes=nc, top_k=1)
 
         # Initialize the metrics dictionary with the train metric.
-        self.metrics = torch.nn.ModuleDict({"train/acc1": train_acc1})
+        self.metrics = torch.nn.ModuleDict(
+            {"train/acc1": MulticlassAccuracy(num_classes=nc, top_k=1)}
+        )
 
         # Add unique evaluation metrics for each eval dataset.
         name_eval_loaders = set(self.dataloaders.keys()) - set(
