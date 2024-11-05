@@ -11,10 +11,10 @@ from dataclasses import dataclass
 import torch
 import torch.nn.functional as F
 
-from .base import JointEmbeddingConfig, JointEmbeddingModel
+from .base import SelfDistillationConfig, SelfDistillationModel
 
 
-class DINO(JointEmbeddingModel):
+class DINO(SelfDistillationModel):
     """DINO model from [CTM+21]_.
 
     Reference
@@ -25,8 +25,8 @@ class DINO(JointEmbeddingModel):
         International Conference on Computer Vision.
     """
 
-    def compute_ssl_loss(self, z_i, z_j):
-        """Compute the contrastive loss for SimCLR.
+    def ssl_loss(self, z_i, z_j):
+        """Compute the loss of the DINO model.
 
         Parameters
         ----------
@@ -38,23 +38,5 @@ class DINO(JointEmbeddingModel):
         Returns
         -------
         float
-            The computed contrastive loss.
+            The computed loss.
         """
-        z = torch.cat([z_i, z_j], 0)
-        N = z.size(0)
-
-        features = F.normalize(z, dim=1)
-        sim = torch.matmul(features, features.T) / self.config.model.temperature
-
-        sim_i_j = torch.diag(sim, N // 2)
-        sim_j_i = torch.diag(sim, -N // 2)
-
-        positive_samples = torch.cat((sim_i_j, sim_j_i), dim=0)  # shape (N)
-
-        mask = torch.eye(N, dtype=bool).to(self.this_device)
-        negative_samples = sim[~mask].reshape(N, -1)  # shape (N, N-1)
-
-        attraction = -positive_samples.mean()
-        repulsion = torch.logsumexp(negative_samples, dim=1).mean()
-
-        return attraction + repulsion

@@ -31,7 +31,8 @@ class WMSE(JointEmbeddingModel):
             track_running_stats=False,
         )
 
-    def compute_ssl_loss(self, embeds):
+    # TODO : adapt to the new gather_tensors and JointEmbeddingModel structure
+    def ssl_loss(self, embeds):
         n_views = 2
         h = self.projector(embeds)
         bs = h.size(0) // n_views

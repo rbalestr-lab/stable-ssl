@@ -8,6 +8,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import copy
+from abc import abstractmethod
 from dataclasses import dataclass, field
 import torch
 import torch.nn.functional as F
@@ -93,6 +94,10 @@ class JointEmbeddingModel(BaseModel):
 
         return loss_ssl + loss_proj + loss_backbone
 
+    @abstractmethod
+    def ssl_loss(self, z_i, z_j):
+        raise NotImplementedError
+
     def _backbone_classifier_loss(self, embed_i, embed_j):
         loss_backbone_i = F.cross_entropy(
             self.backbone_classifier(embed_i.detach()), self.data[1]
@@ -110,9 +115,6 @@ class JointEmbeddingModel(BaseModel):
             self.projector_classifier(z_j.detach()), self.data[1]
         )
         return loss_proj_i + loss_proj_j
-
-    def _ssl_loss(self, z_i, z_j):
-        raise NotImplementedError
 
 
 class SelfDistillationModel(JointEmbeddingModel):
