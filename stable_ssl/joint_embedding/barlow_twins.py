@@ -10,11 +10,11 @@
 from dataclasses import dataclass
 import torch
 
-from .base import JEConfig, JETrainer
-from stable_ssl.utils import off_diagonal
+from .base import JointEmbeddingConfig, JointEmbeddingModel
+from stable_ssl.utils import off_diagonal, gather_tensors
 
 
-class BarlowTwins(JETrainer):
+class BarlowTwins(JointEmbeddingModel):
     """BarlowTwins model from [ZJM+21]_.
 
     Reference
@@ -28,6 +28,7 @@ class BarlowTwins(JETrainer):
         super().initialize_modules()
         self.bn = torch.nn.BatchNorm1d(self.config.model.projector[-1])
 
+    @gather_tensors
     def compute_ssl_loss(self, z_i, z_j):
         # Empirical cross-correlation matrix.
         c = self.bn(z_i).T @ self.bn(z_j)
@@ -43,7 +44,7 @@ class BarlowTwins(JETrainer):
 
 
 @dataclass
-class BarlowTwinsConfig(JEConfig):
+class BarlowTwinsConfig(JointEmbeddingConfig):
     """Configuration for the BarlowTwins model parameters.
 
     Parameters

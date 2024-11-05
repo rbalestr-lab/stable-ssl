@@ -10,10 +10,10 @@
 from dataclasses import dataclass
 import torch
 
-from .base import JEConfig, JETrainer
+from .base import JointEmbeddingConfig, JointEmbeddingModel
 
 
-class WMSE(JETrainer):
+class WMSE(JointEmbeddingModel):
     """Whitening Mean Squared Error (WMSE) model from [ESSS21]_.
 
     Reference
@@ -116,7 +116,7 @@ class Whitening2d(torch.nn.Module):
 
 
 @dataclass
-class WMSEConfig(JEConfig):
+class WMSEConfig(JointEmbeddingConfig):
     """Configuration for the WMSE model parameters."""
 
     w_iter: float = 1

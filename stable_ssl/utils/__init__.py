@@ -6,11 +6,13 @@ from .utils import (
     off_diagonal,
     get_open_port,
     get_gpu_info,
+    deactivate_requires_grad,
+    gather_tensors,
 )
 from .schedulers import LinearWarmupCosineAnnealing
 from .optim import LARS
 from .exceptions import BreakEpoch, BreakStep, NanError, BreakAllEpochs
-from .nn import load_nn
+from .nn import load_nn, mlp
 
 __all__ = [
     "mask_correlated_samples",
@@ -24,8 +26,11 @@ __all__ = [
     "NanError",
     "BreakAllEpochs",
     "load_nn",
+    "mlp",
     "to_device",
     "off_diagonal",
     "get_open_port",
     "get_gpu_info",
+    "deactivate_requires_grad",
+    "gather_tensors",
 ]

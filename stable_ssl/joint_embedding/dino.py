@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""SimCLR model."""
+"""DINO model."""
 #
 # Author: Hugues Van Assel <vanasselhugues@gmail.com>
 #         Randall Balestriero <randallbalestriero@gmail.com>
@@ -12,20 +12,19 @@ import torch
 import torch.nn.functional as F
 
 from .base import JointEmbeddingConfig, JointEmbeddingModel
-from stable_ssl.utils import gather_tensors
 
 
-class SimCLR(JointEmbeddingModel):
-    """SimCLR model from [CKNH20]_.
+class DINO(JointEmbeddingModel):
+    """DINO model from [CTM+21]_.
 
     Reference
     ---------
-    .. [CKNH20] Chen, T., Kornblith, S., Norouzi, M., & Hinton, G. (2020).
-            A Simple Framework for Contrastive Learning of Visual Representations.
-            In International Conference on Machine Learning (pp. 1597-1607). PMLR.
+    .. [CTM+21] Caron, M., Touvron, H., Misra, I., Jégou, H., Mairal, J.,
+        Bojanowski, P., & Joulin, A. (2021).
+        Emerging Properties in Self-Supervised Vision Transformers.
+        International Conference on Computer Vision.
     """
 
-    @gather_tensors
     def compute_ssl_loss(self, z_i, z_j):
         """Compute the contrastive loss for SimCLR.
 
@@ -59,26 +58,3 @@ class SimCLR(JointEmbeddingModel):
         repulsion = torch.logsumexp(negative_samples, dim=1).mean()
 
         return attraction + repulsion
-
-
-@dataclass
-class SimCLRConfig(JointEmbeddingConfig):
-    """Configuration for the SimCLR model parameters.
-
-    Parameters
-    ----------
-    temperature : float
-        Temperature parameter for the contrastive loss. Default is 0.15.
-    """
-
-    temperature: float = 0.15
-
-    def trainer(self):
-        """Return the corresponding trainer for the SimCLR configuration.
-
-        Returns
-        -------
-        SimCLR
-            A SimCLR trainer instance.
-        """
-        return SimCLR

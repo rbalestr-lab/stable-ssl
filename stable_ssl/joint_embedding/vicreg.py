@@ -11,10 +11,10 @@ from dataclasses import dataclass
 import torch
 
 from stable_ssl.utils import FullGatherLayer, off_diagonal
-from .base import JEConfig, JETrainer
+from .base import JointEmbeddingConfig, JointEmbeddingModel
 
 
-class VICReg(JETrainer):
+class VICReg(JointEmbeddingModel):
     """VICReg model from [BPL21]_.
 
     Reference
@@ -60,7 +60,7 @@ class VICReg(JETrainer):
 
 
 @dataclass
-class VICRegConfig(JEConfig):
+class VICRegConfig(JointEmbeddingConfig):
     """Configuration for the VICreg model parameters."""
 
     sim_coeff: float = 25

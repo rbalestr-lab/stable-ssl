@@ -698,9 +698,6 @@ class BaseModel(torch.nn.Module):
         logging.info("Cleaning distributed processes.")
         torch.distributed.destroy_process_group()
 
-    def gather(self, x):
-        return FullGatherLayer.apply(x)
-
     @property
     def rank(self):
         if self.config.hardware.world_size > 1:
