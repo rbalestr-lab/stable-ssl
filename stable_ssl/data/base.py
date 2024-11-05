@@ -83,7 +83,10 @@ class DatasetConfig:
             return self.path
             # return os.path.join(hydra.utils.get_original_cwd(), self.path)
         else:
-            return os.path.join(hydra.utils.get_original_cwd(), self.path, self.name)
+            if self.path != "data":
+                return os.path.join(self.path, self.name)
+            else:
+                return os.path.join(hydra.utils.get_original_cwd(), self.path, self.name)
 
     def get_dataset(self):
         """Load a dataset with torchvision.datasets.
