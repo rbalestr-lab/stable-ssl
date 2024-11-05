@@ -22,9 +22,9 @@ class DatasetConfig:
     name : str, optional
         Name of the dataset to use (e.g., "CIFAR10", "CIFAR100").
         Default is "CIFAR10".
-    path : str, optional
+    path : str | None, optional
         Path to the directory containing the data.
-        Default is "data".
+        Default is None.
     split : str, optional
         Name of the dataset split to use (e.g., "train", "test").
         Default is "train".
@@ -42,7 +42,7 @@ class DatasetConfig:
     """
 
     name: str = "CIFAR10"
-    path: str = "data"
+    path: str | None = None
     split: str = "train"
     num_workers: int = -1
     batch_size: int = 256
@@ -79,9 +79,12 @@ class DatasetConfig:
     @property
     def data_path(self):
         """Return the path to the dataset."""
-        if self.path == "data":
-            return os.path.join(hydra.utils.get_original_cwd(), self.path, self.name)
+        if self.path is None:
+            raise RuntimeError(
+                "Path to the dataset or download location is not provided."
+            )
         else:
+            self.path = os.path.expanduser(self.path)
             return os.path.join(self.path, self.name)
 
     def get_dataset(self):
