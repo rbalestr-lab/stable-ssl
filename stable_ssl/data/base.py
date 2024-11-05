@@ -1,6 +1,7 @@
 import os
 from dataclasses import dataclass
 import logging
+from typing import Optional
 import numpy as np
 
 import torch
@@ -41,7 +42,7 @@ class DatasetConfig:
     """
 
     name: str = "CIFAR10"
-    path: str = None
+    path: Optional[str] = None
     split: str = "train"
     num_workers: int = -1
     batch_size: int = 256
