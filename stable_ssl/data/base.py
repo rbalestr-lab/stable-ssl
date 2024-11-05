@@ -41,7 +41,7 @@ class DatasetConfig:
     """
 
     name: str = "CIFAR10"
-    path: str | None = None
+    path: str = None
     split: str = "train"
     num_workers: int = -1
     batch_size: int = 256
