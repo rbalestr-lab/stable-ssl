@@ -6,14 +6,12 @@ hydra:
     tasks_per_node: ${hardware.world_size}
     gpus_per_node: ${hardware.world_size}
     partition: gpu
-    cpus_per_task: 6
-    timeout_min: 1440
+    cpus_per_task: 4
 
 data:
   train_on: base
   base:
-    name: ImageNet
-    path: /sss/jobtmp/hvanasse/ImageNet
+    name: CIFAR10
     batch_size: 256
     drop_last: True
     shuffle: True
@@ -23,7 +21,10 @@ data:
       view1:
       - name: RandomResizedCrop
         kwargs:
-          size: 224
+          size: 32
+          scale:
+            - 0.2
+            - 1.0
           interpolation: bicubic
       - name: RandomHorizontalFlip
         kwargs:
@@ -43,7 +44,10 @@ data:
       view2:
       - name: RandomResizedCrop
         kwargs:
-          size: 224
+          size: 32
+          scale:
+            - 0.2
+            - 1.0
           interpolation: bicubic
       - name: RandomHorizontalFlip
         kwargs:
@@ -60,15 +64,16 @@ data:
           p: 0.2
       - name: GaussianBlur2
         p: 0.1
-      - name: Solarization
-        p: 0.2
+      - name: RandomSolarize
+        kwargs:
+          threshold: 128
+          p: 0.2
   test_out:
-    name: ImageNet
-    path: /sss/jobtmp/hvanasse/ImageNet
+    name: CIFAR10
     batch_size: 256
     drop_last: False
     num_workers: -1
-    split: val
+    split: test
 
 model:
   name: SimCLR
@@ -77,8 +82,8 @@ model:
   temperature: 0.5
 
 optim:
-  epochs: 100
-  lr: 0.3
+  epochs: 1000
+  lr: 5
   optimizer: LARS
   weight_decay: 1e-6
 
@@ -86,4 +91,4 @@ hardware:
   seed: 0
   float16: true
   gpu_id: 0
-  world_size: 8
+  world_size: 1

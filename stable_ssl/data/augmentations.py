@@ -1,9 +1,11 @@
-from dataclasses import dataclass
-import torch
-from PIL import Image
-from io import BytesIO
 import numpy as np
+import random
+from dataclasses import dataclass
 from scipy.ndimage import zoom as scizoom
+from PIL import Image, ImageOps, ImageFilter
+from io import BytesIO
+
+import torch
 from torchvision.transforms import v2
 from torchvision.transforms.functional import InterpolationMode
 
@@ -716,3 +718,17 @@ class Pixelate(torch.nn.Module):
         x = x.resize((int(self.size * c), int(self.size * c)), Image.BOX)
         x = x.resize((self.size, self.size), Image.BOX)
         return x
+
+
+# inspired from https://github.com/facebookresearch/barlowtwins/blob/main/main.py
+
+
+class GaussianBlur2(torch.nn.Module):
+    def forward(self, x):
+        sigma = random.random() * 1.9 + 0.1
+        return x.filter(ImageFilter.GaussianBlur(sigma))
+
+
+class Solarization(torch.nn.Module):
+    def forward(self, x):
+        return ImageOps.solarize(x)
