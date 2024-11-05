@@ -2,7 +2,6 @@ import os
 from dataclasses import dataclass
 import logging
 import numpy as np
-import hydra
 
 import torch
 import torchvision
