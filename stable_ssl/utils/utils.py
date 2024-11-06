@@ -255,3 +255,9 @@ def get_gpu_info():
         logging.info(f"\t{complete_process.stdout}")
     except subprocess.SubprocessError as e:
         logging.info("nvidia-smi failed.", exc_info=e)
+
+
+def log_and_raise(exception_class, message):
+    """Log an error message and raise an exception."""
+    logging.error(message)
+    raise exception_class(message)

@@ -44,6 +44,7 @@ from .utils import (
     LinearWarmupCosineAnnealing,
     to_device,
     get_gpu_info,
+    log_and_raise,
 )
 
 
@@ -83,11 +84,16 @@ class BaseModel(torch.nn.Module):
     """
 
     def __new__(cls, config, *args, **kwargs):
+        logging.basicConfig(
+            level=self.config.log.level, format="[stable-SSL] %(message)s"
+        )
+
         if len(args):
-            raise ValueError(
-                "You should only provide named arguments to ensure they are "
-                "logged in the config."
+            log_and_raise(
+                ValueError,
+                "You should only provide named arguments to ensure they are logged in the config.",
             )
+
         trainer = super(BaseModel, cls).__new__(cls)
         config.__class__ = make_dataclass(
             "TrainerConfig",
@@ -99,6 +105,7 @@ class BaseModel(torch.nn.Module):
 
     def __init__(self, config, *args, **kwargs):
         self._set_device()
+        logging.getLogger().setLevel(self.config.log.level)
         super().__init__()
 
     @abstractmethod
@@ -117,10 +124,6 @@ class BaseModel(torch.nn.Module):
         pass
 
     def __call__(self):
-
-        logging.basicConfig(
-            level=self.config.log.level, format="[stable-SSL] %(message)s"
-        )
         get_gpu_info()
         seed_everything(self.config.hardware.seed)
 
@@ -133,31 +136,44 @@ class BaseModel(torch.nn.Module):
 
         if self.use_wandb:
             logging.info(
-                f"\t=> Initializating wandb for logging in {self.config.log.dump_path}."
+                f"\t=> Initializing wandb for logging in {self.config.log.dump_path}."
             )
             if os.environ.get("HOME") is None:
                 os.environ["HOME"] = "/users/hvanasse"  # TODO: remove hardcoded home
-            wandb.init(
-                entity=self.config.log.entity,
-                project=self.config.log.project,
-                config=dataclasses.asdict(self.config),
-                name=self.config.log.run,
-                dir=str(self.config.log.dump_path),
-                resume="allow",
-            )
+            try:
+                wandb.init(
+                    entity=self.config.log.entity,
+                    project=self.config.log.project,
+                    config=dataclasses.asdict(self.config),
+                    name=self.config.log.run,
+                    dir=str(self.config.log.dump_path),
+                    resume="allow",
+                )
+            except Exception as e:
+                logging.exception("Failed to initialize wandb.")
+                raise
 
         logging.info(f"\t=> Dumping config file in {self.config.log.dump_path}.")
-        omegaconf.OmegaConf.save(
-            self.config, self.config.log.dump_path / "hparams.yaml"
-        )
+        try:
+            omegaconf.OmegaConf.save(
+                self.config, self.config.log.dump_path / "hparams.yaml"
+            )
+        except Exception as e:
+            logging.exception("Failed to dump config file.")
+            raise
 
         self.scaler = torch.amp.GradScaler("cuda", enabled=self.config.hardware.float16)
 
         # Set up the dataloaders.
         logging.info("Creating dataloaders.")
-        dataloaders = self.config.data.get_dataloaders(
-            world_size=self.config.hardware.world_size
-        )
+        try:
+            dataloaders = self.config.data.get_dataloaders(
+                world_size=self.config.hardware.world_size
+            )
+        except Exception as e:
+            logging.exception("Failed to create dataloaders.")
+            raise
+
         for name, loader in dataloaders.items():
             logging.info(
                 f"\t=> Found dataloader `{name}` with length/batches {len(loader)}."
@@ -166,36 +182,55 @@ class BaseModel(torch.nn.Module):
             if name in self.config.data.train_on:
                 if self.config.log.eval_only:
                     logging.info(f"\t=> `{name}` will be ignored (eval_only=True).")
-            assert len(loader), logging.error(f"Length of dataset {name} is 0.")
+            if not len(loader):
+                log_and_raise(ValueError, f"Length of dataset {name} is 0.")
 
         if not self.config.log.eval_only:
-            assert len(self.config.data.train_on), logging.error(
-                f"{self.config.data.train_on} train datasets supplied."
-            )
-            if self.config.data.train_on not in dataloaders:
-                raise RuntimeError(
-                    f"eval_only=False and `{self.config.data.train_on}` not given."
+            if not len(self.config.data.train_on):
+                log_and_raise(
+                    ValueError,
+                    f"No train datasets supplied in {self.config.data.train_on}.",
                 )
+
+            if self.config.data.train_on not in dataloaders:
+                log_and_raise(
+                    RuntimeError,
+                    f"eval_only=False and `{self.config.data.train_on}` not given.",
+                )
+
         self.dataloaders = dataloaders
 
         # Set up the model's modules. Should be implemented by the child class.
         logging.info("Calling initialize_modules() method.")
-        self.initialize_modules()
+        try:
+            self.initialize_modules()
+        except Exception as e:
+            logging.exception("Failed to initialize modules.")
+            raise
 
-        # Set up fthe metrics. Should be implemented by the child class.
+        # Set up the metrics. Should be implemented by the child class.
         if hasattr(self, "metrics"):
-            raise RuntimeError(
-                "You can't assign any value to `self.metrics`, this will be "
-                "used for metrics only."
+            log_and_raise(
+                RuntimeError,
+                "You can't assign any value to `self.metrics`; this will be "
+                "used for metrics only.",
             )
-        self.initialize_metrics()
+
+        try:
+            self.initialize_metrics()
+        except Exception as e:
+            logging.exception("Failed to initialize metrics.")
+            raise
+
         if not hasattr(self, "metrics"):
-            raise RuntimeError(
-                "The `initialize_metrics` method should create a `self.metrics` "
-                "ModuleDict object."
+            log_and_raise(
+                RuntimeError,
+                "The `initialize_metrics` method should create a `self.metrics`.",
             )
+
         if not isinstance(self.metrics, torch.nn.ModuleDict):
-            raise RuntimeError("The `self.metrics` should be a ModuleDict.")
+            log_and_raise(RuntimeError, "The `self.metrics` should be a ModuleDict.")
+
         self._log_buffer = {}
         self.register_buffer("global_step", torch.zeros((1,), dtype=int))
 
@@ -223,20 +258,30 @@ class BaseModel(torch.nn.Module):
 
         if not self.config.log.eval_only:
             logging.info("Calling _initialize_optimizer() method.")
-            self.optimizer = self._initialize_optimizer()
+            try:
+                self.optimizer = self._initialize_optimizer()
+            except Exception as e:
+                logging.exception("Failed to initialize optimizer.")
+                raise
+
             logging.info("Calling _initialize_scheduler() method.")
             try:
                 self.scheduler = self._initialize_scheduler()
-            except NotImplementedError:
-                logging.info("No scheduler given.")
+            except Exception as e:
+                logging.exception("Failed to initialize scheduler.")
+                raise
         else:
             logging.info(
-                "Mode is eval_only, skipping optimizer and "
-                "scheduler initializations."
+                "Mode is eval_only, skipping optimizer and scheduler initializations."
             )
 
         logging.info("Calling _load_checkpoint() method.")
-        self._load_checkpoint()
+        try:
+            self._load_checkpoint()
+        except Exception as e:
+            logging.exception("Failed to load checkpoint.")
+            raise
+
         self.start_time = time.time()
         self.execute()
 
@@ -453,7 +498,7 @@ class BaseModel(torch.nn.Module):
             loss = self.compute_loss()
 
         if np.isnan(loss.item()):
-            raise NanError
+            log_and_raise(NanError, "Loss is NaN. Stopping training.")
 
         self.scaler.scale(loss).backward()
         # Unscales the gradients of optimizer's assigned params in-place.
@@ -697,9 +742,6 @@ class BaseModel(torch.nn.Module):
     def cleanup(self):
         logging.info("Cleaning distributed processes.")
         torch.distributed.destroy_process_group()
-
-    def gather(self, x):
-        return FullGatherLayer.apply(x)
 
     @property
     def rank(self):
