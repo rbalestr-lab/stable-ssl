@@ -1,9 +1,13 @@
+from typing import Optional, Tuple
+import logging
 from dataclasses import dataclass
-import torch
-from PIL import Image
-from io import BytesIO
-import numpy as np
 from scipy.ndimage import zoom as scizoom
+from PIL import Image, ImageFilter
+from io import BytesIO
+import inspect
+import numpy as np
+
+import torch
 from torchvision.transforms import v2
 from torchvision.transforms.functional import InterpolationMode
 
@@ -93,11 +97,32 @@ class TransformConfig:
 
         self.p = p
         if self.name is not None:
-            if self.name in v2.__dict__:
-                t = v2.__dict__[self.name](*self.args, **self.kwargs)
+            if self.name in globals():
+                func = globals()[self.name]
             else:
-                t = globals()[self.name](*self.args, **self.kwargs)
+                # Attempt to get the attribute from v2.
+                func = getattr(v2, self.name, None)
+                if func is None:
+                    raise AttributeError(
+                        f"'{self.name}' not found in globals() or in 'v2'. "
+                        "Please check the function name."
+                    )
+
+            # Check if the function has a p argument.
+            func_signature = inspect.signature(func)
+            p_in_args = "p" in func_signature.parameters
+
+            t = func(*self.args, **self.kwargs)
+
             if self.p < 1:
+                if p_in_args:
+                    logging.warning(
+                        f"The function '{self.name}' already includes a 'p' argument, "
+                        "but 'p' is also set externally in the configuration "
+                        f"(p={self.p}). This results in 'p' being applied twice, "
+                        "which may cause unexpected behavior. "
+                        "Consider adjusting the configuration to avoid redundancy."
+                    )
                 self._transform = v2.RandomApply(torch.nn.ModuleList([t]), p=self.p)
             elif self.p == 0:
                 self._transform = v2.Identity()
@@ -716,3 +741,27 @@ class Pixelate(torch.nn.Module):
         x = x.resize((int(self.size * c), int(self.size * c)), Image.BOX)
         x = x.resize((self.size, self.size), Image.BOX)
         return x
+
+
+class GaussianBlur(torch.nn.Module):
+    """Apply Gaussian blur to an image.
+
+    Unlike the torchvision implementation, this one does not require the kernel size.
+    """
+
+    def __init__(
+        self,
+        kernel_size: Optional[float] = None,
+        sigma: Tuple[float, float] = (0.1, 2),
+    ):
+        super().__init__()
+        if kernel_size is not None:
+            logging.warning(
+                "The 'kernel_size' argument of the GaussianBlur "
+                "augmentation will be deprecated. "
+            )
+        self.sigma = sigma
+
+    def forward(self, x):
+        sigma = np.random.uniform(self.sigma[0], self.sigma[1])
+        return x.filter(ImageFilter.GaussianBlur(radius=sigma))
