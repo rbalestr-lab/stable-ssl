@@ -60,8 +60,10 @@ data:
           p: 0.2
       - name: GaussianBlur
         p: 0.1
-      - name: Solarization
-        p: 0.2
+      - name: RandomSolarize
+        kwargs:
+          threshold: 128
+          p: 0.2
   test_out:
     name: ImageNet
     path: /sss/jobtmp/hvanasse/ImageNet
