@@ -91,7 +91,7 @@ class OptimConfig:
                     default_value = default_params[param]
                     setattr(self, param, default_value)
                     logging.warning(
-                        f"{param} not provided for {self.optimizer} "
+                        f"'{param}' not provided for {self.optimizer} "
                         f"optimizer. Default value of {default_value} is used."
                     )
             else:

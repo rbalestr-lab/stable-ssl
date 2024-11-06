@@ -295,3 +295,9 @@ def update_momentum(model: torch.nn.Module, model_ema: torch.nn.Module, m: float
     """Updates parameters of `model_ema` with Exponential Moving Average of `model`."""
     for model_ema, model in zip(model_ema.parameters(), model.parameters()):
         model_ema.data = model_ema.data * m + model.data * (1.0 - m)
+
+
+def log_and_raise(exception_class, message):
+    """Log an error message and raise an exception."""
+    logging.error(message)
+    raise exception_class(message)

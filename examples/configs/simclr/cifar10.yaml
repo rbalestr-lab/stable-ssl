@@ -12,6 +12,7 @@ data:
   train_on: base
   base:
     name: CIFAR10
+    path: ~/data
     batch_size: 256
     drop_last: True
     shuffle: True
@@ -66,6 +67,7 @@ data:
           p: 0.2
   test_out:
     name: CIFAR10
+    path: ~/data
     batch_size: 256
     drop_last: False
     num_workers: -1

@@ -9,6 +9,7 @@ from .utils import (
     deactivate_requires_grad,
     gather_processes,
     update_momentum,
+    log_and_raise,
 )
 from .schedulers import LinearWarmupCosineAnnealing
 from .optim import LARS
@@ -35,4 +36,5 @@ __all__ = [
     "deactivate_requires_grad",
     "gather_processes",
     "update_momentum",
+    "log_and_raise",
 ]
