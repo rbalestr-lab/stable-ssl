@@ -23,9 +23,9 @@ class JointEmbeddingModel(BaseModel):
 
     Parameters
     ----------
-    config : TrainerConfig
-        Parameters for Trainer organized in groups.
-        For details, see the `TrainerConfig` class in `config.py`.
+    config : GlobalConfig
+        Parameters organized in groups.
+        For details, see the `GlobalConfig` class in `config.py`.
     """
 
     def initialize_modules(self):
@@ -107,6 +107,15 @@ class JointEmbeddingConfig(ModelConfig):
 
 
 class SelfDistillationModel(JointEmbeddingModel):
+    r"""Base class for training a self-distillation SSL model.
+
+    Parameters
+    ----------
+    config : GlobalConfig
+        Parameters organized in groups.
+        For details, see the `GlobalConfig` class in `config.py`.
+    """
+
     def initialize_modules(self):
         super().initialize_modules()
         self.backbone_target = copy.deepcopy(self.backbone)
@@ -116,14 +125,6 @@ class SelfDistillationModel(JointEmbeddingModel):
         deactivate_requires_grad(self.projector_target)
 
     def compute_loss(self):
-        # Update the target parameters as EMA of the online model parameters
-        update_momentum(
-            self.backbone, self.backbone_target, m=self.config.model.momentum
-        )
-        update_momentum(
-            self.projector, self.projector_target, m=self.config.model.momentum
-        )
-
         embeddings = [self.backbone(view) for view in self.data[0]]
         loss_backbone = self._compute_backbone_classifier_loss(*embeddings)
 
@@ -145,6 +146,15 @@ class SelfDistillationModel(JointEmbeddingModel):
         )
 
         return loss_ssl + loss_proj + loss_backbone
+
+    def before_train_step(self):
+        # Update the target parameters as EMA of the online model parameters
+        update_momentum(
+            self.backbone, self.backbone_target, m=self.config.model.momentum
+        )
+        update_momentum(
+            self.projector, self.projector_target, m=self.config.model.momentum
+        )
 
 
 @dataclass
