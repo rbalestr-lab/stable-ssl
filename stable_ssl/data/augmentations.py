@@ -1,4 +1,3 @@
-import random
 from typing import Optional, Tuple
 import logging
 from dataclasses import dataclass
@@ -98,11 +97,30 @@ class TransformConfig:
         self.p = p
         if self.name is not None:
             if self.name in globals():
-                t = globals()[self.name](*self.args, **self.kwargs)
+                func = globals()[self.name]
             else:
-                t = v2.__dict__[self.name](*self.args, **self.kwargs)
+                # Attempt to get the attribute from v2.
+                func = getattr(v2, self.name, None)
+                if func is None:
+                    raise AttributeError(
+                        f"'{self.name}' not found in globals() or in 'v2'. Please check the function name."
+                    )
+
+            # Check if the function has a p argument.
+            func_signature = inspect.signature(func)
+            p_in_args = "p" in func_signature.parameters
+
+            t = func(*self.args, **self.kwargs)
 
             if self.p < 1:
+                if p_in_args:
+                    logging.warning(
+                        f"The function '{self.name}' already includes a 'p' argument, "
+                        "but 'p' is also set externally in the configuration "
+                        f"(p={self.p}). This results in 'p' being applied twice, "
+                        "which may cause unexpected behavior. "
+                        "Consider adjusting the configuration to avoid redundancy."
+                    )
                 self._transform = v2.RandomApply(torch.nn.ModuleList([t]), p=self.p)
             elif self.p == 0:
                 self._transform = v2.Identity()
