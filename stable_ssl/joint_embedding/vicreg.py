@@ -26,7 +26,7 @@ class VICReg(JointEmbeddingModel):
     """
 
     @gather_tensors
-    def ssl_loss(self, z_i, z_j):
+    def compute_ssl_loss(self, z_i, z_j):
         repr_loss = torch.nn.functional.mse_loss(z_i, z_j)
 
         x = z_i - z_i.mean(dim=0)

@@ -26,7 +26,7 @@ class SimCLR(JointEmbeddingModel):
     """
 
     @gather_tensors
-    def ssl_loss(self, z_i, z_j):
+    def compute_ssl_loss(self, z_i, z_j):
         """Compute the contrastive loss for SimCLR.
 
         Parameters

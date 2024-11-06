@@ -72,16 +72,17 @@ class JointEmbeddingModel(BaseModel):
         return self.backbone(x)
 
     def compute_loss(self):
+        # We assume that there are two views in the input data.
         embed_i = self.backbone(self.data[0][0])
         embed_j = self.backbone(self.data[0][1])
 
-        loss_backbone = self._backbone_classifier_loss(embed_i, embed_j)
+        loss_backbone = self._compute_backbone_classifier_loss(embed_i, embed_j)
 
         z_i = self.projector(embed_i)
         z_j = self.projector(embed_j)
 
-        loss_proj = self._projector_classifier_loss(z_i, z_j)
-        loss_ssl = self._ssl_loss(z_i, z_j)
+        loss_proj = self._compute_projector_classifier_loss(z_i, z_j)
+        loss_ssl = self.compute_ssl_loss(z_i, z_j)
 
         self.log(
             {
@@ -95,10 +96,10 @@ class JointEmbeddingModel(BaseModel):
         return loss_ssl + loss_proj + loss_backbone
 
     @abstractmethod
-    def ssl_loss(self, z_i, z_j):
+    def compute_ssl_loss(self, z_i, z_j):
         raise NotImplementedError
 
-    def _backbone_classifier_loss(self, embed_i, embed_j):
+    def _compute_backbone_classifier_loss(self, embed_i, embed_j):
         loss_backbone_i = F.cross_entropy(
             self.backbone_classifier(embed_i.detach()), self.data[1]
         )
@@ -107,7 +108,7 @@ class JointEmbeddingModel(BaseModel):
         )
         return loss_backbone_i + loss_backbone_j
 
-    def _projector_classifier_loss(self, z_i, z_j):
+    def _compute_projector_classifier_loss(self, z_i, z_j):
         loss_proj_i = F.cross_entropy(
             self.projector_classifier(z_i.detach()), self.data[1]
         )
@@ -125,3 +126,26 @@ class SelfDistillationModel(JointEmbeddingModel):
 
         deactivate_requires_grad(self.backbone_target)
         deactivate_requires_grad(self.projector_target)
+
+    def compute_loss(self):
+        embed_i = self.backbone(self.data[0][0])
+        embed_j = self.backbone(self.data[0][1])
+
+        loss_backbone = self._compute_backbone_classifier_loss(embed_i, embed_j)
+
+        z_i = self.projector(embed_i)
+        z_j = self.projector(embed_j)
+
+        loss_proj = self._compute_projector_classifier_loss(z_i, z_j)
+        loss_ssl = self.compute_ssl_loss(z_i, z_j)
+
+        self.log(
+            {
+                "train/loss_ssl": loss_ssl.item(),
+                "train/loss_backbone_classifier": loss_backbone.item(),
+                "train/loss_projector_classifier": loss_proj.item(),
+            },
+            commit=False,
+        )
+
+        return loss_ssl + loss_proj + loss_backbone

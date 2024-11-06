@@ -25,7 +25,7 @@ class DINO(SelfDistillationModel):
         International Conference on Computer Vision.
     """
 
-    def ssl_loss(self, z_i, z_j):
+    def compute_ssl_loss(self, z_i, z_j):
         """Compute the loss of the DINO model.
 
         Parameters
