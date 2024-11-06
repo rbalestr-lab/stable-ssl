@@ -86,4 +86,4 @@ hardware:
   seed: 0
   float16: true
   gpu_id: 0
-  world_size: 8
+  world_size: 2

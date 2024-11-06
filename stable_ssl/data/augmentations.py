@@ -1,9 +1,11 @@
-import numpy as np
 import random
+from typing import Optional, Tuple
+import logging
 from dataclasses import dataclass
 from scipy.ndimage import zoom as scizoom
 from PIL import Image, ImageFilter
 from io import BytesIO
+import numpy as np
 
 import torch
 from torchvision.transforms import v2
@@ -721,18 +723,21 @@ class Pixelate(torch.nn.Module):
         return x
 
 
-# inspired from https://github.com/facebookresearch/barlowtwins/blob/main/main.py
-
-
 class GaussianBlur(torch.nn.Module):
+    """Apply Gaussian blur to an image.
+
+    Unlike the torchvision implementation, this one does not require the kernel size.
+    """
+
     def __init__(
         self,
         kernel_size: Optional[float] = None,
         sigma: Tuple[float, float] = (0.1, 2),
     ):
-        if kernel_size != None:
+        if kernel_size is not None:
             logging.warning(
-                "The 'kernel_size' argument of the GaussianBlur augmentation will be deprecated. "
+                "The 'kernel_size' argument of the GaussianBlur "
+                "augmentation will be deprecated. "
             )
         self.sigma = sigma
 
