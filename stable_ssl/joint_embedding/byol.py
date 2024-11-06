@@ -10,7 +10,7 @@
 import logging
 import torch
 
-from .base import SelfDistillationModel
+from .base import SelfDistillationModel, SelfDistillationConfig
 
 
 class BYOL(SelfDistillationModel):
@@ -48,3 +48,9 @@ class BYOL(SelfDistillationModel):
             criterion(projections[0], projections_target[1])
             + criterion(projections[1], projections_target[0])
         )
+
+
+class BYOLConfig(SelfDistillationConfig):
+    """Configuration for the BYOL model parameters."""
+
+    pass

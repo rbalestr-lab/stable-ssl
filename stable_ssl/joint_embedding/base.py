@@ -12,7 +12,6 @@ from abc import abstractmethod
 from dataclasses import dataclass, field
 import torch
 import torch.nn.functional as F
-from torch import nn
 
 from stable_ssl.utils import load_nn, mlp, deactivate_requires_grad, update_momentum
 from stable_ssl.base import BaseModel, ModelConfig
