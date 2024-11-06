@@ -10,10 +10,10 @@
 from dataclasses import dataclass
 import torch
 
-from .base import JEConfig, JETrainer
+from .base import JointEmbeddingConfig, JointEmbeddingModel
 
 
-class WMSE(JETrainer):
+class WMSE(JointEmbeddingModel):
     """Whitening Mean Squared Error (WMSE) model from [ESSS21]_.
 
     Reference
@@ -31,7 +31,8 @@ class WMSE(JETrainer):
             track_running_stats=False,
         )
 
-    def compute_ssl_loss(self, embeds):
+    # TODO : adapt to the new gather_tensors and JointEmbeddingModel structure
+    def ssl_loss(self, embeds):
         n_views = 2
         h = self.projector(embeds)
         bs = h.size(0) // n_views
@@ -116,7 +117,7 @@ class Whitening2d(torch.nn.Module):
 
 
 @dataclass
-class WMSEConfig(JEConfig):
+class WMSEConfig(JointEmbeddingConfig):
     """Configuration for the WMSE model parameters."""
 
     w_iter: float = 1

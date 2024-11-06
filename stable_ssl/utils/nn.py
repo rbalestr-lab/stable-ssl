@@ -96,6 +96,17 @@ def load_nn(
     return model, in_features
 
 
+def mlp(sizes):
+    """Create a multi-layer perceptron."""
+    layers = []
+    for i in range(len(sizes) - 2):
+        layers.append(nn.Linear(sizes[i], sizes[i + 1], bias=False))
+        layers.append(nn.BatchNorm1d(sizes[i + 1]))
+        layers.append(nn.ReLU(inplace=True))
+    layers.append(nn.Linear(sizes[-2], sizes[-1], bias=False))
+    return nn.Sequential(*layers)
+
+
 class resnet9(nn.Module):
     """ResNet-9 model."""
 

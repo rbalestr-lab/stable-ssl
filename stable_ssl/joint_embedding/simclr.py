@@ -11,10 +11,11 @@ from dataclasses import dataclass
 import torch
 import torch.nn.functional as F
 
-from .base import JEConfig, JETrainer
+from .base import JointEmbeddingConfig, JointEmbeddingModel
+from stable_ssl.utils import gather_processes
 
 
-class SimCLR(JETrainer):
+class SimCLR(JointEmbeddingModel):
     """SimCLR model from [CKNH20]_.
 
     Reference
@@ -24,6 +25,7 @@ class SimCLR(JETrainer):
             In International Conference on Machine Learning (pp. 1597-1607). PMLR.
     """
 
+    @gather_processes
     def compute_ssl_loss(self, z_i, z_j):
         """Compute the contrastive loss for SimCLR.
 
@@ -60,7 +62,7 @@ class SimCLR(JETrainer):
 
 
 @dataclass
-class SimCLRConfig(JEConfig):
+class SimCLRConfig(JointEmbeddingConfig):
     """Configuration for the SimCLR model parameters.
 
     Parameters

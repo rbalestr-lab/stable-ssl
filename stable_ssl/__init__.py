@@ -28,6 +28,7 @@ from .joint_embedding import (
     BarlowTwins,
     VICReg,
     WMSE,
+    BYOL,
 )
 from .supervised import Supervised
 
@@ -50,4 +51,5 @@ __all__ = [
     "BarlowTwins",
     "VICReg",
     "WMSE",
+    "BYOL",
 ]

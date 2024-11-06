@@ -20,6 +20,7 @@ from .joint_embedding import (
     SimCLRConfig,
     VICRegConfig,
     WMSEConfig,
+    BYOLConfig,
 )
 from .supervised import Supervised
 from .data import DataConfig
@@ -265,6 +266,7 @@ _MODEL_CONFIGS = {
     "Barlowtwins": BarlowTwinsConfig,
     "VICReg": VICRegConfig,
     "WMSE": WMSEConfig,
+    "BYOL": BYOLConfig,
 }
 _LOG_CONFIGS = {
     "wandb": WandbConfig,

@@ -10,11 +10,11 @@
 from dataclasses import dataclass
 import torch
 
-from stable_ssl.utils import FullGatherLayer, off_diagonal
-from .base import JEConfig, JETrainer
+from stable_ssl.utils import off_diagonal, gather_processes
+from .base import JointEmbeddingConfig, JointEmbeddingModel
 
 
-class VICReg(JETrainer):
+class VICReg(JointEmbeddingModel):
     """VICReg model from [BPL21]_.
 
     Reference
@@ -25,18 +25,12 @@ class VICReg(JETrainer):
             International Conference on Learning Representations (ICLR).
     """
 
-    def compute_ssl_loss(self, z1, z2):
+    @gather_processes
+    def compute_ssl_loss(self, z_i, z_j):
+        repr_loss = torch.nn.functional.mse_loss(z_i, z_j)
 
-        repr_loss = torch.nn.functional.mse_loss(z1, z2)
-
-        if self.config.hardware.world_size > 1:
-            x = torch.cat(FullGatherLayer.apply(z1), dim=0)
-            y = torch.cat(FullGatherLayer.apply(z2), dim=0)
-        else:
-            x = z1
-            y = z2
-        x = x - x.mean(dim=0)
-        y = y - y.mean(dim=0)
+        x = z_i - z_i.mean(dim=0)
+        y = z_j - z_j.mean(dim=0)
 
         std_x = torch.sqrt(x.var(dim=0) + self.config.model.epsilon)
         std_y = torch.sqrt(y.var(dim=0) + self.config.model.epsilon)
@@ -60,7 +54,7 @@ class VICReg(JETrainer):
 
 
 @dataclass
-class VICRegConfig(JEConfig):
+class VICRegConfig(JointEmbeddingConfig):
     """Configuration for the VICreg model parameters."""
 
     sim_coeff: float = 25

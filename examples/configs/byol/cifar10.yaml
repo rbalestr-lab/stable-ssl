@@ -1,0 +1,91 @@
+defaults:
+  - override hydra/launcher: submitit_slurm
+
+hydra:
+  launcher:
+    tasks_per_node: ${hardware.world_size}
+    gpus_per_node: ${hardware.world_size}
+    partition: gpu
+    cpus_per_task: 4
+
+data:
+  train_on: base
+  base:
+    name: CIFAR10
+    path: ~/data
+    batch_size: 256
+    drop_last: True
+    shuffle: True
+    split: train
+    num_workers: -1
+    transforms:
+      view1:
+      - name: RandomResizedCrop
+        kwargs:
+          size: 32
+          scale:
+            - 0.2
+            - 1.0
+          interpolation: bicubic
+      - name: RandomHorizontalFlip
+        kwargs:
+          p: 0.5
+      - name: ColorJitter
+        kwargs:
+          brightness: 0.4
+          contrast: 0.4
+          saturation: 0.2
+          hue: 0.1
+        p: 0.8
+      - name: RandomGrayscale
+        kwargs:
+          p: 0.2
+      view2:
+      - name: RandomResizedCrop
+        kwargs:
+          size: 32
+          scale:
+            - 0.2
+            - 1.0
+          interpolation: bicubic
+      - name: RandomHorizontalFlip
+        kwargs:
+          p: 0.5
+      - name: ColorJitter
+        kwargs:
+          brightness: 0.4
+          contrast: 0.4
+          saturation: 0.2
+          hue: 0.1
+        p: 0.8
+      - name: RandomGrayscale
+        kwargs:
+          p: 0.2
+      - name: RandomSolarize
+        kwargs:
+          threshold: 128
+          p: 0.2
+  test_out:
+    name: CIFAR10
+    path: ~/data
+    batch_size: 256
+    drop_last: False
+    num_workers: -1
+    split: test
+
+model:
+  name: BYOL
+  backbone_model: resnet50
+  projector: 2048-128
+
+optim:
+  epochs: 1000
+  lr: 5
+  optimizer: LARS
+  weight_decay: 1e-6
+
+hardware:
+  seed: 0
+  float16: true
+  gpu_id: 0
+  world_size: 1

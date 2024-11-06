@@ -10,13 +10,14 @@
 import random
 import os
 import time
-import numpy as np
 import subprocess
+import functools
 import logging
 from contextlib import closing
 import socket
 import torch.distributed as dist
 import submitit
+import numpy as np
 import torch
 
 
@@ -34,6 +35,32 @@ class FullGatherLayer(torch.autograd.Function):
         all_gradients = torch.stack(grads)
         dist.all_reduce(all_gradients)
         return all_gradients[dist.get_rank()]
+
+
+def gather_processes(func):
+    """Gather tensors from all processes before calling the function."""
+
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        if self.config.hardware.world_size > 1:
+
+            def process(arg):
+                if isinstance(arg, torch.Tensor):
+                    return torch.cat(FullGatherLayer.apply(arg), dim=0)
+                elif isinstance(arg, (list, tuple)):
+                    return type(arg)(process(a) for a in arg)
+                elif isinstance(arg, dict):
+                    return {k: process(v) for k, v in arg.items()}
+                else:
+                    return arg
+
+            new_args = tuple(process(arg) for arg in args)
+            new_kwargs = {k: process(v) for k, v in kwargs.items()}
+            return func(self, *new_args, **new_kwargs)
+        else:
+            return func(self, *args, **kwargs)
+
+    return wrapper
 
 
 def setup_distributed(args):
@@ -255,6 +282,19 @@ def get_gpu_info():
         logging.info(f"\t{complete_process.stdout}")
     except subprocess.SubprocessError as e:
         logging.info("nvidia-smi failed.", exc_info=e)
+
+
+def deactivate_requires_grad(model: torch.nn.Module):
+    """Deactivates the requires_grad flag for all parameters of a model."""
+    for param in model.parameters():
+        param.requires_grad = False
+
+
+@torch.no_grad()
+def update_momentum(model: torch.nn.Module, model_ema: torch.nn.Module, m: float):
+    """Update parameters of `model_ema` with Exponential Moving Average of `model`."""
+    for model_ema, model in zip(model_ema.parameters(), model.parameters()):
+        model_ema.data = model_ema.data * m + model.data * (1.0 - m)
 
 
 def log_and_raise(exception_class, message):
