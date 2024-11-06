@@ -47,7 +47,7 @@ class JointEmbeddingModel(BaseModel):
         )
 
     def forward(self, x):
-        return self.backbone(x)
+        return self.backbone_classifier(self.backbone(x))
 
     def compute_loss(self):
         embeddings = [self.backbone(view) for view in self.data[0]]

@@ -45,8 +45,8 @@ class BYOL(SelfDistillationModel):
 
         criterion = torch.nn.CosineSimilarity(dim=1)
         return 0.5 * (
-            criterion(projections[0], projections_target[1])
-            + criterion(projections[1], projections_target[0])
+            criterion(projections[0], projections_target[1]).mean()
+            + criterion(projections[1], projections_target[0]).mean()
         )
 
 
