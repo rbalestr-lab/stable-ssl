@@ -19,8 +19,8 @@ import omegaconf
 from pathlib import Path
 from tqdm import tqdm
 from dataclasses import dataclass, make_dataclass
+import torch
 from torchmetrics.classification import MulticlassAccuracy
-import os
 
 try:
     import wandb
@@ -30,8 +30,6 @@ except ModuleNotFoundError:
         "or an error will be thrown."
     )
 
-import torch
-
 from .utils import (
     BreakAllEpochs,
     BreakEpoch,
@@ -39,7 +37,6 @@ from .utils import (
     BreakStep,
     seed_everything,
     setup_distributed,
-    FullGatherLayer,
     LARS,
     LinearWarmupCosineAnnealing,
     to_device,
@@ -84,14 +81,11 @@ class BaseModel(torch.nn.Module):
     """
 
     def __new__(cls, config, *args, **kwargs):
-        logging.basicConfig(
-            level=self.config.log.level, format="[stable-SSL] %(message)s"
-        )
-
         if len(args):
             log_and_raise(
                 ValueError,
-                "You should only provide named arguments to ensure they are logged in the config.",
+                "You should only provide named arguments to ensure that "
+                "they are logged in the config.",
             )
 
         trainer = super(BaseModel, cls).__new__(cls)
