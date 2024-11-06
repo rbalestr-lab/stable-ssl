@@ -12,7 +12,7 @@ def main(cfg):
     """Load the configuration and launch the run."""
     args = stable_ssl.get_args(cfg)  # Get the verified arguments
 
-    logging.basicConfig(level=config.log.level, format="[stable-SSL] %(message)s")
+    logging.basicConfig(level=args.log.level, format="[stable-SSL] %(message)s")
 
     print("--- Arguments ---")
     print(args)
