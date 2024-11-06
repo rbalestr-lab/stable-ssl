@@ -6,6 +6,7 @@ from .utils import (
     off_diagonal,
     get_open_port,
     get_gpu_info,
+    log_and_raise,
 )
 from .schedulers import LinearWarmupCosineAnnealing
 from .optim import LARS
@@ -28,4 +29,5 @@ __all__ = [
     "off_diagonal",
     "get_open_port",
     "get_gpu_info",
+    "log_and_raise",
 ]
