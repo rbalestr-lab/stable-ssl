@@ -43,10 +43,10 @@ class BYOL(SelfDistillationModel):
                 "BYOL only supports two views. Only the first two views will be used."
             )
 
-        criterion = torch.nn.CosineSimilarity(dim=1)
-        return 0.5 * (
-            criterion(projections[0], projections_target[1]).mean()
-            + criterion(projections[1], projections_target[0]).mean()
+        sim = torch.nn.CosineSimilarity(dim=1)
+        return -0.5 * (
+            sim(projections[0], projections_target[1]).mean()
+            + sim(projections[1], projections_target[0]).mean()
         )
 
 
