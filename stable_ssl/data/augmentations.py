@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from scipy.ndimage import zoom as scizoom
 from PIL import Image, ImageFilter
 from io import BytesIO
+import inspect
 import numpy as np
 
 import torch
@@ -103,7 +104,8 @@ class TransformConfig:
                 func = getattr(v2, self.name, None)
                 if func is None:
                     raise AttributeError(
-                        f"'{self.name}' not found in globals() or in 'v2'. Please check the function name."
+                        f"'{self.name}' not found in globals() or in 'v2'. "
+                        "Please check the function name."
                     )
 
             # Check if the function has a p argument.
