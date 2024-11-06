@@ -11,6 +11,7 @@ from torch.utils.data import Dataset
 from torchvision.transforms.functional import to_pil_image
 
 from .augmentations import TransformsConfig
+from stable_ssl.utils import log_and_raise
 
 
 @dataclass
@@ -350,7 +351,8 @@ def resample_classes(dataset, samples_or_freq, random_seed=None):
     elif hasattr(dataset, "targets"):
         labels = dataset.targets
     else:
-        raise ValueError("dataset does not have `labels`")
+        log_and_raise(ValueError, "Dataset does not have `labels`.")
+
     classes, class_inverse, class_counts = np.unique(
         labels, return_counts=True, return_inverse=True
     )
@@ -358,9 +360,10 @@ def resample_classes(dataset, samples_or_freq, random_seed=None):
     logging.info(f"Subsampling : original class counts: {list(class_counts)}")
 
     if np.min(samples_or_freq) < 0:
-        raise ValueError(
-            "You can't have negative values in `samples_or_freq`, "
-            f"got {samples_or_freq}."
+        log_and_raise(
+            ValueError,
+            "There can't be any negative values in `samples_or_freq`, "
+            "got {samples_or_freq}.",
         )
     elif np.sum(samples_or_freq) <= 1:
         target_class_counts = np.array(samples_or_freq) * len(dataset)
@@ -368,11 +371,14 @@ def resample_classes(dataset, samples_or_freq, random_seed=None):
         freq = np.array(samples_or_freq) / np.sum(samples_or_freq)
         target_class_counts = freq * len(dataset)
         if (target_class_counts / class_counts).max() > 1:
-            raise ValueError("specified more samples per class than available")
+            log_and_raise(
+                ValueError, "Specified more samples per class than available."
+            )
     else:
-        raise ValueError(
-            f"samples_or_freq needs to sum to <= 1 or len(dataset) ({len(dataset)}), "
-            f"got {np.sum(samples_or_freq)}."
+        log_and_raise(
+            ValueError,
+            "Samples_or_freq needs to sum to <= 1 or len(dataset) "
+            f"({len(dataset)}), got {np.sum(samples_or_freq)}.",
         )
 
     target_class_counts = (

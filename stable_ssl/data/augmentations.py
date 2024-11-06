@@ -11,6 +11,8 @@ import torch
 from torchvision.transforms import v2
 from torchvision.transforms.functional import InterpolationMode
 
+from stable_ssl.utils import log_and_raise
+
 # some are from
 # https://github.com/hendrycks/robustness/blob/master/ImageNet-C/imagenet_c/imagenet_c/corruptions.py
 
@@ -56,9 +58,10 @@ def get_interpolation_mode(mode_str: str) -> InterpolationMode:
     try:
         return InterpolationMode(mode_str)
     except ValueError:
-        raise ValueError(
+        log_and_raise(
+            ValueError,
             f"{mode_str} is not a valid interpolation mode. "
-            f"Choose from {list(InterpolationMode)}."
+            f"Choose from {list(InterpolationMode)}.",
         )
 
 
@@ -100,12 +103,12 @@ class TransformConfig:
             if self.name in globals():
                 func = globals()[self.name]
             else:
-                # Attempt to get the attribute from v2.
                 func = getattr(v2, self.name, None)
                 if func is None:
-                    raise AttributeError(
+                    log_and_raise(
+                        AttributeError,
                         f"'{self.name}' not found in globals() or in 'v2'. "
-                        "Please check the function name."
+                        "Please check the function name.",
                     )
 
             # Check if the function has a p argument.
@@ -116,12 +119,13 @@ class TransformConfig:
 
             if self.p < 1:
                 if p_in_args:
-                    logging.warning(
+                    log_and_raise(
+                        ValueError,
                         f"The function '{self.name}' already includes a 'p' argument, "
-                        "but 'p' is also set externally in the configuration "
-                        f"(p={self.p}). This results in 'p' being applied twice, "
-                        "which may cause unexpected behavior. "
-                        "Consider adjusting the configuration to avoid redundancy."
+                        f"but p={self.p} is also set externally in the configuration. "
+                        "This results in 'p' being applied twice. "
+                        "Please adjust the configuration to set 'p' only via the "
+                        f"kwargs of the function '{self.name}'.",
                     )
                 self._transform = v2.RandomApply(torch.nn.ModuleList([t]), p=self.p)
             elif self.p == 0:
