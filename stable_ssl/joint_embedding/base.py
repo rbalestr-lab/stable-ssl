@@ -131,9 +131,11 @@ class SelfDistillationModel(JointEmbeddingModel):
         projections = [self.projector(embed) for embed in embeddings]
         loss_proj = self._compute_projector_classifier_loss(*projections)
 
-        projections_target = [
-            self.projector_target(self.backbone_target(view)) for view in self.data[0]
-        ]
+        with torch.no_grad():
+            projections_target = [
+                self.projector_target(self.backbone_target(view))
+                for view in self.data[0]
+            ]
         loss_ssl = self.compute_ssl_loss(projections, projections_target)
 
         self.log(
