@@ -138,8 +138,7 @@ class BaseModel(torch.nn.Module):
             logging.info(
                 f"\t=> Initializing wandb for logging in {self.config.log.dump_path}."
             )
-            if os.environ.get("HOME") is None:
-                os.environ["HOME"] = "/users/hvanasse"  # TODO: remove hardcoded home
+
             try:
                 wandb.init(
                     entity=self.config.log.entity,
@@ -149,7 +148,7 @@ class BaseModel(torch.nn.Module):
                     dir=str(self.config.log.dump_path),
                     resume="allow",
                 )
-            except Exception as e:
+            except Exception:
                 logging.exception("Failed to initialize wandb.")
                 raise
 
@@ -158,7 +157,7 @@ class BaseModel(torch.nn.Module):
             omegaconf.OmegaConf.save(
                 self.config, self.config.log.dump_path / "hparams.yaml"
             )
-        except Exception as e:
+        except Exception:
             logging.exception("Failed to dump config file.")
             raise
 
@@ -170,7 +169,7 @@ class BaseModel(torch.nn.Module):
             dataloaders = self.config.data.get_dataloaders(
                 world_size=self.config.hardware.world_size
             )
-        except Exception as e:
+        except Exception:
             logging.exception("Failed to create dataloaders.")
             raise
 
@@ -204,7 +203,7 @@ class BaseModel(torch.nn.Module):
         logging.info("Calling initialize_modules() method.")
         try:
             self.initialize_modules()
-        except Exception as e:
+        except Exception:
             logging.exception("Failed to initialize modules.")
             raise
 
@@ -218,7 +217,7 @@ class BaseModel(torch.nn.Module):
 
         try:
             self.initialize_metrics()
-        except Exception as e:
+        except Exception:
             logging.exception("Failed to initialize metrics.")
             raise
 
@@ -260,14 +259,14 @@ class BaseModel(torch.nn.Module):
             logging.info("Calling _initialize_optimizer() method.")
             try:
                 self.optimizer = self._initialize_optimizer()
-            except Exception as e:
+            except Exception:
                 logging.exception("Failed to initialize optimizer.")
                 raise
 
             logging.info("Calling _initialize_scheduler() method.")
             try:
                 self.scheduler = self._initialize_scheduler()
-            except Exception as e:
+            except Exception:
                 logging.exception("Failed to initialize scheduler.")
                 raise
         else:
@@ -278,7 +277,7 @@ class BaseModel(torch.nn.Module):
         logging.info("Calling _load_checkpoint() method.")
         try:
             self._load_checkpoint()
-        except Exception as e:
+        except Exception:
             logging.exception("Failed to load checkpoint.")
             raise
 
