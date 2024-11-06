@@ -107,7 +107,8 @@ class TransformConfig:
                 if func is None:
                     log_and_raise(
                         AttributeError,
-                        f"'{self.name}' not found in globals() or in 'v2'. Please check the function name.",
+                        f"'{self.name}' not found in globals() or in 'v2'. "
+                        "Please check the function name.",
                     )
 
             # Check if the function has a p argument.
