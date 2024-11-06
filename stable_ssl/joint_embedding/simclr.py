@@ -12,7 +12,7 @@ import torch
 import torch.nn.functional as F
 
 from .base import JointEmbeddingConfig, JointEmbeddingModel
-from stable_ssl.utils import gather_tensors
+from stable_ssl.utils import gather_processes
 
 
 class SimCLR(JointEmbeddingModel):
@@ -25,7 +25,7 @@ class SimCLR(JointEmbeddingModel):
             In International Conference on Machine Learning (pp. 1597-1607). PMLR.
     """
 
-    @gather_tensors
+    @gather_processes
     def compute_ssl_loss(self, z_i, z_j):
         """Compute the contrastive loss for SimCLR.
 

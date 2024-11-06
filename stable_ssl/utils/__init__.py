@@ -7,7 +7,8 @@ from .utils import (
     get_open_port,
     get_gpu_info,
     deactivate_requires_grad,
-    gather_tensors,
+    gather_processes,
+    update_momentum,
 )
 from .schedulers import LinearWarmupCosineAnnealing
 from .optim import LARS
@@ -32,5 +33,6 @@ __all__ = [
     "get_open_port",
     "get_gpu_info",
     "deactivate_requires_grad",
-    "gather_tensors",
+    "gather_processes",
+    "update_momentum",
 ]

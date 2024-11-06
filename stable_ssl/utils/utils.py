@@ -37,7 +37,7 @@ class FullGatherLayer(torch.autograd.Function):
         return all_gradients[dist.get_rank()]
 
 
-def gather_tensors(func):
+def gather_processes(func):
     """Gather tensors from all processes before calling the function."""
 
     @functools.wraps(func)
@@ -288,3 +288,10 @@ def deactivate_requires_grad(model: torch.nn.Module):
     """Deactivates the requires_grad flag for all parameters of a model."""
     for param in model.parameters():
         param.requires_grad = False
+
+
+@torch.no_grad()
+def update_momentum(model: torch.nn.Module, model_ema: torch.nn.Module, m: float):
+    """Updates parameters of `model_ema` with Exponential Moving Average of `model`."""
+    for model_ema, model in zip(model_ema.parameters(), model.parameters()):
+        model_ema.data = model_ema.data * m + model.data * (1.0 - m)

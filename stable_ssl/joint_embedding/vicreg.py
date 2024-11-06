@@ -10,7 +10,7 @@
 from dataclasses import dataclass
 import torch
 
-from stable_ssl.utils import off_diagonal, gather_tensors
+from stable_ssl.utils import off_diagonal, gather_processes
 from .base import JointEmbeddingConfig, JointEmbeddingModel
 
 
@@ -25,7 +25,7 @@ class VICReg(JointEmbeddingModel):
             International Conference on Learning Representations (ICLR).
     """
 
-    @gather_tensors
+    @gather_processes
     def compute_ssl_loss(self, z_i, z_j):
         repr_loss = torch.nn.functional.mse_loss(z_i, z_j)
 
