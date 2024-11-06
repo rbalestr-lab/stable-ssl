@@ -38,7 +38,7 @@ data:
       - name: RandomGrayscale
         kwargs:
           p: 0.2
-      - name: GaussianBlur2
+      - name: GaussianBlur
         p: 0.1
       view2:
       - name: RandomResizedCrop
@@ -58,7 +58,7 @@ data:
       - name: RandomGrayscale
         kwargs:
           p: 0.2
-      - name: GaussianBlur2
+      - name: GaussianBlur
         p: 0.1
       - name: Solarization
         p: 0.2

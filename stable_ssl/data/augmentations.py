@@ -2,7 +2,7 @@ import numpy as np
 import random
 from dataclasses import dataclass
 from scipy.ndimage import zoom as scizoom
-from PIL import Image, ImageOps, ImageFilter
+from PIL import Image, ImageFilter
 from io import BytesIO
 
 import torch
@@ -95,10 +95,11 @@ class TransformConfig:
 
         self.p = p
         if self.name is not None:
-            if self.name in v2.__dict__:
-                t = v2.__dict__[self.name](*self.args, **self.kwargs)
-            else:
+            if self.name in globals():
                 t = globals()[self.name](*self.args, **self.kwargs)
+            else:
+                t = v2.__dict__[self.name](*self.args, **self.kwargs)
+
             if self.p < 1:
                 self._transform = v2.RandomApply(torch.nn.ModuleList([t]), p=self.p)
             elif self.p == 0:
@@ -723,12 +724,18 @@ class Pixelate(torch.nn.Module):
 # inspired from https://github.com/facebookresearch/barlowtwins/blob/main/main.py
 
 
-class GaussianBlur2(torch.nn.Module):
-    def forward(self, x):
-        sigma = random.random() * 1.9 + 0.1
-        return x.filter(ImageFilter.GaussianBlur(sigma))
+class GaussianBlur(torch.nn.Module):
+    def __init__(
+        self,
+        kernel_size: Optional[float] = None,
+        sigma: Tuple[float, float] = (0.1, 2),
+    ):
+        if kernel_size != None:
+            logging.warning(
+                "The 'kernel_size' argument of the GaussianBlur augmentation will be deprecated. "
+            )
+        self.sigma = sigma
 
-
-class Solarization(torch.nn.Module):
     def forward(self, x):
-        return ImageOps.solarize(x)
+        sigma = np.random.uniform(self.sigma[0], self.sigma[1])
+        return x.filter(ImageFilter.GaussianBlur(radius=sigma))
