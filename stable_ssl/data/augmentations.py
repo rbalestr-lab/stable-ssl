@@ -734,6 +734,7 @@ class GaussianBlur(torch.nn.Module):
         kernel_size: Optional[float] = None,
         sigma: Tuple[float, float] = (0.1, 2),
     ):
+        super().__init__()
         if kernel_size is not None:
             logging.warning(
                 "The 'kernel_size' argument of the GaussianBlur "
