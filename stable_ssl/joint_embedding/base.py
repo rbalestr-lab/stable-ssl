@@ -57,14 +57,15 @@ class JointEmbeddingModel(BaseModel):
         loss_proj = self._compute_projector_classifier_loss(*projections)
         loss_ssl = self.compute_ssl_loss(*projections)
 
-        self.log(
-            {
-                "train/loss_ssl": loss_ssl.item(),
-                "train/loss_backbone_classifier": loss_backbone.item(),
-                "train/loss_projector_classifier": loss_proj.item(),
-            },
-            commit=False,
-        )
+        if self.batch_idx % self.config.log.log_every_step == 0:
+            self.log(
+                {
+                    "train/loss_ssl": loss_ssl.item(),
+                    "train/loss_backbone_classifier": loss_backbone.item(),
+                    "train/loss_projector_classifier": loss_proj.item(),
+                },
+                commit=False,
+            )
 
         return loss_ssl + loss_proj + loss_backbone
 

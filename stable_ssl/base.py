@@ -506,15 +506,17 @@ class BaseModel(torch.nn.Module):
         self.scaler.update()
 
         self.scheduler.step()
-        self.log(
-            {
-                "train/loss": loss.item(),
-                "train/lr": self.scheduler.get_last_lr()[0],
-                "step": self.batch_idx,
-                "epoch": self.epoch,
-            },
-            commit=True,
-        )
+
+        if self.batch_idx % self.config.log.log_every_step == 0:
+            self.log(
+                {
+                    "train/loss": loss.item(),
+                    "train/lr": self.scheduler.get_last_lr()[0],
+                    "step": self.batch_idx,
+                    "epoch": self.epoch,
+                },
+                commit=True,
+            )
 
     def eval_step(self, name_loader):
         output = self.forward(self.data[0])
