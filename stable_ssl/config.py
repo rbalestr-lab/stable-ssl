@@ -157,8 +157,10 @@ class LogConfig:
         Name for the final saved model. Default is "final_model".
     eval_only : bool, optional
         Whether to only evaluate the model without training. Default is False.
-    eval_epoch_freq : int, optional
+    eval_every_epoch : int, optional
         Frequency of evaluation (in terms of epochs). Default is 1.
+    log_every_step : int, optional
+        Frequency of logging (in terms of steps). Default is 1.
     """
 
     api: Optional[str] = None
@@ -169,7 +171,8 @@ class LogConfig:
     save_final_model: bool = True
     final_model_name: str = "final_model"
     eval_only: bool = False
-    eval_epoch_freq: int = 1
+    eval_every_epoch: int = 1
+    log_every_step: int = 1
 
     def __post_init__(self):
         """Initialize logging folder and run settings.
