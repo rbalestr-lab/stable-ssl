@@ -164,7 +164,7 @@ class LogConfig:
     """
 
     api: Optional[str] = None
-    folder: Optional[str] = Noneeval_every_epoch
+    folder: Optional[str] = None
     load_from: str = "ckpt"
     level: int = logging.INFO
     checkpoint_frequency: int = 10
