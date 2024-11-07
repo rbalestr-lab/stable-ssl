@@ -554,8 +554,8 @@ class BaseModel(torch.nn.Module):
         # "self" therefore holds the current version of the model:
         logging.info("Requeuing the task.")
         config = copy.deepcopy(self.config)
-        config.log.add_version = False
-        config.log.folder = self.config.log.dump_path.as_posix()
+        # config.log.add_version = False
+        # config.log.folder = self.config.log.dump_path.as_posix()
         model = type(self)(config)
         return submitit.helpers.DelayedSubmission(model)
 
