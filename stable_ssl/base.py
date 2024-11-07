@@ -682,7 +682,7 @@ class BaseModel(torch.nn.Module):
 
     def _initialize_scheduler(self):
         min_lr = self.config.optim.lr * 0.005
-        peak_step = 5 * len(self.dataloaders[self.config.data.train_on])
+        peak_step = 10 * len(self.dataloaders[self.config.data.train_on])
         total_steps = self.config.optim.epochs * len(
             self.dataloaders[self.config.data.train_on]
         )

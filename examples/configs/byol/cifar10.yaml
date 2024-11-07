@@ -76,8 +76,8 @@ data:
 model:
   name: BYOL
   backbone_model: resnet18
-  projector: 1024-256
-  predictor: 1024-256
+  projector: 2048-256
+  predictor: 2048-256
   momentum: 0.999
 
 optim:
