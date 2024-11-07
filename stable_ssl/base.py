@@ -523,9 +523,6 @@ class BaseModel(torch.nn.Module):
         for name, metric in self.metrics.items():
             if name.startswith(f"eval/{name_loader}/"):
                 metric.update(output, self.data[1])
-        #     elif name.startswith(f"eval/{name_loader}/"):
-        #         self.log({name: metric(output, self.data[1])}, commit=False)
-        # self.log(commit=True)
 
     def _set_device(self):
         # Check if CUDA is available, otherwise set to CPU.
