@@ -8,8 +8,10 @@
 # LICENSE file in the root directory of this source tree.
 
 import logging
+from dataclasses import dataclass, field
 import torch
 
+from stable_ssl.utils import mlp
 from .base import SelfDistillationModel, SelfDistillationConfig
 
 
@@ -22,6 +24,12 @@ class BYOL(SelfDistillationModel):
             Bootstrap Your Own Latent-A New Approach To Self-Supervised Learning.
             Advances in neural information processing systems, 33, 21271-21284.
     """
+
+    def initialize_modules(self):
+        super().initialize_modules()
+
+        sizes = [self.config.model.projector[-1]] + self.config.model.predictor
+        self.predictor = mlp(sizes)
 
     def compute_ssl_loss(self, projections, projections_target):
         """Compute the loss of the BYOL model.
@@ -43,14 +51,32 @@ class BYOL(SelfDistillationModel):
                 "BYOL only supports two views. Only the first two views will be used."
             )
 
+        predictions = [self.predictor(proj) for proj in projections]
+
         sim = torch.nn.CosineSimilarity(dim=1)
         return -0.5 * (
-            sim(projections[0], projections_target[1]).mean()
-            + sim(projections[1], projections_target[0]).mean()
+            sim(predictions[0], projections_target[1]).mean()
+            + sim(predictions[1], projections_target[0]).mean()
         )
 
 
+@dataclass
 class BYOLConfig(SelfDistillationConfig):
-    """Configuration for the BYOL model parameters."""
+    """Configuration for the BYOL model parameters.
 
-    pass
+    Parameters
+    ----------
+    predictor : str
+        Architecture of the predictor head. Default is "2048-256".
+    """
+
+    predictor: list[int] = field(default_factory=lambda: [2048, 256])
+
+    def __post_init__(self):
+        """Convert predictor string to a list of integers if necessary."""
+        super().__post_init__()
+        if isinstance(self.predictor, str):
+            self.predictor = [int(i) for i in self.predictor.split("-")]
+
+    def trainer(self):
+        return BYOL

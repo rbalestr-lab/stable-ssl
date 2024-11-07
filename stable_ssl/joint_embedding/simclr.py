@@ -74,11 +74,4 @@ class SimCLRConfig(JointEmbeddingConfig):
     temperature: float = 0.15
 
     def trainer(self):
-        """Return the corresponding trainer for the SimCLR configuration.
-
-        Returns
-        -------
-        SimCLR
-            A SimCLR trainer instance.
-        """
         return SimCLR
