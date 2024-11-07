@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""VICReg model."""
+"""Reader for logs."""
 #
 # Author: Randall Balestriero <randallbalestriero@gmail.com>
 #
@@ -52,18 +52,20 @@ def jsonl_run(path):
     _path = Path(path)
     if not _path.is_dir():
         raise ValueError(f"The provided path ({path}) is not a directory!")
-    # load the config
+    # Load the config file.
     if not (_path / "hparams.yaml").is_file():
         raise ValueError(
             f"The provided path ({path}) must at least contain a `hparams.yaml` file."
         )
     config = omegaconf.OmegaConf.load(_path / "hparams.yaml")
     values = []
-    # load the values
-    if (_path / "csv_logs.jsonl").is_file():
-        for obj in jsonlines.open(_path / "csv_logs.jsonl").iter(
-            type=dict, skip_invalid=True
-        ):
+    # Load the values from logs_rank_* files.
+    logs_files = list(_path.glob("logs_rank_*"))
+    for log_file in logs_files:
+        # Extract rank from the filename.
+        rank = int(log_file.name.split("_")[-1])
+        for obj in jsonlines.open(log_file).iter(type=dict, skip_invalid=True):
+            obj["rank"] = rank  # Add rank field to each dict.
             values.append(obj)
     return config, values
 

@@ -150,7 +150,7 @@ class SelfDistillationModel(JointEmbeddingModel):
         return loss_ssl + loss_proj + loss_backbone
 
     def before_train_step(self):
-        # Update the target parameters as EMA of the online model parameters
+        # Update the target parameters as EMA of the online model parameters.
         update_momentum(
             self.backbone, self.backbone_target, m=self.config.model.momentum
         )
