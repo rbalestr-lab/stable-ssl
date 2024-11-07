@@ -27,12 +27,16 @@ class Supervised(BaseModel):
         return self.backbone(x)
 
     def compute_loss(self):
-        preds = self.forward(self.data[0])
+        predictions = [self.forward(view) for view in self.data[0]]
+        losses = [F.cross_entropy(pred, self.data[1]) for pred in predictions]
+        loss = sum(losses)
 
         if self.global_step % self.config.log.log_every_step == 0:
             self.log(
-                {"train/acc1": self.metrics["train/acc1"](preds, self.data[1])},
+                {
+                    "train/loss": loss.item(),
+                },
                 commit=False,
             )
 
-        return F.cross_entropy(preds, self.data[1])
+        return loss
