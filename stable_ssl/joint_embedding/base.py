@@ -57,7 +57,7 @@ class JointEmbeddingModel(BaseModel):
         loss_proj = self._compute_projector_classifier_loss(*projections)
         loss_ssl = self.compute_ssl_loss(*projections)
 
-        if self.batch_idx % self.config.log.log_every_step == 0:
+        if self.global_step % self.config.log.log_every_step == 0:
             self.log(
                 {
                     "train/loss_ssl": loss_ssl.item(),

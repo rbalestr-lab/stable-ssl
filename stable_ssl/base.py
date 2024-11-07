@@ -506,7 +506,7 @@ class BaseModel(torch.nn.Module):
 
         self.scheduler.step()
 
-        if self.batch_idx % self.config.log.log_every_step == 0:
+        if self.global_step % self.config.log.log_every_step == 0:
             self.log(
                 {
                     "train/loss": loss.item(),
