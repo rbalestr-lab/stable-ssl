@@ -348,12 +348,11 @@ class BaseModel(torch.nn.Module):
                 logging.exception("An unexpected error occurred during training.")
                 raise
 
-            if self.epoch % self.config.log.eval_epoch_freq == 0:
+            if self.epoch % self.config.log.eval_every_epoch == 0:
                 self.eval_epoch()
             self.epoch = self.epoch + 1
 
-            freq = self.config.log.checkpoint_frequency
-            if self.epoch % freq == 0:
+            if self.epoch % self.config.log.checkpoint_frequency == 0:
                 logging.info("Checkpointing everything to restart if needed.")
                 self.save_checkpoint("tmp_checkpoint.ckpt", model_only=False)
 
