@@ -399,7 +399,6 @@ class BaseModel(torch.nn.Module):
         ):
             # set up the data to have easy access throughout the methods
             self.batch_idx = batch_idx
-            self.global_step.add_(1)
             self.data = to_device(data, self.this_device)
 
             try:
@@ -409,6 +408,8 @@ class BaseModel(torch.nn.Module):
 
             except BreakStep:
                 logging.info("Method `train_step` has been interrupted by user.")
+
+            self.global_step.add_(1)
 
             if batch_idx >= max_steps:
                 break
