@@ -86,7 +86,7 @@ class DatasetConfig:
             )
         else:
             self.path = os.path.expanduser(self.path)
-            return os.path.join(self.path, self.name)
+            return self.path
 
     def get_dataset(self):
         """Load a dataset with torchvision.datasets.
