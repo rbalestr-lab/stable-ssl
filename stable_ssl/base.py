@@ -388,7 +388,10 @@ class BaseModel(torch.nn.Module):
             )
         # Otherwise, set max_steps to the length of the dataset.
         else:
-            max_steps = min(max_steps, len(self.dataloaders[self.config.data.train_on]))
+            max_steps = min(
+                self.config.optim.max_steps,
+                len(self.dataloaders[self.config.data.train_on]),
+            )
 
         for batch_idx, data in enumerate(
             tqdm(
