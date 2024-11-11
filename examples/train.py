@@ -6,11 +6,13 @@ import logging
 import hydra
 import stable_ssl
 from stable_ssl.utils import log_and_raise
+import time
 
 
 @hydra.main()
 def main(cfg):
     """Load the configuration and launch the run."""
+    time.sleep(20)
     args = stable_ssl.get_args(cfg)  # Get the verified arguments
 
     logging.basicConfig(level=args.log.level, format="[stable-SSL] %(message)s")
