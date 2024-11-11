@@ -171,7 +171,7 @@ def plasma_fractal(mapsize=256, wibbledecay=3):
         The rate of decay for the randomness. Default is 3.
     """
     assert mapsize & (mapsize - 1) == 0
-    maparray = np.empty((mapsize, mapsize), dtype=np.float_)
+    maparray = np.empty((mapsize, mapsize), dtype=np.float64)
     maparray[0, 0] = 0
     stepsize = mapsize
     wibble = 100
