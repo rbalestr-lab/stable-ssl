@@ -270,8 +270,8 @@ def get_gpu_info():
     """
     cmd = (
         "nvidia-smi --query-gpu="
-        "name,memory.total,pstate,pcie.link.gen.max,uuid,pci.bus_id "
-        "--format=csv,noheader"
+        "name,memory.total,memory.used,pstate,pcie.link.gen.max,uuid,pci.bus_id "
+        "--format=csv"
     )
 
     try:

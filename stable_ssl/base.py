@@ -12,6 +12,7 @@ import logging
 import time
 import copy
 import dataclasses
+import gc
 import numpy as np
 import submitit
 import jsonlines
@@ -118,7 +119,6 @@ class BaseModel(torch.nn.Module):
         pass
 
     def __call__(self):
-        get_gpu_info()
         seed_everything(self.config.hardware.seed)
 
         # Use WandB if an entity or project name is provided.
@@ -531,6 +531,7 @@ class BaseModel(torch.nn.Module):
         # Check if CUDA is available, otherwise set to CPU.
         if not torch.cuda.is_available():
             logging.warning("CUDA is not available. Setting device to CPU.")
+            gc.collect()
             self._device = "cpu"
             return
 
@@ -548,6 +549,16 @@ class BaseModel(torch.nn.Module):
             self.config.hardware.gpu_id = 0
             self.config.hardware.world_size = 1
 
+        # cleanup the device
+        logging.info("Device status at start of process but before training.")
+        get_gpu_info()
+
+        gc.collect()
+        torch.cuda.empty_cache()
+
+        logging.info("Device status at start of training.")
+        get_gpu_info()
+
         # Set the CUDA device.
         torch.cuda.set_device(self._device)
 
@@ -561,6 +572,8 @@ class BaseModel(torch.nn.Module):
         # config.log.add_version = False
         # config.log.folder = self.config.log.dump_path.as_posix()
         model = type(self)(config)
+        logging.info("Cleaning up the current task before submitting a new one.")
+        self.cleanup()
         return submitit.helpers.DelayedSubmission(model)
 
     def log(self, packet=None, commit=True):
@@ -735,8 +748,18 @@ class BaseModel(torch.nn.Module):
         return bucket
 
     def cleanup(self):
-        logging.info("Cleaning distributed processes.")
-        torch.distributed.destroy_process_group()
+        logging.info("Cleaning up process, device status before cleaning:")
+        get_gpu_info()
+
+        if torch.distributed.is_initialized():
+            logging.info("Cleaning distributed processes.")
+            torch.distributed.destroy_process_group()
+
+        gc.collect()
+        torch.cuda.empty_cache()
+
+        logging.info("Device status after cleaning.")
+        get_gpu_info()
 
     @property
     def rank(self):
