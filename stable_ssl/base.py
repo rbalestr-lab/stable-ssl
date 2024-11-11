@@ -392,6 +392,7 @@ class BaseModel(torch.nn.Module):
                 self.config.optim.max_steps,
                 len(self.dataloaders[self.config.data.train_on]),
             )
+        self.train_max_steps = max_steps
 
         for batch_idx, data in enumerate(
             tqdm(
@@ -479,7 +480,7 @@ class BaseModel(torch.nn.Module):
             self.data = None
 
         # Compute the final metrics for the epoch.
-        packet = {}
+        packet = {"epoch": self.epoch}
         for name, metric in self.metrics.items():
             if name.startswith("eval/"):
                 packet[name] = metric.compute()
@@ -510,7 +511,9 @@ class BaseModel(torch.nn.Module):
 
         self.scheduler.step()
 
-        if self.global_step % self.config.log.log_every_step == 0:
+        if (self.global_step % self.config.log.log_every_step == 0) or (
+            self.global_step == self.train_max_steps
+        ):
             self.log(
                 {
                     "train/loss": loss.item(),
