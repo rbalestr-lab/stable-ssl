@@ -480,7 +480,7 @@ class BaseModel(torch.nn.Module):
             self.data = None
 
         # Compute the final metrics for the epoch.
-        packet = {"epoch": self.epoch}
+        packet = {"epoch": min(self.epoch, self.config.optim.epochs - 1)}
         for name, metric in self.metrics.items():
             if name.startswith("eval/"):
                 packet[name] = metric.compute()
