@@ -117,7 +117,7 @@ class DatasetConfig:
             )
         return dataset
 
-    def get_dataloader(self, world_size=1):
+    def get_dataloader(self, world_size=1, seed=0):
         """Return a DataLoader for the dataset.
 
         Returns
@@ -128,7 +128,9 @@ class DatasetConfig:
         dataset = self.get_dataset()
 
         if torch.distributed.is_available() and torch.distributed.is_initialized():
-            self.sampler = torch.utils.data.distributed.DistributedSampler(dataset)
+            self.sampler = torch.utils.data.distributed.DistributedSampler(
+                dataset, seed=seed
+            )
 
             if self.batch_size % world_size != 0:
                 logging.warning(
@@ -212,7 +214,7 @@ class DataConfig:
         """
         return {name: d.get_dataset() for name, d in self.datasets.items()}
 
-    def get_dataloaders(self, world_size=1):
+    def get_dataloaders(self, world_size=1, seed=0):
         """Get dataloaders for the datasets.
 
         Returns
@@ -221,7 +223,7 @@ class DataConfig:
             A dictionary containing dataloaders.
         """
         return {
-            name: d.get_dataloader(world_size=world_size)
+            name: d.get_dataloader(world_size=world_size, seed=seed)
             for name, d in self.datasets.items()
         }
 

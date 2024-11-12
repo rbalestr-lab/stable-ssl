@@ -161,7 +161,8 @@ class BaseModel(torch.nn.Module):
         logging.info("Creating dataloaders.")
         try:
             dataloaders = self.config.data.get_dataloaders(
-                world_size=self.config.hardware.world_size
+                world_size=self.config.hardware.world_size,
+                seed=self.config.hardware.seed,
             )
         except Exception:
             logging.exception("Failed to create dataloaders.")
