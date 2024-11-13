@@ -47,7 +47,7 @@ __all__ = ["BreakStep"]
 
 
 class _DatasetSamplerWrapper(torch.utils.data.Dataset):
-    """Dataset to create indexes from `Sampler` or `Iterable`"""
+    """Dataset to create indexes from `Sampler` or `Iterable`."""
 
     def __init__(self, sampler) -> None:
         self._sampler = sampler

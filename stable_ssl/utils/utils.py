@@ -36,7 +36,15 @@ class FullGatherLayer(torch.autograd.Function):
         return all_gradients[dist.get_rank()]
 
 
-def str_to_dtype(v):
+def str_to_dtype(v: str) -> torch.dtype:
+    """_summary_
+
+    Args:
+        v (str): the string value to infer as dtype
+
+    Returns:
+        torch.dtype : torch.dtype
+    """
     if v == "float32":
         return torch.float32
     if v == "float16":
@@ -69,15 +77,6 @@ def gather_processes(func):
             return func(self, *args, **kwargs)
 
     return wrapper
-
-
-def to_dictmodule(x):
-    for k, v in x.items():
-        print(type(v))
-        if type(v) in [dict, omegaconf.dictconfig.DictConfig]:
-            print("INTINTIN")
-            x[k] = to_dictmodule(v)
-    return torch.ModuleDict(x)
 
 
 def count_SLURM_jobs(pending=True, running=True):
