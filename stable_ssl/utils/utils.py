@@ -6,7 +6,6 @@
 #
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
-import omegaconf
 import random
 import os
 import time
@@ -37,12 +36,15 @@ class FullGatherLayer(torch.autograd.Function):
 
 
 def str_to_dtype(v: str) -> torch.dtype:
-    """_summary_
+    """Convert a string to a pytorch dtype.
 
-    Args:
-        v (str): the string value to infer as dtype
+    Parameters
+    ----------
+    v: str
+        the string value to infer as dtype
 
-    Returns:
+    Returns
+    -------
         torch.dtype : torch.dtype
     """
     if v == "float32":

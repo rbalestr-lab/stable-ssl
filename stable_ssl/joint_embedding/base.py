@@ -17,6 +17,13 @@ from stable_ssl.base import BaseModel
 
 
 class JointEmbedding(BaseModel):
+    """Joint embedding version of Base Model.
+
+    Parameters
+    ----------
+    cfg: dict
+        the config
+    """
 
     def forward(self, x):
         return self.networks["backbone_classifier"](self.networks["backbone"](x))
