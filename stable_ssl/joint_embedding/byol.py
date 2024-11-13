@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 import torch
 
 from stable_ssl.utils import mlp
-from .base import SelfDistillationModel, SelfDistillationConfig
+from .base import SelfDistillationModel
 
 
 class BYOL(SelfDistillationModel):
@@ -58,25 +58,3 @@ class BYOL(SelfDistillationModel):
             sim(predictions[0], projections_target[1]).mean()
             + sim(predictions[1], projections_target[0]).mean()
         )
-
-
-@dataclass
-class BYOLConfig(SelfDistillationConfig):
-    """Configuration for the BYOL model parameters.
-
-    Parameters
-    ----------
-    predictor : str
-        Architecture of the predictor head. Default is "2048-256".
-    """
-
-    predictor: list[int] = field(default_factory=lambda: [2048, 256])
-
-    def __post_init__(self):
-        """Convert predictor string to a list of integers if necessary."""
-        super().__post_init__()
-        if isinstance(self.predictor, str):
-            self.predictor = [int(i) for i in self.predictor.split("-")]
-
-    def trainer(self):
-        return BYOL

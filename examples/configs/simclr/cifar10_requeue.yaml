@@ -2,96 +2,146 @@ defaults:
   - override hydra/launcher: submitit_slurm
 
 hydra:
+  job:
+    chdir: False
   launcher:
-    tasks_per_node: ${hardware.world_size}
-    gpus_per_node: ${hardware.world_size}
-    partition: gpu
+    tasks_per_node: ${trainer.hardware.world_size}
+    gpus_per_node: ${trainer.hardware.world_size}
+    partition: gpu-he
     cpus_per_task: 4
     max_num_timeout: 1
     timeout_min: 5
 
-data:
+
+trainer:
+  _target_: stable_ssl.JointEmbedding
+  eval_only: False
+  objective:
+    _target_: stable_ssl.NTXEnt
+    temperature: 0.5
   train_on: base
-  base:
-    name: CIFAR10
-    path: ~/data
-    batch_size: 256
-    drop_last: True
-    shuffle: True
-    split: train
-    num_workers: -1
-    transforms:
-      view1:
-      - name: RandomResizedCrop
-        kwargs:
-          size: 32
-          scale:
-            - 0.2
-            - 1.0
-          interpolation: bicubic
-      - name: RandomHorizontalFlip
-        kwargs:
-          p: 0.5
-      - name: ColorJitter
-        kwargs:
-          brightness: 0.4
-          contrast: 0.4
-          saturation: 0.2
-          hue: 0.1
-        p: 0.8
-      - name: RandomGrayscale
-        kwargs:
-          p: 0.2
-      view2:
-      - name: RandomResizedCrop
-        kwargs:
-          size: 32
-          scale:
-            - 0.2
-            - 1.0
-          interpolation: bicubic
-      - name: RandomHorizontalFlip
-        kwargs:
-          p: 0.5
-      - name: ColorJitter
-        kwargs:
-          brightness: 0.4
-          contrast: 0.4
-          saturation: 0.2
-          hue: 0.1
-        p: 0.8
-      - name: RandomGrayscale
-        kwargs:
-          p: 0.2
-      - name: RandomSolarize
-        kwargs:
-          threshold: 128
-          p: 0.2
-  test_out:
-    name: CIFAR10
-    path: ~/data
-    batch_size: 256
-    drop_last: False
-    num_workers: -1
-    split: test
-
-model:
-  name: SimCLR
-  backbone_model: resnet50
-  projector: 2048-128
-  temperature: 0.5
-
-log:
-  checkpoint_frequency: 1
-
-optim:
-  epochs: 1000
-  lr: 5
-  optimizer: LARS
-  weight_decay: 1e-6
-
-hardware:
-  seed: 0
-  float16: true
-  gpu_id: 0
-  world_size: 1
+  data:
+    base:
+      _target_: torch.utils.data.DataLoader
+      batch_size: 256
+      drop_last: True
+      shuffle: True
+      num_workers: 8
+      dataset:
+        _target_: torchvision.datasets.CIFAR10
+        root: ~/data
+        train: True
+        transform:
+          _target_: stable_ssl.data.MultiViewSampler
+          transforms:
+            - _target_: torchvision.transforms.v2.Compose
+              transforms:
+                - _target_: torchvision.transforms.v2.RandomResizedCrop
+                  size: 32
+                  scale:
+                    - 0.2
+                    - 1.0
+                - _target_: torchvision.transforms.v2.RandomHorizontalFlip
+                  p: 0.5
+                - _target_: torchvision.transforms.v2.ColorJitter
+                  brightness: 0.4
+                  contrast: 0.4
+                  saturation: 0.2
+                  hue: 0.1
+                - _target_: torchvision.transforms.v2.RandomGrayscale
+                  p: 0.2
+                - _target_: torchvision.transforms.v2.ToImage
+                - _target_: torchvision.transforms.v2.ToDtype
+                  dtype: 
+                    _target_: stable_ssl.utils.str_to_dtype
+                    _args_: [float32]
+                  scale: True
+            - ${trainer.data.base.dataset.transform.transforms.0}
+    test_out:
+      _target_: torch.utils.data.DataLoader
+      batch_size: 256
+      drop_last: True
+      shuffle: True
+      num_workers: 8
+      dataset:
+        _target_: torchvision.datasets.CIFAR10
+        train: False
+        root: ~/data
+        transform:
+          _target_: torchvision.transforms.v2.Compose
+          transforms:
+            - _target_: torchvision.transforms.v2.ToImage
+            - _target_: torchvision.transforms.v2.ToDtype
+              dtype: 
+                _target_: stable_ssl.utils.str_to_dtype
+                _args_: [float32]
+              scale: True
+  metrics:
+    base:
+      acc1:
+        _target_: torchmetrics.classification.MulticlassAccuracy
+        num_classes: 10
+        top_k: 1
+      acc5:
+        _target_: torchmetrics.classification.MulticlassAccuracy
+        num_classes: 10
+        top_k: 5
+    test_out:
+      acc1:
+        _target_: torchmetrics.classification.MulticlassAccuracy
+        num_classes: 10
+        top_k: 1
+      acc5:
+        _target_: torchmetrics.classification.MulticlassAccuracy
+        num_classes: 10
+        top_k: 5
+  networks:
+    backbone:
+      _target_: stable_ssl.utils.load_backbone
+      name: resnet18
+      dataset: "CIFAR10"
+    projector:
+      _target_: torch.nn.Sequential
+      _args_:
+        - _target_: torch.nn.Linear
+          in_features: 512
+          out_features: 2048
+          bias: False
+        - _target_: torch.nn.BatchNorm1d
+          num_features: ${trainer.networks.projector._args_.0.out_features}
+        - _target_: torch.nn.ReLU
+        - _target_: torch.nn.Linear
+          in_features: 2048
+          out_features: 128
+          bias: False
+    projector_classifier:
+      _target_: torch.nn.Linear
+      in_features: 128
+      out_features: 10
+    backbone_classifier:
+      _target_: torch.nn.Linear
+      in_features: 512
+      out_features: 10
+  optim:
+    epochs: 1000
+    max_steps: 1000
+    optimizer: 
+      _target_: torch.optim.AdamW
+      _partial_: True
+      lr: 0.01
+      weight_decay: 1e-6
+    scheduler:
+      _target_: torch.optim.lr_scheduler.OneCycleLR
+      _partial_: True
+      max_lr: 0.01
+      epochs: ${trainer.optim.epochs}
+      steps_per_epoch: 100
+  log:
+    level: 20
+    checkpoint_frequency: 1
+    every_step: 1
+  hardware:
+    seed: 0
+    float16: true
+    device: "cuda:0"
+    world_size: 2

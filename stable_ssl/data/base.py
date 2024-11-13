@@ -236,7 +236,7 @@ class DataConfig:
             self.train_dataset.sampler.set_epoch(epoch)
 
 
-class Sampler:
+class MultiViewSampler:
     """Apply a list of transforms to an input and return all outputs."""
 
     def __init__(self, transforms: list):

@@ -1,3 +1,3 @@
-from .base import DataConfig
+from .base import DataConfig, MultiViewSampler
 
-__all__ = ["DataConfig"]
+__all__ = ["DataConfig", "MultiViewSampler"]

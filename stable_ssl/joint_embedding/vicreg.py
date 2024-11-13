@@ -11,10 +11,10 @@ from dataclasses import dataclass
 import torch
 
 from stable_ssl.utils import off_diagonal, gather_processes
-from .base import JointEmbeddingConfig, JointEmbeddingModel
+from .base import JointEmbedding
 
 
-class VICReg(JointEmbeddingModel):
+class VICReg(JointEmbedding):
     """VICReg model from [BPL21]_.
 
     Reference
@@ -54,7 +54,7 @@ class VICReg(JointEmbeddingModel):
 
 
 @dataclass
-class VICRegConfig(JointEmbeddingConfig):
+class VICRegLoss(torch.nn.Module):
     """Configuration for the VICreg model parameters."""
 
     sim_coeff: float = 25

@@ -7,15 +7,14 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-from dataclasses import dataclass
 import torch
 import torch.nn.functional as F
 
-from .base import JointEmbeddingConfig, JointEmbeddingModel
+from .base import JointEmbedding
 from stable_ssl.utils import gather_processes
 
 
-class SimCLR(JointEmbeddingModel):
+class NTXEnt(torch.nn.Module):
     """SimCLR model from [CKNH20]_.
 
     Reference
@@ -25,8 +24,11 @@ class SimCLR(JointEmbeddingModel):
             In International Conference on Machine Learning (pp. 1597-1607). PMLR.
     """
 
-    @gather_processes
-    def compute_ssl_loss(self, z_i, z_j):
+    def __init__(self, temperature: float = 0.1):
+        super().__init__()
+        self.temperature = temperature
+
+    def forward(self, z_i, z_j):
         """Compute the contrastive loss for SimCLR.
 
         Parameters
@@ -45,33 +47,17 @@ class SimCLR(JointEmbeddingModel):
         N = z.size(0)
 
         features = F.normalize(z, dim=1)
-        sim = torch.matmul(features, features.T) / self.config.model.temperature
+        sim = torch.matmul(features, features.T) / self.temperature
 
         sim_i_j = torch.diag(sim, N // 2)
         sim_j_i = torch.diag(sim, -N // 2)
 
         positive_samples = torch.cat((sim_i_j, sim_j_i), dim=0)  # shape (N)
 
-        mask = torch.eye(N, dtype=bool).to(self.this_device)
+        mask = torch.eye(N, dtype=bool).to(z_i.device)
         negative_samples = sim[~mask].reshape(N, -1)  # shape (N, N-1)
 
         attraction = -positive_samples.mean()
         repulsion = torch.logsumexp(negative_samples, dim=1).mean()
 
         return attraction + repulsion
-
-
-@dataclass
-class SimCLRConfig(JointEmbeddingConfig):
-    """Configuration for the SimCLR model parameters.
-
-    Parameters
-    ----------
-    temperature : float
-        Temperature parameter for the contrastive loss. Default is 0.15.
-    """
-
-    temperature: float = 0.15
-
-    def trainer(self):
-        return SimCLR

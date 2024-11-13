@@ -1,6 +1,5 @@
 from .utils import (
     FullGatherLayer,
-    setup_distributed,
     seed_everything,
     to_device,
     off_diagonal,
@@ -10,16 +9,18 @@ from .utils import (
     gather_processes,
     update_momentum,
     log_and_raise,
+    str_to_dtype,
+    to_dictmodule,
 )
 from .schedulers import LinearWarmupCosineAnnealing
 from .optim import LARS
 from .exceptions import BreakEpoch, BreakStep, NanError, BreakAllEpochs
-from .nn import load_nn, mlp
+from .nn import load_backbone, mlp
 
 __all__ = [
+    "to_dictmodule",
     "mask_correlated_samples",
     "FullGatherLayer",
-    "setup_distributed",
     "seed_everything",
     "LinearWarmupCosineAnnealing",
     "LARS",
@@ -27,7 +28,7 @@ __all__ = [
     "BreakStep",
     "NanError",
     "BreakAllEpochs",
-    "load_nn",
+    "load_backbone",
     "mlp",
     "to_device",
     "off_diagonal",

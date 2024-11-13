@@ -11,25 +11,19 @@ import torchvision
 import torch.nn as nn
 
 
-def load_nn(
-    backbone_model,
-    n_classes=None,
-    pretrained=False,
-    dataset="CIFAR10",
-    **kwargs,
-):
+def get_backbone_dim(name, n_classes=None, weights=None, dataset="imagenet", **kwargs):
     """Load a neural network model with a given backbone.
 
     Parameters
     ----------
-    backbone_model : str
+    name : str
         Name of the backbone model.
     n_classes : int
         Number of classes in the dataset.
         If None, the model is loaded without the classifier.
         Default is None.
-    pretrained : bool, optional
-        Whether to load a pretrained model, by default False.
+    weights : str, optional
+        Whether to load a weights model, by default False.
     dataset : str, optional
         Name of the dataset, by default "CIFAR10".
     **kwargs: dict
@@ -42,18 +36,16 @@ def load_nn(
     int
         The number of features in the last layer.
     """
-    # Load the backbone_model.
-    if backbone_model == "resnet9":
+    # Load the name.
+    if name == "resnet9":
         model = resnet9(**kwargs)
-    elif backbone_model == "ConvMixer":
+    elif name == "ConvMixer":
         model = ConvMixer(**kwargs)
     else:
         try:
-            model = torchvision.models.__dict__[backbone_model](
-                pretrained=pretrained, **kwargs
-            )
+            model = torchvision.models.__dict__[name](weights=weights, **kwargs)
         except KeyError:
-            raise ValueError(f"Unknown model: {backbone_model}.")
+            raise ValueError(f"Unknown model: {name}.")
 
     # Adapt the last layer, either linear or identity.
     def last_layer(n_classes, in_features):
@@ -79,21 +71,90 @@ def load_nn(
         in_features = model.head.in_features
         model.head = last_layer(n_classes, in_features)
     else:
-        raise ValueError(f"Unknown model structure for : '{backbone_model}'.")
+        raise ValueError(f"Unknown model structure for : '{name}'.")
 
     # TODO: enhance flexibility, this is too hardcoded.
     # Adapt the resolution of the model if using CIFAR with resnet.
-    if (
-        "CIFAR" in dataset
-        and "resnet" in backbone_model
-        and backbone_model != "resnet9"
-    ):
+    if "CIFAR" in dataset and "resnet" in name and name != "resnet9":
         model.conv1 = nn.Conv2d(
             3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False
         )
         model.maxpool = nn.Identity()
 
-    return model, in_features
+    return in_features
+
+
+def load_backbone(name, n_classes=None, weights=None, dataset="imagenet", **kwargs):
+    """Load a neural network model with a given backbone.
+
+    Parameters
+    ----------
+    name : str
+        Name of the backbone model.
+    n_classes : int
+        Number of classes in the dataset.
+        If None, the model is loaded without the classifier.
+        Default is None.
+    weights : bool, optional
+        Whether to load a weights model, by default False.
+    dataset : str, optional
+        Name of the dataset, by default "CIFAR10".
+    **kwargs: dict
+        Additional keyword arguments for the model.
+
+    Returns
+    -------
+    torch.nn.Module
+        The neural network model.
+    int
+        The number of features in the last layer.
+    """
+    # Load the name.
+    if name == "resnet9":
+        model = resnet9(**kwargs)
+    elif name == "ConvMixer":
+        model = ConvMixer(**kwargs)
+    else:
+        try:
+            model = torchvision.models.__dict__[name](weights=weights, **kwargs)
+        except KeyError:
+            raise ValueError(f"Unknown model: {name}.")
+
+    # Adapt the last layer, either linear or identity.
+    def last_layer(n_classes, in_features):
+        if n_classes is not None:
+            return nn.Linear(in_features, n_classes)
+        else:
+            return nn.Identity()
+
+    # For models like ResNet.
+    if hasattr(model, "fc"):
+        in_features = model.fc.in_features
+        model.fc = last_layer(n_classes, in_features)
+    # For models like VGG or AlexNet.
+    elif hasattr(model, "classifier"):
+        in_features = model.classifier[-1].in_features
+        model.classifier[-1] = last_layer(n_classes, in_features)
+    # For models like ViT.
+    elif hasattr(model, "heads"):
+        in_features = model.heads.head.in_features
+        model.heads.head = last_layer(n_classes, in_features)
+    # For models like Swin Transformer.
+    elif hasattr(model, "head"):
+        in_features = model.head.in_features
+        model.head = last_layer(n_classes, in_features)
+    else:
+        raise ValueError(f"Unknown model structure for : '{name}'.")
+
+    # TODO: enhance flexibility, this is too hardcoded.
+    # Adapt the resolution of the model if using CIFAR with resnet.
+    if "CIFAR" in dataset and "resnet" in name and name != "resnet9":
+        model.conv1 = nn.Conv2d(
+            3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False
+        )
+        model.maxpool = nn.Identity()
+
+    return model
 
 
 def mlp(sizes):

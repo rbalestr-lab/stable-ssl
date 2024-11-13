@@ -6,17 +6,23 @@ import logging
 import hydra
 import stable_ssl
 from stable_ssl.utils import log_and_raise
+import hydra
 
 
-@hydra.main()
+@hydra.main(version_base="1.2")
 def main(cfg):
     """Load the configuration and launch the run."""
-    args = stable_ssl.get_args(cfg)  # Get the verified arguments
+    conf = hydra.utils.instantiate(cfg, _convert_="object")
+    conf["trainer"].execute()
+    asdf
 
     logging.basicConfig(level=args.log.level, format="[stable-SSL] %(message)s")
 
     print("--- Arguments ---")
     print(args)
+    conf = hydra.utils.instantiate(args)
+    print(conf)
+    asdf
 
     # torch.autograd.set_detect_anomaly(True)
 

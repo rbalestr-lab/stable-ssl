@@ -19,9 +19,11 @@ import jsonlines
 import omegaconf
 from pathlib import Path
 from tqdm import tqdm
-from dataclasses import dataclass, make_dataclass
 import torch
-from torchmetrics.classification import MulticlassAccuracy
+import subprocess
+import os
+from operator import itemgetter
+from typing_extensions import override
 
 try:
     import wandb
@@ -30,45 +32,108 @@ except ModuleNotFoundError:
         "Wandb module is not installed, make sure not to use wandb for logging "
         "or an error will be thrown."
     )
-
+from hydra.core.hydra_config import HydraConfig
 from .utils import (
     BreakAllEpochs,
     BreakEpoch,
     NanError,
     BreakStep,
     seed_everything,
-    setup_distributed,
-    LARS,
-    LinearWarmupCosineAnnealing,
     to_device,
     get_gpu_info,
     log_and_raise,
 )
 
 
-@dataclass
-class ModelConfig:
-    """Base configuration for the 'model' parameters.
+class _DatasetSamplerWrapper(torch.utils.data.Dataset):
+    """Dataset to create indexes from `Sampler` or `Iterable`"""
 
-    Parameters
-    ----------
-    model : str
-        Type of model to use. Default is "Supervised".
-    backbone_model : str
-        Neural network architecture to use for the backbone. Default is "resnet50".
-    sync_batchnorm : bool, optional
-        Whether to use synchronized batch normalization. Default is True.
-    memory_format : str, optional
-        Memory format for tensors (e.g., "channels_last"). Default is "channels_last".
-    pretrained : bool, optional
-        Whether to use the torchvision pretrained weights or use random initialization.
-    """
+    def __init__(self, sampler) -> None:
+        self._sampler = sampler
+        # defer materializing an iterator until it is necessary
+        self._sampler_list = None
 
-    name: str = "Supervised"
-    backbone_model: str = "resnet50"
-    sync_batchnorm: bool = True
-    memory_format: str = "channels_last"
-    pretrained: bool = False
+    @override
+    def __getitem__(self, index: int):
+        if self._sampler_list is None:
+            self._sampler_list = list(self._sampler)
+        return self._sampler_list[index]
+
+    def __len__(self) -> int:
+        return len(self._sampler)
+
+    def reset(self) -> None:
+        """Reset the sampler list in order to get new sampling."""
+        self._sampler_list = list(self._sampler)
+
+
+# https://github.com/Lightning-AI/pytorch-lightning/blob/master/src/lightning/pytorch/overrides/distributed.py#L224
+# class UnrepeatedDistributedSampler(DistributedSampler):
+#     """A fork of the PyTorch DistributedSampler that doesn't repeat data, instead allowing the number of batches per
+#     process to be off-by-one from each other. This makes this sampler usable for predictions (it's deterministic and
+#     doesn't require shuffling). It is potentially unsafe to use this sampler for training, because during training the
+#     DistributedDataParallel syncs buffers on each forward pass, so it could freeze if one of the processes runs one
+#     fewer batch. During prediction, buffers are only synced on the first batch, so this is safe to use as long as each
+#     process runs at least one batch. We verify this in an assert.
+
+#     Taken from https://github.com/jpuigcerver/PyLaia/blob/v1.0.0/laia/data/unpadded_distributed_sampler.py and
+#     https://github.com/pytorch/pytorch/issues/25162#issuecomment-634146002
+
+#     """
+
+#     def __init__(self, *args: Any, **kwargs: Any) -> None:
+#         super().__init__(*args, **kwargs)
+#         if not isinstance(self.dataset, Sized):
+#             raise TypeError("The given dataset must implement the `__len__` method.")
+#         self.num_samples = len(range(self.rank, len(self.dataset), self.num_replicas))
+#         self.total_size = len(self.dataset)
+#         # If any process has at least one batch, every other process needs to
+#         # have at least one batch, or the DistributedDataParallel could lock up.
+#         assert self.num_samples >= 1 or self.total_size == 0
+
+#     @override
+#     def __iter__(self) -> Iterator[List[int]]:
+#         if not isinstance(self.dataset, Sized):
+#             raise TypeError("The given dataset must implement the `__len__` method.")
+#         if self.shuffle:
+#             # deterministically shuffle based on epoch
+#             g = torch.Generator()
+#             g.manual_seed(self.epoch)
+#             indices = torch.randperm(len(self.dataset), generator=g).tolist()
+#         else:
+#             indices = list(range(len(self.dataset)))
+
+#         assert len(indices) == self.total_size
+
+#         # subsample
+#         indices = indices[self.rank : self.total_size : self.num_replicas]
+#         assert len(indices) == self.num_samples
+
+#         return iter(indices)
+
+
+# class UnrepeatedDistributedSamplerWrapper(UnrepeatedDistributedSampler):
+#     """Equivalent class to ``DistributedSamplerWrapper`` but for the ``UnrepeatedDistributedSampler``."""
+
+#     def __init__(
+#         self, sampler: Union[Sampler, Iterable], *args: Any, **kwargs: Any
+#     ) -> None:
+#         super().__init__(_DatasetSamplerWrapper(sampler), *args, **kwargs)
+
+#     @override
+#     def __iter__(self) -> Iterator:
+#         self.dataset.reset()
+#         return (self.dataset[index] for index in super().__iter__())
+
+
+class DistributedSamplerWrapper(torch.utils.data.DistributedSampler):
+    def __init__(self, sampler, *args, **kwargs) -> None:
+        super().__init__(_DatasetSamplerWrapper(sampler), *args, **kwargs)
+
+    @override
+    def __iter__(self):
+        self.dataset.reset()
+        return (self.dataset[index] for index in super().__iter__())
 
 
 class BaseModel(torch.nn.Module):
@@ -81,32 +146,113 @@ class BaseModel(torch.nn.Module):
         For details, see the `TrainerConfig` class in `config.py`.
     """
 
-    def __new__(cls, config, *args, **kwargs):
-        if len(args):
-            log_and_raise(
-                ValueError,
-                "You should only provide named arguments to ensure that "
-                "they are logged in the config.",
+    def __init__(
+        self,
+        data,
+        networks,
+        objective,
+        train_on,
+        hardware,
+        optim,
+        log,
+        eval_only,
+        metrics=None,
+        seed=None,
+        save_final_model=None,
+        checkpoint_frequency=1,
+        eval_every_epoch=1,
+    ):
+        super().__init__()
+        # FIXME: wandb logging
+        self.use_wandb = False
+        self._train_on = train_on
+        self._eval_only = eval_only
+        self._log_every_step = log["every_step"]
+        self.save_final_model = save_final_model
+        self.checkpoint_frequency = checkpoint_frequency
+        self.eval_every_epoch = eval_every_epoch
+        seed_everything(seed)
+        self._set_device(hardware)
+        self.hardware = hardware
+        self.dump_path = Path(HydraConfig.get().runtime.output_dir)
+        logging.info(f"\t=> Dump path: `{self.dump_path}`")
+
+        self.objective = objective.to(self._device)
+
+        # Data
+        self.data = data
+        for name, loader in self.data.items():
+            logging.info(f"\t=> Found dataloader `{name}` with length {len(loader)}.")
+            if not len(loader):
+                log_and_raise(ValueError, f"Length of dataset {name} is 0.")
+            if self.world_size > 1:
+                if not isinstance(
+                    loader.sampler,
+                    (
+                        torch.utils.data.SequentialSampler,
+                        torch.utils.data.RandomSampler,
+                    ),
+                ):
+                    logging.warn(
+                        "Replacing custom sampler with distributed version is not yet OK"
+                    )
+                    raise ValueError("ERROR")
+                self.data[name] = DistributedSamplerWrapper(
+                    loader, self.world_size, self.rank
+                )
+            logging.info(
+                f"\t=> New length after DDS on local process `{len(self.data[name])}."
             )
 
-        trainer = super(BaseModel, cls).__new__(cls)
-        config.__class__ = make_dataclass(
-            "TrainerConfig",
-            fields=[(name, type(v), v) for name, v in kwargs.items()],
-            bases=(type(config),),
-        )
-        trainer._config = copy.deepcopy(config)
-        return trainer
+        if not eval_only and train_on not in self.data:
+            log_and_raise(ValueError, f"Training data ({train_on}) not in {self.data}.")
 
-    def __init__(self, config, *args, **kwargs):
-        self._set_device()
-        logging.getLogger().setLevel(self.config.log.level)
-        super().__init__()
+        # Modules and scaler
+        for name, module in networks.items():
+            # if self.config.model.memory_format == "channels_last":
+            #     module.to(memory_format=torch.channels_last)
+            if self.world_size > 1:
+                module = torch.nn.SyncBatchNorm.convert_sync_batchnorm(module)
+            module.to(self.this_device)
+            has_parameters = False
+            if sum(p.numel() for p in module.parameters() if p.requires_grad) > 0:
+                has_parameters = True
+            if self.world_size > 1 and has_parameters:
+                module = torch.nn.parallel.DistributedDataParallel(
+                    module, device_ids=[self._device]
+                )
+            networks[name] = module
+            trainable = sum(
+                param.numel() for param in module.parameters() if param.requires_grad
+            )
+            logging.info(
+                f"\t=> Found module '{name}' with {trainable} trainable parameters."
+            )
+        self.networks = torch.nn.ModuleDict(networks)
+        self.scaler = torch.amp.GradScaler("cuda", enabled=hardware["float16"])
 
-    @abstractmethod
-    def initialize_modules(self):
-        """Initialize the modules required for the model."""
-        pass
+        if not eval_only:
+            logging.info("Setting up self.optim.")
+            optim["optimizer"] = optim["optimizer"](self.parameters())
+            optim["scheduler"] = optim["scheduler"](optim["optimizer"])
+            self.optim = optim
+        else:
+            logging.info(
+                "Mode is eval_only, skipping optimizer and scheduler initializations."
+            )
+
+        self.register_buffer("global_step", torch.zeros((1,), dtype=int))
+        self.metrics = metrics or {}
+        logging.info(f"\t=> Found metric(s) `{self.metrics}`.")
+        for m in self.metrics:
+            for k in self.metrics[m]:
+                self.metrics[m][k] = self.metrics[m][k].to(self._device)
+
+        logging.getLogger().setLevel(log["level"])
+        self._log_buffer = {}
+
+        logging.info("\tCalling load_checkpoint() method.")
+        self.load_checkpoint()
 
     @abstractmethod
     def forward(self):
@@ -129,9 +275,7 @@ class BaseModel(torch.nn.Module):
         )
 
         if self.use_wandb:
-            logging.info(
-                f"\t=> Initializing wandb for logging in {self.config.log.dump_path}."
-            )
+            logging.info(f"\t=> Initializing wandb for logging in {self.dump_path}.")
 
             try:
                 wandb.init(
@@ -139,140 +283,18 @@ class BaseModel(torch.nn.Module):
                     project=self.config.log.project,
                     config=dataclasses.asdict(self.config),
                     name=self.config.log.run,
-                    dir=str(self.config.log.dump_path),
+                    dir=str(self.dump_path),
                     resume="allow",
                 )
             except Exception:
                 logging.exception("Failed to initialize wandb.")
                 raise
 
-        logging.info(f"\t=> Dumping config file in {self.config.log.dump_path}.")
+        logging.info(f"\t=> Dumping config file in {self.dump_path}.")
         try:
-            omegaconf.OmegaConf.save(
-                self.config, self.config.log.dump_path / "hparams.yaml"
-            )
+            omegaconf.OmegaConf.save(self.config, self.dump_path / "hparams.yaml")
         except Exception:
             logging.exception("Failed to dump config file.")
-            raise
-
-        self.scaler = torch.amp.GradScaler("cuda", enabled=self.config.hardware.float16)
-
-        # Set up the dataloaders.
-        logging.info("Creating dataloaders.")
-        try:
-            dataloaders = self.config.data.get_dataloaders(
-                world_size=self.config.hardware.world_size
-            )
-        except Exception:
-            logging.exception("Failed to create dataloaders.")
-            raise
-
-        for name, loader in dataloaders.items():
-            logging.info(
-                f"\t=> Found dataloader `{name}` with length/batches {len(loader)}."
-                f"\n\t=> Per GPU Data `{name}`: {len(loader)*loader.batch_size}."
-            )
-            if name in self.config.data.train_on:
-                if self.config.log.eval_only:
-                    logging.info(f"\t=> `{name}` will be ignored (eval_only=True).")
-            if not len(loader):
-                log_and_raise(ValueError, f"Length of dataset {name} is 0.")
-
-        if not self.config.log.eval_only:
-            if not len(self.config.data.train_on):
-                log_and_raise(
-                    ValueError,
-                    f"No train datasets supplied in {self.config.data.train_on}.",
-                )
-
-            if self.config.data.train_on not in dataloaders:
-                log_and_raise(
-                    RuntimeError,
-                    f"eval_only=False and `{self.config.data.train_on}` not given.",
-                )
-
-        self.dataloaders = dataloaders
-
-        # Set up the model's modules. Should be implemented by the child class.
-        logging.info("Calling initialize_modules() method.")
-        try:
-            self.initialize_modules()
-        except Exception:
-            logging.exception("Failed to initialize modules.")
-            raise
-
-        # Set up the metrics. Should be implemented by the child class.
-        if hasattr(self, "metrics"):
-            log_and_raise(
-                RuntimeError,
-                "You can't assign any value to `self.metrics`; this will be "
-                "used for metrics only.",
-            )
-
-        try:
-            self.initialize_metrics()
-        except Exception:
-            logging.exception("Failed to initialize metrics.")
-            raise
-
-        if not hasattr(self, "metrics"):
-            log_and_raise(
-                RuntimeError,
-                "The `initialize_metrics` method should create a `self.metrics`.",
-            )
-
-        if not isinstance(self.metrics, torch.nn.ModuleDict):
-            log_and_raise(RuntimeError, "The `self.metrics` should be a ModuleDict.")
-
-        self._log_buffer = {}
-        self.register_buffer("global_step", torch.zeros((1,), dtype=int))
-
-        for name, module in self.named_children():
-            if self.config.model.memory_format == "channels_last":
-                module.to(memory_format=torch.channels_last)
-            if self.config.model.sync_batchnorm:
-                module = torch.nn.SyncBatchNorm.convert_sync_batchnorm(module)
-            module.to(self.this_device)
-            has_parameters = False
-            if sum(p.numel() for p in module.parameters() if p.requires_grad) > 0:
-                has_parameters = True
-            if self.config.hardware.world_size > 1 and has_parameters:
-                module = torch.nn.parallel.DistributedDataParallel(
-                    module, device_ids=[self.config.hardware.gpu_id]
-                )
-            setattr(self, name, module)
-
-            trainable = sum(
-                param.numel() for param in module.parameters() if param.requires_grad
-            )
-            logging.info(
-                f"\t=> Found module '{name}' with {trainable} trainable parameters."
-            )
-
-        if not self.config.log.eval_only:
-            logging.info("Calling _initialize_optimizer() method.")
-            try:
-                self.optimizer = self._initialize_optimizer()
-            except Exception:
-                logging.exception("Failed to initialize optimizer.")
-                raise
-
-            logging.info("Calling _initialize_scheduler() method.")
-            try:
-                self.scheduler = self._initialize_scheduler()
-            except Exception:
-                logging.exception("Failed to initialize scheduler.")
-                raise
-        else:
-            logging.info(
-                "Mode is eval_only, skipping optimizer and scheduler initializations."
-            )
-
-        logging.info("Calling _load_checkpoint() method.")
-        try:
-            self._load_checkpoint()
-        except Exception:
-            logging.exception("Failed to load checkpoint.")
             raise
 
         self.start_time = time.time()
@@ -285,58 +307,25 @@ class BaseModel(torch.nn.Module):
         Can be customized by the user to fit the use-cases.
         This is just a boilerplate version that provides minimal things.
         """
-        if self.config.log.eval_only:
-            self.eval_epoch()
+        if self._eval_only:
+            self.evaluate()
         else:
             try:
-                self.before_train_all_epochs()
-                self._train_all_epochs()
-                self.after_train_all_epochs()
-                self.eval_epoch()  # always eval the model after training
+                self.before_train()
+                self.fit()
+                self.after_train()
+                self.evaluate()  # always eval the model after training
             except BreakAllEpochs:
-                logging.exception("Exception during training (self.evaluate).")
+                logging.exception("Training stopped by user.")
                 raise
             if self.use_wandb:
                 wandb.finish()
             self.cleanup()
 
-    def initialize_metrics(self):
-        nc = self.config.data.datasets[self.config.data.train_on].num_classes
-
-        # Initialize the metrics dictionary with the train metric.
-        self.metrics = torch.nn.ModuleDict(
-            {"train/acc1": MulticlassAccuracy(num_classes=nc, top_k=1)}
-        )
-
-        # Add unique evaluation metrics for each eval dataset.
-        name_eval_loaders = set(self.dataloaders.keys()) - set(
-            [self.config.data.train_on]
-        )
-        for name_loader in name_eval_loaders:
-            self.metrics.update(
-                {
-                    f"eval/{name_loader}/acc1": MulticlassAccuracy(
-                        num_classes=nc, top_k=1
-                    ),
-                    f"eval/{name_loader}/acc5": MulticlassAccuracy(
-                        num_classes=nc, top_k=5
-                    ),
-                    f"eval/{name_loader}/acc1_by_class": MulticlassAccuracy(
-                        num_classes=nc, average="none", top_k=1
-                    ),
-                    f"eval/{name_loader}/acc5_by_class": MulticlassAccuracy(
-                        num_classes=nc, average="none", top_k=5
-                    ),
-                }
-            )
-
-    def _train_all_epochs(self):
-        while self.epoch < self.config.optim.epochs:
-
-            self.config.data.set_epoch_train_sampler(self.epoch)
-
+    def fit(self):
+        while self.epoch < self.optim["epochs"]:
             try:
-                self._train_epoch()
+                self.train_epoch()
             except BreakEpoch:
                 logging.info(
                     "Train epoch interrupted by user. Proceeding to the next one."
@@ -348,27 +337,22 @@ class BaseModel(torch.nn.Module):
                 logging.exception("An unexpected error occurred during training.")
                 raise
 
-            if self.epoch % self.config.log.eval_every_epoch == 0:
-                self.eval_epoch()
+            if self.epoch % self.eval_every_epoch == 0:
+                self.evaluate()
             self.epoch = self.epoch + 1
 
-            if self.epoch % self.config.log.checkpoint_frequency == 0:
-                logging.info("Checkpointing everything to restart if needed.")
+            if self.epoch % self.checkpoint_frequency == 0:
                 self.save_checkpoint("tmp_checkpoint.ckpt", model_only=False)
 
         # At the end of training, we (optionally) save the final model.
-        if self.config.log.save_final_model:
-            self.save_checkpoint(
-                f"{self.config.log.final_model_name}.ckpt", model_only=True
-            )
-        # Remove any temporary checkpoint.
-        (self.config.log.dump_path / "tmp_checkpoint.ckpt").unlink(missing_ok=True)
+        if self.save_final_model:
+            self.save_checkpoint(f"{self.save_final_model}.ckpt", model_only=True)
 
-    def _train_epoch(self):
+        logging.info("Cleaning up any temporary checkpoint.")
+        (self.dump_path / "tmp_checkpoint.ckpt").unlink(missing_ok=True)
 
-        self.train()  # hierarchically set up all modules in train mode
+    def train_epoch(self):
         self.before_train_epoch()
-
         # We do not ensure that the model is still in train mode to not
         # override any user desired behavior, simply speak out.
         if not self.training:
@@ -377,76 +361,57 @@ class BaseModel(torch.nn.Module):
                 "train mode after call to before_train_epoch()."
             )
 
+        loader = self.data[self.train_on]
         # If max_steps is negative, train on the full dataset.
-        if self.config.optim.max_steps < 0:
-            max_steps = len(self.dataloaders[self.config.data.train_on])
+        if self.optim["max_steps"] < 0:
+            max_steps = len(loader)
         # If max_steps is a float between 0 and 1, treat it as a percentage.
-        elif 0 < self.config.optim.max_steps < 1:
-            max_steps = int(
-                self.config.optim.max_steps
-                * len(self.dataloaders[self.config.data.train_on])
-            )
+        elif 0 < self.optim["max_steps"] < 1:
+            max_steps = int(self.optim["max_steps"] * len(loader))
         # Otherwise, set max_steps to the length of the dataset.
         else:
-            max_steps = min(
-                self.config.optim.max_steps,
-                len(self.dataloaders[self.config.data.train_on]),
-            )
-        self.train_max_steps = max_steps
+            max_steps = min(self.optim["max_steps"], len(loader))
 
-        for batch_idx, data in enumerate(
-            tqdm(
-                self.dataloaders[self.config.data.train_on],
-                total=max_steps,
-                desc=f"Training: {self.epoch=}",
-            )
+        for i, data in enumerate(
+            tqdm(loader, total=max_steps, desc=f"Training: {self.epoch}")
         ):
             # set up the data to have easy access throughout the methods
-            self.batch_idx = batch_idx
-            self.data = to_device(data, self.this_device)
+            self.batch_idx = i
+            self.batch = to_device(data, self.this_device)
 
-            try:
-                self.before_train_step()
-                self.train_step()
-                self.after_train_step()
-
-            except BreakStep:
-                logging.info("Method `train_step` has been interrupted by user.")
+            self.before_train_step()
+            self.train_step()
+            self.after_train_step()
 
             self.global_step.add_(1)
-
-            if batch_idx >= max_steps:
+            if i >= max_steps:
                 break
 
         self.after_train_epoch()
+        self.batch = None
 
-        # clean up to avoid silent bugs
-        self.data = None
+    def evaluate(self) -> dict:
 
-    def eval_epoch(self) -> dict:
-
-        if set(self.dataloaders) == set([self.config.data.train_on]):
+        if set(self.data) == set([self.train_on]):
             logging.info("No val_loader hence skipping eval epoch.")
             return
 
-        self.eval()  # Set model in eval mode.
-        self.before_eval_epoch()
+        self.before_eval()
         # We do not ensure that the model is still in eval mode to not
         # override any user desired behavior.
         if self.training:
             logging.warning(
                 "Starting eval epoch but model is not in "
-                "eval mode after call to before_eval_epoch()."
+                "eval mode after call to before_eval()."
             )
 
-        # Reset the metrics for the epoch.
-        for name, metric in self.metrics.items():
-            if name.startswith("eval/"):
-                metric.reset()
-
-        for name_loader, loader in self.dataloaders.items():
-            if name_loader == self.config.data.train_on:
+        packet = {"epoch": min(self.epoch, self.optim["epochs"] - 1)}
+        for name_loader, loader in self.data.items():
+            if name_loader == self.train_on:
                 continue
+            # Reset the metrics for the epoch.
+            for _, v in self.metrics.get(name_loader, {}).items():
+                v.reset()
 
             try:
                 max_steps = len(loader)
@@ -457,14 +422,14 @@ class BaseModel(torch.nn.Module):
                         desc=f"Eval {name_loader}: {self.epoch=}",
                     ):
                         self.batch_idx = step
-                        self.data = to_device(data, self.this_device)
+                        self.batch = to_device(data, self.this_device)
 
                         # Call any user specified pre-step function.
                         self.before_eval_step()
 
                         # Call the eval step.
                         with torch.amp.autocast(
-                            "cuda", enabled=self.config.hardware.float16
+                            "cuda", enabled=self.hardware["float16"]
                         ):
                             self.eval_step(name_loader=name_loader)
 
@@ -477,21 +442,17 @@ class BaseModel(torch.nn.Module):
                 raise
 
             # Be sure to clean up to avoid silent bugs.
-            self.data = None
-
-        # Compute the final metrics for the epoch.
-        packet = {"epoch": min(self.epoch, self.config.optim.epochs - 1)}
-        for name, metric in self.metrics.items():
-            if name.startswith("eval/"):
-                packet[name] = metric.compute()
+            self.batch = None
+            # Compute the final metrics for the epoch.
+            for name, metric in self.metrics.get(name_loader, {}).items():
+                packet[f"{name_loader}/{name}"] = metric.compute()
         self.log(packet, commit=True)
-
         # Call any user specified post-epoch function.
-        self.after_eval_epoch()
+        self.after_eval()
 
     def train_step(self):
-        self.optimizer.zero_grad(set_to_none=True)
-        with torch.amp.autocast("cuda", enabled=self.config.hardware.float16):
+        self.optim["optimizer"].zero_grad(set_to_none=True)
+        with torch.amp.autocast("cuda", enabled=self.hardware["float16"]):
             loss = self.compute_loss()
 
         if np.isnan(loss.item()):
@@ -499,67 +460,76 @@ class BaseModel(torch.nn.Module):
 
         self.scaler.scale(loss).backward()
         # Unscales the gradients of optimizer's assigned params in-place.
-        self.scaler.unscale_(self.optimizer)
-        if self.config.optim.grad_max_norm is not None:
+        self.scaler.unscale_(self.optim["optimizer"])
+        if self.optim.get("grad_max_norm", None) is not None:
             # Since the gradients of optimizer's assigned params are unscaled,
             # clips as usual:
             torch.nn.utils.clip_grad_norm_(
-                self.parameters(), self.config.optim.grad_max_norm
+                self.parameters(), self.optim.get("grad_max_norm")
             )
-        self.scaler.step(self.optimizer)
+        self.scaler.step(self.optim["optimizer"])
         self.scaler.update()
 
-        self.scheduler.step()
+        self.optim["scheduler"].step()
 
-        if (self.global_step % self.config.log.log_every_step == 0) or (
-            self.global_step == self.train_max_steps
-        ):
-            self.log(
-                {
-                    "train/loss": loss.item(),
-                    "train/lr": self.scheduler.get_last_lr()[0],
-                    "step": self.batch_idx,
-                    "epoch": self.epoch,
-                },
-                commit=True,
-            )
+        if self.global_step % self._log_every_step == 0:
+            bucket = {}
+            bucket["train/loss"] = loss.item()
+            bucket["train/lr"] = self.optim["scheduler"].get_last_lr()[0]
+            bucket["step"] = self.batch_idx
+            bucket["epoch"] = self.epoch
+            self.log(bucket, commit=True)
 
     def eval_step(self, name_loader):
-        output = self.forward(self.data[0])
-        for name, metric in self.metrics.items():
-            if name.startswith(f"eval/{name_loader}/"):
-                metric.update(output, self.data[1])
+        output = self.forward(self.batch[0])
+        for metric in self.metrics[name_loader].values():
+            metric.update(output, self.batch[1])
 
-    def _set_device(self):
+    def _set_device(self, hardware):
         # Check if CUDA is available, otherwise set to CPU.
-        if not torch.cuda.is_available():
+        if not torch.cuda.is_available() or hardware["device"] == "cpu":
             logging.warning("CUDA is not available. Setting device to CPU.")
-            gc.collect()
             self._device = "cpu"
             return
 
-        try:
-            # Setup distributed hardware configuration.
-            self.config.hardware = setup_distributed(self.config.hardware)
-            self._device = f"cuda:{self.config.hardware.gpu_id}"
-        except RuntimeError:
-            # Log the error and set the device to default GPU (cuda:0) as a fallback.
-            logging.exception(
-                "Error setting up distributed hardware. "
-                "Falling back to default GPU configuration."
+        if hardware["world_size"] > 1:
+            logging.info("Setting up Distributed model.")
+
+            dist_env = submitit.JobEnvironment()
+            port = 10000 + int(os.environ["SLURM_JOBID"]) % 55000
+            if "SLURM_JOB_NODELIST" in os.environ:
+
+                cmd = ["scontrol", "show", "hostnames", os.getenv("SLURM_JOB_NODELIST")]
+                host_name = subprocess.check_output(cmd).decode().splitlines()[0]
+                dist_url = f"tcp://{host_name}:{port}"
+            else:
+                dist_url = f"tcp://localhost:{port}"
+
+            logging.info(f"\tos MASTER_ADDR: {os.getenv('MASTER_ADDR')}")
+            logging.info(f"\tos MASTER_PORT: {os.getenv('MASTER_PORT')}")
+            logging.info(f"\tprocess group: {dist_env.num_tasks} tasks")
+            logging.info(f"\tmaster: {dist_url}")
+            logging.info(f"\tglobal rank: {dist_env.global_rank}")
+            logging.info(f"\tlocal rank: {dist_env.local_rank}")
+            logging.info(f"\tnumber of nodes: {dist_env.num_nodes}")
+            logging.info(f"\tworld size: {dist_env.num_nodes*dist_env.num_tasks}")
+
+            torch.distributed.init_process_group(
+                "nccl",
+                init_method=dist_url,
+                rank=dist_env.global_rank,
+                world_size=dist_env.num_nodes * dist_env.num_tasks,
             )
-            self._device = "cuda:0"
-            self.config.hardware.gpu_id = 0
-            self.config.hardware.world_size = 1
+            assert dist_env.global_rank == torch.distributed.get_rank()
+            assert (
+                dist_env.num_nodes * dist_env.num_tasks
+            ) == torch.distributed.get_world_size()
+            self._device = f"cuda:{dist_env.local_rank}"
+        else:
+            self._device = hardware["device"]
 
         # cleanup the device
-        logging.info("Device status at start of process but before training.")
-        get_gpu_info()
-
-        gc.collect()
-        torch.cuda.empty_cache()
-
-        logging.info("Device status at start of training.")
+        logging.info("Device status at start of process:")
         get_gpu_info()
 
         # Set the CUDA device.
@@ -572,8 +542,6 @@ class BaseModel(torch.nn.Module):
         # "self" therefore holds the current version of the model:
         logging.info("Requeuing the task.")
         config = copy.deepcopy(self.config)
-        # config.log.add_version = False
-        # config.log.folder = self.config.log.dump_path.as_posix()
         model = type(self)(config)
         logging.info("Cleaning up the current task before submitting a new one.")
         self.cleanup()
@@ -613,33 +581,27 @@ class BaseModel(torch.nn.Module):
         # Log in jsonl.
         else:
             with jsonlines.open(
-                self.config.log.dump_path / f"logs_rank_{self.rank}.jsonl", mode="a"
+                self.dump_path / f"logs_rank_{self.rank}.jsonl", mode="a"
             ) as writer:
                 writer.write(self._log_buffer)
 
         # Clear the log buffer.
         self._log_buffer = {}
 
-    def _load_checkpoint(self):
-        load_from = Path(self.config.log.load_from)
-        if load_from.is_file():
-            logging.info(f"\t=> file {load_from} exists\n\t=> loading it.")
-            checkpoint = load_from
-        elif (self.config.log.dump_path / "tmp_checkpoint.ckpt").is_file():
+    def load_checkpoint(self):
+        if not (self.dump_path / "tmp_checkpoint.ckpt").is_file():
             logging.info(
-                f"\t=> folder {self.config.log.dump_path} contains "
-                "`tmp_checkpoint.ckpt` file\n\t=> loading it."
-            )
-            checkpoint = self.config.log.dump_path / "tmp_checkpoint.ckpt"
-        else:
-            logging.info(f"\t=> no checkpoint at `{load_from}`")
-            logging.info(
-                "\t=> no checkpoint at "
-                f"`{self.config.log.dump_path / 'tmp_checkpoint.ckpt'}`. "
+                f"\t=> `{self.dump_path / 'tmp_checkpoint.ckpt'}` does not exist "
             )
             logging.info("\t=> training from scratch...")
             self.epoch = 0
             return
+
+        logging.info(
+            f"\t=> folder `{self.dump_path}/tmp_checkpoint.ckpt` exists "
+            "\n\t=> loading it."
+        )
+        checkpoint = self.dump_path / "tmp_checkpoint.ckpt"
 
         ckpt = torch.load(checkpoint, map_location="cpu")
 
@@ -650,7 +612,7 @@ class BaseModel(torch.nn.Module):
             model.load_state_dict(ckpt[name])
             logging.info(f"\t\t=> {name} successfully loaded.")
         if "optimizer" in ckpt:
-            self.optimizer.load_state_dict(ckpt["optimizer"])
+            self.optim["optimizer"].load_state_dict(ckpt["optimizer"])
             logging.info("\t\t=> optimizer successfully loaded.")
         if "scheduler" in ckpt:
             self.scheduler.load_state_dict(ckpt["scheduler"])
@@ -661,60 +623,13 @@ class BaseModel(torch.nn.Module):
         else:
             self.epoch = 0
 
-    def _initialize_optimizer(self):
-        if self.config.optim.optimizer == "Adam":
-            optimizer = torch.optim.Adam(
-                self.parameters(),
-                lr=self.config.optim.lr,
-                weight_decay=self.config.optim.weight_decay,
-            )
-        if self.config.optim.optimizer == "AdamW":
-            optimizer = torch.optim.AdamW(
-                self.parameters(),
-                lr=self.config.optim.lr,
-                weight_decay=self.config.optim.weight_decay,
-                betas=self.config.optim.betas,
-            )
-        elif self.config.optim.optimizer == "RMSprop":
-            optimizer = torch.optim.RMSprop(
-                self.parameters(),
-                lr=self.config.optim.lr,
-                weight_decay=self.config.optim.weight_decay,
-                momentum=self.config.optim.momentum,
-            )
-        elif self.config.optim.optimizer == "SGD":
-            optimizer = torch.optim.SGD(
-                self.parameters(),
-                lr=self.config.optim.lr,
-                weight_decay=self.config.optim.weight_decay,
-                momentum=self.config.optim.momentum,
-            )
-        elif self.config.optim.optimizer == "LARS":
-            optimizer = LARS(
-                self.parameters(),
-                lr=self.config.optim.lr,
-                weight_decay=self.config.optim.weight_decay,
-                momentum=self.config.optim.momentum,
-            )
-        return optimizer
-
-    def _initialize_scheduler(self):
-        min_lr = self.config.optim.lr * 0.005
-        peak_step = 10 * len(self.dataloaders[self.config.data.train_on])
-        total_steps = self.config.optim.epochs * len(
-            self.dataloaders[self.config.data.train_on]
-        )
-        return LinearWarmupCosineAnnealing(
-            self.optimizer, end_lr=min_lr, peak_step=peak_step, total_steps=total_steps
-        )
-
     def save_checkpoint(self, name, model_only):
-        if self.config.hardware.world_size > 1:
+        if self.world_size > 1:
             curr_rank = torch.distributed.get_rank()
             if curr_rank != 0:
                 logging.info(f"On rank {curr_rank}, only rank 0 saves the checkpoint.")
                 return
-        saving_name = self.config.log.dump_path / name
+        saving_name = self.dump_path / name
         state = {}
         for subname, model in self.named_children():
             state[subname] = model.state_dict()
@@ -723,20 +638,22 @@ class BaseModel(torch.nn.Module):
             logging.info(f"Model saved at {saving_name}.")
             return
         if hasattr(self, "optimizer"):
-            state["optimizer"] = self.optimizer.state_dict()
+            state["optimizer"] = self.optim["optimizer"].state_dict()
         if hasattr(self, "scheduler"):
             state["scheduler"] = self.scheduler.state_dict()
         state["epoch"] = self.epoch
 
         torch.save(state, saving_name)
-        logging.info(
-            f"Checkpoint (model, optimizer, scheduler, epoch) saved at {saving_name}."
-        )
+        if model_only:
+            mess = "(model only)"
+        else:
+            mess = "(model, optimizer, scheduler, epoch)"
+        logging.info(f"Checkpoint {mess} saved at {saving_name}.")
 
     def generate_logging_default_bucket(self):
         cur_time = time.time()
         rel_time = cur_time - self.start_time
-        if self.config.hardware.world_size > 1:
+        if self.world_size > 1:
             rank = torch.distributed.get_rank()
         else:
             rank = 0
@@ -766,9 +683,19 @@ class BaseModel(torch.nn.Module):
 
     @property
     def rank(self):
-        if self.config.hardware.world_size > 1:
+        if self.world_size > 1:
             return torch.distributed.get_rank()
         return 0
+
+    @property
+    def world_size(self):
+        if torch.distributed.is_initialized():
+            return torch.distributed.get_world_size()
+        return 1
+
+    @property
+    def train_on(self):
+        return self._train_on
 
     @property
     def epoch(self):
@@ -806,14 +733,16 @@ class BaseModel(torch.nn.Module):
     def data(self, value):
         self._data = value
 
-    def before_train_all_epochs(self):
-        pass
+    def before_train(self):
+        self.epoch = 0
 
-    def after_train_all_epochs(self):
+    def after_train(self):
         pass
 
     def before_train_epoch(self):
-        pass
+        self.train()
+        if self.world_size > 1:
+            self.data[self._train_on].set_epoch(self.epoch)
 
     def after_train_epoch(self):
         pass
@@ -824,10 +753,10 @@ class BaseModel(torch.nn.Module):
     def after_train_step(self):
         pass
 
-    def before_eval_epoch(self):
-        pass
+    def before_eval(self):
+        self.eval()
 
-    def after_eval_epoch(self):
+    def after_eval(self):
         pass
 
     def before_eval_step(self):

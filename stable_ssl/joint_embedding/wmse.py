@@ -7,13 +7,12 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-from dataclasses import dataclass
 import torch
 
-from .base import JointEmbeddingConfig, JointEmbeddingModel
+from .base import JointEmbedding
 
 
-class WMSE(JointEmbeddingModel):
+class WMSE(JointEmbedding):
     """Whitening Mean Squared Error (WMSE) model from [ESSS21]_.
 
     Reference
@@ -116,12 +115,12 @@ class Whitening2d(torch.nn.Module):
         )
 
 
-@dataclass
-class WMSEConfig(JointEmbeddingConfig):
-    """Configuration for the WMSE model parameters."""
+# @dataclass
+# class WMSEConfig(JointEmbeddingConfig):
+#     """Configuration for the WMSE model parameters."""
 
-    w_iter: float = 1
-    w_eps: float = 0
+#     w_iter: float = 1
+#     w_eps: float = 0
 
-    def trainer(self):
-        return WMSE
+#     def trainer(self):
+#         return WMSE

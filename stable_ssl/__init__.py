@@ -13,19 +13,10 @@ from .__about__ import (
     __license__,
 )
 
-from .config import (
-    get_args,
-    # OptimConfig,
-    # HardwareConfig,
-    # LogConfig,
-    # WandbConfig,
-    # BaseModelConfig,
-    # TrainerConfig,
-)
-
 from .joint_embedding import (
-    SimCLR,
-    BarlowTwins,
+    JointEmbedding,
+    NTXEnt,
+    BarlowTwinsLoss,
     VICReg,
     WMSE,
     BYOL,
@@ -48,7 +39,7 @@ __all__ = [
     # "TrainerConfig",
     "Supervised",
     "SimCLR",
-    "BarlowTwins",
+    "BarlowTwinsLoss",
     "VICReg",
     "WMSE",
     "BYOL",

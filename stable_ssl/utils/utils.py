@@ -6,7 +6,7 @@
 #
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
-
+import omegaconf
 import random
 import os
 import time
@@ -37,12 +37,21 @@ class FullGatherLayer(torch.autograd.Function):
         return all_gradients[dist.get_rank()]
 
 
+def str_to_dtype(v):
+    if v == "float32":
+        return torch.float32
+    if v == "float16":
+        return torch.half
+    if v == "float64":
+        return torch.double
+
+
 def gather_processes(func):
     """Gather tensors from all processes before calling the function."""
 
     @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
-        if self.config.hardware.world_size > 1:
+        if self.hardware["world_size"] > 1:
 
             def process(arg):
                 if isinstance(arg, torch.Tensor):
@@ -63,87 +72,13 @@ def gather_processes(func):
     return wrapper
 
 
-def setup_distributed(args):
-    """Set up the distributed environment for PyTorch."""
-    logging.info("Setting up Distributed model.")
-    logging.info("Exporting PyTorch distributed environment variables.")
-    # logging.info(f"Launching with: {args.launcher}.")
-
-    try:
-        submitit_env = submitit.helpers.TorchDistributedEnvironment().export()
-        dist_env = {
-            "num_tasks": submitit_env.world_size,
-            # TODO? TorchDistributedEnvironment() does not have global_rank
-            "global_rank": submitit_env.local_rank,
-            "local_rank": submitit_env.local_rank,
-        }
-        host_name = submitit_env.master_addr
-        args.port = submitit_env.master_port
-    except Exception as e:
-        logging.warning(f"Submitit environment not detected: {e}")
-    if "SLURM_JOB_NODELIST" in os.environ:
-        logging.info("SLURM detected!")
-        # slurm manager being used irrespective of hydra
-        cmd = ["scontrol", "show", "hostnames", os.getenv("SLURM_JOB_NODELIST")]
-        host_name = subprocess.check_output(cmd).decode().splitlines()[0]
-        dist_env = {
-            "num_tasks": int(os.getenv("SLURM_NTASKS", 1)),
-            "global_rank": int(os.getenv("SLURM_PROCID", 0)),
-            "local_rank": int(os.getenv("SLURM_LOCALID", 0)),
-        }
-        world_size = dist_env.get("num_tasks", 1)
-    else:
-        logging.info("Running on local machine!")
-        # local host being used irrespective of hydra
-        host_name = "localhost"
-        cmd = "nvidia-smi --query-gpu=name --format=csv,noheader | wc -l"
-        num_gpus = subprocess.check_output(cmd, shell=True).decode().splitlines()[0]
-        # find other procs, sort them based on their pid and then assign ranks
-        rank = find_local_rank()
-        dist_env = {
-            "num_tasks": int(num_gpus),
-            "global_rank": rank,
-            "local_rank": rank,
-        }
-        world_size = dist_env.get("num_tasks", 1)
-
-    dist_url = f"tcp://{host_name}:{args.port}"
-
-    os.environ["MASTER_ADDR"] = host_name
-    os.environ["MASTER_PORT"] = str(args.port)
-
-    logging.info(f"MASTER_ADDR:\n\t{os.getenv('MASTER_ADDR')}")
-    logging.info(f"MASTER_PORT:\n\t{os.getenv('MASTER_PORT')}")
-    logging.info(f"Process group:\n\t{dist_env.get('num_tasks', 1)} tasks")
-    logging.info(f"\trank: {dist_env.get('global_rank', 0)}")
-    logging.info(f"\tworld size: {world_size}")
-    logging.info(f"\tlocal rank: {dist_env.get('local_rank', 0)}")
-
-    if not torch.distributed.is_available():
-        raise RuntimeError(
-            "torch.distributed is not available. Cannot initialize "
-            "distributed process group."
-        )
-    if not torch.distributed.is_initialized():
-        torch.distributed.init_process_group(
-            "nccl",
-            init_method=dist_url,
-            rank=dist_env.get("global_rank", 0),
-            world_size=world_size,
-        )
-        args.world_size = world_size
-        args.gpu_id = dist_env.get("local_rank", 0)
-        assert (
-            dist_env.get("global_rank", 0) == torch.distributed.get_rank()
-        ), logging.error(
-            "Torch and submitit global ranks do not match. "
-            f"{dist_env.get('global_rank', 0)}, {torch.distributed.get_rank()}"
-        )
-        assert (world_size) == torch.distributed.get_world_size(), logging.error(
-            "Torch and submitit world size do not match. "
-            f"{world_size}, {torch.distributed.get_world_size()}"
-        )
-    return args
+def to_dictmodule(x):
+    for k, v in x.items():
+        print(type(v))
+        if type(v) in [dict, omegaconf.dictconfig.DictConfig]:
+            print("INTINTIN")
+            x[k] = to_dictmodule(v)
+    return torch.ModuleDict(x)
 
 
 def count_SLURM_jobs(pending=True, running=True):
