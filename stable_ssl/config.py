@@ -73,7 +73,7 @@ from pathlib import Path
 
 # #         # Instantiate the optimizer to get the default parameters.
 # #         optimizer = (
-# #             LARS if self.optimizer == "LARS" else getattr(torch.optim, self.optimizer)
+# #         LARS if self.optimizer == "LARS" else getattr(torch.optim, self.optimizer)
 # #         )
 # #         default_params = optimizer([torch.tensor(0)]).defaults
 
@@ -81,7 +81,7 @@ from pathlib import Path
 # #         for param in ["lr", "weight_decay", "momentum", "betas", "nesterov"]:
 # #             if param in default_params.keys():
 # #                 if getattr(self, param) is None:
-# #                     # If a useful parameter is not provided, its default value is used.
+# #             # If a useful parameter is not provided, its default value is used.
 # #                     default_value = default_params[param]
 # #                     setattr(self, param, default_value)
 # #                     logging.warning(

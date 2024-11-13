@@ -10,9 +10,6 @@
 import torch
 import torch.nn.functional as F
 
-from .base import JointEmbedding
-from stable_ssl.utils import gather_processes
-
 
 class NTXEnt(torch.nn.Module):
     """SimCLR model from [CKNH20]_.

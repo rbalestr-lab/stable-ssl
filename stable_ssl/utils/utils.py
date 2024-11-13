@@ -16,7 +16,6 @@ import logging
 from contextlib import closing
 import socket
 import torch.distributed as dist
-import submitit
 import numpy as np
 import torch
 

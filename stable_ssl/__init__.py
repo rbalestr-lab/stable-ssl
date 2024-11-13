@@ -37,6 +37,8 @@ __all__ = [
     # "WandbConfig",
     # "BaseModelConfig",
     # "TrainerConfig",
+    "JointEmbedding",
+    "NTXEnt",
     "Supervised",
     "SimCLR",
     "BarlowTwinsLoss",

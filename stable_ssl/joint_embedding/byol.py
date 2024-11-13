@@ -8,7 +8,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import logging
-from dataclasses import dataclass, field
 import torch
 
 from stable_ssl.utils import mlp

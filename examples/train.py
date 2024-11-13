@@ -6,7 +6,8 @@ import logging
 import hydra
 import stable_ssl
 from stable_ssl.utils import log_and_raise
-import hydra
+
+__all__ = ["log_and_raise", "stable_ssl", "logging"]
 
 
 @hydra.main(version_base="1.2")
@@ -14,34 +15,6 @@ def main(cfg):
     """Load the configuration and launch the run."""
     conf = hydra.utils.instantiate(cfg, _convert_="object")
     conf["trainer"].execute()
-    asdf
-
-    logging.basicConfig(level=args.log.level, format="[stable-SSL] %(message)s")
-
-    print("--- Arguments ---")
-    print(args)
-    conf = hydra.utils.instantiate(args)
-    print(conf)
-    asdf
-
-    # torch.autograd.set_detect_anomaly(True)
-
-    stable_ssl.utils.get_gpu_info()
-
-    # Check if the model name is a valid attribute in stable_ssl
-    if hasattr(stable_ssl, args.model.name):
-        model_class = getattr(stable_ssl, args.model.name)
-        model = model_class(args)  # Create model instance
-        model()  # Call model
-    else:
-        available_models = [
-            attr for attr in dir(stable_ssl) if not attr.startswith("_")
-        ]
-        log_and_raise(
-            ValueError,
-            f"The model '{args.model.name}' is not available in stable_ssl. "
-            f"Available models are: {available_models}.",
-        )
 
 
 if __name__ == "__main__":

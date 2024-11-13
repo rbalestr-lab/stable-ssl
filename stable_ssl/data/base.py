@@ -5,8 +5,6 @@ from typing import Optional
 import numpy as np
 
 import torch
-import torchvision
-from torchvision import transforms
 from torch.utils.data import Dataset
 from torchvision.transforms.functional import to_pil_image
 
@@ -87,90 +85,6 @@ class DatasetConfig:
         else:
             self.path = os.path.expanduser(self.path)
             return self.path
-
-    def get_dataset(self):
-        """Load a dataset with torchvision.datasets.
-
-        Raises
-        ------
-        ValueError
-            If the dataset is not found in torchvision.datasets.
-        """
-        if hasattr(torchvision.datasets, self.name):
-            if self.name == "ImageNet":
-                dataset = torchvision.datasets.ImageNet(
-                    root=self.data_path,
-                    split=self.split,
-                    transform=Sampler(self.transforms),
-                )
-            else:
-                dataset = getattr(torchvision.datasets, self.name)(
-                    root=self.data_path,
-                    train=self.split == "train",
-                    download=True,
-                    transform=Sampler(self.transforms),
-                )
-        else:
-            dataset = torchvision.datasets.ImageFolder(
-                root=self.data_path,
-                transform=Sampler(self.transforms),
-            )
-        return dataset
-
-    def get_dataloader(self, world_size=1):
-        """Return a DataLoader for the dataset.
-
-        Returns
-        -------
-        torch.utils.data.DataLoader
-            DataLoader object for the dataset.
-        """
-        dataset = self.get_dataset()
-
-        if torch.distributed.is_available() and torch.distributed.is_initialized():
-            self.sampler = torch.utils.data.distributed.DistributedSampler(dataset)
-
-            if self.batch_size % world_size != 0:
-                logging.warning(
-                    f"Batch size ({self.batch_size}) is not divisible by world size "
-                    f"({world_size}). Setting per-device batch size to "
-                    f"{self.batch_size // world_size}."
-                )
-            self.batch_size = max(self.batch_size // world_size, 1)
-            logging.info(
-                f"Loading {self.name} using DDP, "
-                f"world size {world_size}, "
-                f"batch size {self.batch_size}. "
-            )
-            logging.info(
-                f"Length of sample: {len(self.sampler)}, whole dataset: {len(dataset)}."
-                f"\nSampler rank: {self.sampler.rank}, "
-                f"torch rank: {torch.distributed.get_rank()}."
-            )
-        else:
-            self.sampler = None
-
-        # Use all available CPUs if num_workers is set to -1.
-        if self.num_workers == -1:
-            if os.environ.get("SLURM_JOB_ID"):
-                self.num_workers = int(os.environ.get("SLURM_CPUS_PER_TASK", 1))
-            else:
-                self.num_workers = os.cpu_count()
-            logging.info(
-                f"Using {self.num_workers} workers (CPUS_PER_TASK) for data loading."
-            )
-
-        loader = torch.utils.data.DataLoader(
-            dataset,
-            batch_size=self.batch_size,
-            num_workers=self.num_workers,
-            pin_memory=True,
-            sampler=self.sampler,
-            shuffle=self.shuffle and (self.sampler is None),
-            drop_last=self.drop_last and (self.sampler is None),
-        )
-
-        return loader
 
 
 @dataclass
@@ -301,27 +215,27 @@ class MultiViewSampler:
 #     )
 
 
-def from_torchvision(data_path, dataset):
-    """Load dataset features and labels from torchvision.
+# def from_torchvision(data_path, dataset):
+#     """Load dataset features and labels from torchvision.
 
-    Parameters
-    ----------
-    data_path : str
-        Path to the dataset.
-    dataset : torch.utils.data.Dataset
-        The dataset class from torchvision.
+#     Parameters
+#     ----------
+#     data_path : str
+#         Path to the dataset.
+#     dataset : torch.utils.data.Dataset
+#         The dataset class from torchvision.
 
-    Returns
-    -------
-    tuple
-        Tuple of features and labels.
-    """
-    dataset = dataset(
-        root=data_path, train=True, download=True, transform=transforms.ToTensor()
-    )
-    features = torch.stack([dataset[i][0] for i in range(len(dataset))])
-    labels = torch.tensor([dataset[i][1] for i in range(len(dataset))])
-    return features, labels
+#     Returns
+#     -------
+#     tuple
+#         Tuple of features and labels.
+#     """
+#     dataset = dataset(
+#         root=data_path, train=True, download=True, transform=transforms.ToTensor()
+#     )
+#     features = torch.stack([dataset[i][0] for i in range(len(dataset))])
+#     labels = torch.tensor([dataset[i][1] for i in range(len(dataset))])
+#     return features, labels
 
 
 def resample_classes(dataset, samples_or_freq, random_seed=None):

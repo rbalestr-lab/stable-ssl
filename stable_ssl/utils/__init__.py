@@ -18,6 +18,7 @@ from .exceptions import BreakEpoch, BreakStep, NanError, BreakAllEpochs
 from .nn import load_backbone, mlp
 
 __all__ = [
+    "str_to_dtype",
     "to_dictmodule",
     "mask_correlated_samples",
     "FullGatherLayer",
