@@ -10,7 +10,6 @@ from .utils import (
     update_momentum,
     log_and_raise,
     str_to_dtype,
-    to_dictmodule,
 )
 from .schedulers import LinearWarmupCosineAnnealing
 from .optim import LARS
@@ -19,7 +18,6 @@ from .nn import load_backbone, mlp
 
 __all__ = [
     "str_to_dtype",
-    "to_dictmodule",
     "mask_correlated_samples",
     "FullGatherLayer",
     "seed_everything",
