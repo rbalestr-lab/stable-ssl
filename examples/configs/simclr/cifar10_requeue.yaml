@@ -76,25 +76,6 @@ trainer:
                 _target_: stable_ssl.utils.str_to_dtype
                 _args_: [float32]
               scale: True
-  metrics:
-    base:
-      acc1:
-        _target_: torchmetrics.classification.MulticlassAccuracy
-        num_classes: 10
-        top_k: 1
-      acc5:
-        _target_: torchmetrics.classification.MulticlassAccuracy
-        num_classes: 10
-        top_k: 5
-    test_out:
-      acc1:
-        _target_: torchmetrics.classification.MulticlassAccuracy
-        num_classes: 10
-        top_k: 1
-      acc5:
-        _target_: torchmetrics.classification.MulticlassAccuracy
-        num_classes: 10
-        top_k: 5
   networks:
     backbone:
       _target_: stable_ssl.utils.load_backbone
@@ -136,12 +117,31 @@ trainer:
       max_lr: 0.01
       epochs: ${trainer.optim.epochs}
       steps_per_epoch: 100
-  log:
+  logger:
     level: 20
     checkpoint_frequency: 1
     every_step: 1
+    metrics:
+      base:
+        acc1:
+          _target_: torchmetrics.classification.MulticlassAccuracy
+          num_classes: 10
+          top_k: 1
+        acc5:
+          _target_: torchmetrics.classification.MulticlassAccuracy
+          num_classes: 10
+          top_k: 5
+      test_out:
+        acc1:
+          _target_: torchmetrics.classification.MulticlassAccuracy
+          num_classes: 10
+          top_k: 1
+        acc5:
+          _target_: torchmetrics.classification.MulticlassAccuracy
+          num_classes: 10
+          top_k: 5
   hardware:
     seed: 0
     float16: true
     device: "cuda:0"
-    world_size: 2
+    world_size: 1

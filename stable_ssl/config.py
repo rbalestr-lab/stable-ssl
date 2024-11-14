@@ -8,7 +8,6 @@
 # # LICENSE file in the root directory of this source tree.
 
 from dataclasses import dataclass
-from typing import Optional
 import logging
 
 # from omegaconf import OmegaConf
@@ -156,16 +155,12 @@ class LogConfig:
         Frequency of logging (in terms of steps). Default is 1.
     """
 
-    api: Optional[str] = None
-    folder: Optional[str] = None
-    load_from: str = "ckpt"
     level: int = logging.INFO
-    checkpoint_frequency: int = 10
     save_final_model: bool = True
-    final_model_name: str = "final_model"
-    eval_only: bool = False
+    metrics: dict = None
     eval_every_epoch: int = 1
     log_every_step: int = 1
+    wandb = False
 
     def __post_init__(self):
         """Initialize logging folder and run settings.
@@ -181,14 +176,6 @@ class LogConfig:
         # if self.run is None:
         #     self.run = datetime.now().strftime("%Y%m%d_%H%M%S.%f")
         self.folder.mkdir(parents=True, exist_ok=True)
-
-    @property
-    def dump_path(self):
-        """Return the full path where logs and checkpoints are stored.
-
-        This path includes the base folder and the run identifier.
-        """
-        return self.folder
 
 
 # @dataclass

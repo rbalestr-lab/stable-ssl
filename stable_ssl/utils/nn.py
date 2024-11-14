@@ -11,7 +11,10 @@ import torchvision
 import torch.nn as nn
 
 
-def get_backbone_dim(name, n_classes=None, weights=None, dataset="imagenet", **kwargs):
+def get_backbone_dim(
+    name,
+    n_classes=None,
+):
     """Load a neural network model with a given backbone.
 
     Parameters
@@ -22,28 +25,20 @@ def get_backbone_dim(name, n_classes=None, weights=None, dataset="imagenet", **k
         Number of classes in the dataset.
         If None, the model is loaded without the classifier.
         Default is None.
-    weights : str, optional
-        Whether to load a weights model, by default False.
-    dataset : str, optional
-        Name of the dataset, by default "CIFAR10".
-    **kwargs: dict
-        Additional keyword arguments for the model.
 
     Returns
     -------
-    torch.nn.Module
-        The neural network model.
     int
         The number of features in the last layer.
     """
     # Load the name.
     if name == "resnet9":
-        model = resnet9(**kwargs)
+        model = resnet9()
     elif name == "ConvMixer":
-        model = ConvMixer(**kwargs)
+        model = ConvMixer()
     else:
         try:
-            model = torchvision.models.__dict__[name](weights=weights, **kwargs)
+            model = torchvision.models.__dict__[name]()
         except KeyError:
             raise ValueError(f"Unknown model: {name}.")
 
@@ -72,14 +67,6 @@ def get_backbone_dim(name, n_classes=None, weights=None, dataset="imagenet", **k
         model.head = last_layer(n_classes, in_features)
     else:
         raise ValueError(f"Unknown model structure for : '{name}'.")
-
-    # TODO: enhance flexibility, this is too hardcoded.
-    # Adapt the resolution of the model if using CIFAR with resnet.
-    if "CIFAR" in dataset and "resnet" in name and name != "resnet9":
-        model.conv1 = nn.Conv2d(
-            3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False
-        )
-        model.maxpool = nn.Identity()
 
     return in_features
 
@@ -157,15 +144,22 @@ def load_backbone(name, n_classes=None, weights=None, dataset="imagenet", **kwar
     return model
 
 
-def mlp(sizes):
+class MLP(nn.Module):
     """Create a multi-layer perceptron."""
-    layers = []
-    for i in range(len(sizes) - 2):
-        layers.append(nn.Linear(sizes[i], sizes[i + 1], bias=False))
-        layers.append(nn.BatchNorm1d(sizes[i + 1]))
-        layers.append(nn.ReLU(inplace=True))
-    layers.append(nn.Linear(sizes[-2], sizes[-1], bias=False))
-    return nn.Sequential(*layers)
+
+    def __init__(self, sizes, activation="ReLU", batch_norm=True):
+        super().__init__()
+        layers = []
+        for i in range(len(sizes) - 2):
+            layers.append(nn.Linear(sizes[i], sizes[i + 1], bias=not batch_norm))
+            if batch_norm:
+                layers.append(nn.BatchNorm1d(sizes[i + 1]))
+            layers.append(nn.__dict__[activation]())
+        layers.append(nn.Linear(sizes[-2], sizes[-1], bias=False))
+        self.layers = nn.Sequential(layers)
+
+    def forward(self, x):
+        return self.layers(x)
 
 
 class resnet9(nn.Module):

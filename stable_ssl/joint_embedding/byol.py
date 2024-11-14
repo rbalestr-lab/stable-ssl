@@ -10,7 +10,7 @@
 import logging
 import torch
 
-from stable_ssl.utils import mlp
+from stable_ssl.utils import MLP
 from .base import SelfDistillationModel
 
 
@@ -28,7 +28,7 @@ class BYOL(SelfDistillationModel):
         super().initialize_modules()
 
         sizes = [self.config.model.projector[-1]] + self.config.model.predictor
-        self.predictor = mlp(sizes)
+        self.predictor = MLP(sizes)
 
     def compute_ssl_loss(self, projections, projections_target):
         """Compute the loss of the BYOL model.

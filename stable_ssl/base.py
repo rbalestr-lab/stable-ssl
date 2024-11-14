@@ -136,32 +136,15 @@ class BaseModel(torch.nn.Module):
     """
 
     def __init__(
-        self,
-        data,
-        networks,
-        objective,
-        train_on,
-        hardware,
-        optim,
-        log,
-        eval_only,
-        metrics=None,
-        seed=None,
-        save_final_model=None,
-        checkpoint_frequency=1,
-        eval_every_epoch=1,
+        self, data, networks, objective, train_on, hardware, optim, logger, eval_only
     ):
         super().__init__()
-        # FIXME: wandb logging
-        self.use_wandb = False
         self._train_on = train_on
         self._eval_only = eval_only
-        self._log_every_step = log["every_step"]
-        self.save_final_model = save_final_model
-        self.checkpoint_frequency = checkpoint_frequency
-        self.eval_every_epoch = eval_every_epoch
-        seed_everything(seed)
+        seed_everything(hardware.get("seed", None))
         self._set_device(hardware)
+        self.set_logger_defaults(logger)
+        self.logger = logger
         self.hardware = hardware
         self.dump_path = Path(HydraConfig.get().runtime.output_dir)
         logging.info(f"\t=> Dump path: `{self.dump_path}`")
@@ -231,17 +214,33 @@ class BaseModel(torch.nn.Module):
             )
 
         self.register_buffer("global_step", torch.zeros((1,), dtype=int))
-        self.metrics = metrics or {}
-        logging.info(f"\t=> Found metric(s) `{self.metrics}`.")
-        for m in self.metrics:
-            for k in self.metrics[m]:
-                self.metrics[m][k] = self.metrics[m][k].to(self._device)
 
-        logging.getLogger().setLevel(log["level"])
+        logging.info(f"\t=> Found metric(s) `{logger['metrics']}`.")
+        for m in self.logger["metrics"]:
+            for k in self.logger["metrics"][m]:
+                self.logger["metrics"][m][k] = self.logger["metrics"][m][k].to(
+                    self._device
+                )
+
+        logging.getLogger().setLevel(logger.get("level", 0))
         self._log_buffer = {}
 
         logging.info("\tCalling load_checkpoint() method.")
         self.load_checkpoint()
+
+    @staticmethod
+    def set_logger_defaults(logger):
+        logger["wandb"] = logger.get("wandb", False)
+        if logger["wandb"]:
+            logger["entity"] = logger.get("entity", None)
+            logger["project"] = logger.get("project", None)
+            logger["run"] = logger.get("run", None)
+        logger["level"] = logger.get("level", 20)
+        logger["metrics"] = logger.get("metrics", {})
+        logger["save_final_model"] = logger.get("save_final_model", "final")
+        logger["eval_every_epoch"] = logger.get("eval_every_epoch", 1)
+        logger["every_step"] = logger.get("every_step", 1)
+        logger["checkpoint_frequency"] = logger.get("checkpoint_frequency", 1)
 
     @abstractmethod
     def forward(self):
@@ -257,21 +256,15 @@ class BaseModel(torch.nn.Module):
         seed_everything(self.config.hardware.seed)
 
         # Use WandB if an entity or project name is provided.
-        self.use_wandb = (
-            (self.config.log.api is not None)
-            and (self.config.log.api.lower() == "wandb")
-            and (self.rank == self.config.log.rank_to_log)
-        )
-
-        if self.use_wandb:
+        if self.logger["wandb"]:
             logging.info(f"\t=> Initializing wandb for logging in {self.dump_path}.")
 
             try:
                 wandb.init(
-                    entity=self.config.log.entity,
-                    project=self.config.log.project,
+                    entity=self.logger["entity"],
+                    project=self.logger["project"],
                     config=dataclasses.asdict(self.config),
-                    name=self.config.log.run,
+                    name=self.logger["run"],
                     dir=str(self.dump_path),
                     resume="allow",
                 )
@@ -307,7 +300,7 @@ class BaseModel(torch.nn.Module):
             except BreakAllEpochs:
                 logging.exception("Training stopped by user.")
                 raise
-            if self.use_wandb:
+            if self.logger["wandb"]:
                 wandb.finish()
             self.cleanup()
 
@@ -326,16 +319,18 @@ class BaseModel(torch.nn.Module):
                 logging.exception("An unexpected error occurred during training.")
                 raise
 
-            if self.epoch % self.eval_every_epoch == 0:
+            if self.epoch % self.logger["eval_every_epoch"] == 0:
                 self.evaluate()
             self.epoch = self.epoch + 1
 
-            if self.epoch % self.checkpoint_frequency == 0:
+            if self.epoch % self.logger["checkpoint_frequency"] == 0:
                 self.save_checkpoint("tmp_checkpoint.ckpt", model_only=False)
 
         # At the end of training, we (optionally) save the final model.
         if self.save_final_model:
-            self.save_checkpoint(f"{self.save_final_model}.ckpt", model_only=True)
+            self.save_checkpoint(
+                f"{self.logger['save_final_model']}.ckpt", model_only=True
+            )
 
         logging.info("Cleaning up any temporary checkpoint.")
         (self.dump_path / "tmp_checkpoint.ckpt").unlink(missing_ok=True)
@@ -399,7 +394,7 @@ class BaseModel(torch.nn.Module):
             if name_loader == self.train_on:
                 continue
             # Reset the metrics for the epoch.
-            for _, v in self.metrics.get(name_loader, {}).items():
+            for _, v in self.logger["metrics"].get(name_loader, {}).items():
                 v.reset()
 
             try:
@@ -433,7 +428,7 @@ class BaseModel(torch.nn.Module):
             # Be sure to clean up to avoid silent bugs.
             self.batch = None
             # Compute the final metrics for the epoch.
-            for name, metric in self.metrics.get(name_loader, {}).items():
+            for name, metric in self.logger["metrics"].get(name_loader, {}).items():
                 packet[f"{name_loader}/{name}"] = metric.compute()
         self.log(packet, commit=True)
         # Call any user specified post-epoch function.
@@ -461,7 +456,7 @@ class BaseModel(torch.nn.Module):
 
         self.optim["scheduler"].step()
 
-        if self.global_step % self._log_every_step == 0:
+        if self.global_step % self.logger["every_step"] == 0:
             bucket = {}
             bucket["train/loss"] = loss.item()
             bucket["train/lr"] = self.optim["scheduler"].get_last_lr()[0]
@@ -471,7 +466,7 @@ class BaseModel(torch.nn.Module):
 
     def eval_step(self, name_loader):
         output = self.forward(self.batch[0])
-        for metric in self.metrics[name_loader].values():
+        for metric in self.logger["metrics"][name_loader].values():
             metric.update(output, self.batch[1])
 
     def _set_device(self, hardware):
@@ -555,7 +550,7 @@ class BaseModel(torch.nn.Module):
                     self._log_buffer[name] = value.tolist()
 
         # Log in WandB.
-        if self.use_wandb:
+        if self.logger["wandb"]:
             for name, value in self._log_buffer.items():
                 if isinstance(value, list):
                     # Create a WandB table if the value is a list.
