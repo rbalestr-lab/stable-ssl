@@ -144,6 +144,7 @@ class BaseModel(torch.nn.Module):
         seed_everything(hardware.get("seed", None))
         self._set_device(hardware)
         self.set_logger_defaults(logger)
+        self.set_optim_defaults(optim)
         self.logger = logger
         self.hardware = hardware
         self.dump_path = Path(HydraConfig.get().runtime.output_dir)
@@ -225,7 +226,7 @@ class BaseModel(torch.nn.Module):
                     self._device
                 )
 
-        logging.getLogger().setLevel(logger.get("level", 0))
+        logging.getLogger().setLevel(logger["level"])
         self._log_buffer = {}
 
         logging.info("\tCalling load_checkpoint() method.")
@@ -244,6 +245,11 @@ class BaseModel(torch.nn.Module):
         logger["eval_every_epoch"] = logger.get("eval_every_epoch", 1)
         logger["every_step"] = logger.get("every_step", 1)
         logger["checkpoint_frequency"] = logger.get("checkpoint_frequency", 1)
+
+    @staticmethod
+    def set_optim_defaults(optim):
+        optim["accumulation_steps"] = optim.get("accumulation_steps", 1)
+        optim["grad_max_norm"] = optim.get("grad_max_norm", None)
 
     @abstractmethod
     def forward(self):
@@ -359,11 +365,10 @@ class BaseModel(torch.nn.Module):
         else:
             max_steps = min(self.optim["max_steps"], len(loader))
 
-        for i, data in enumerate(
+        for self._batch_idx, data in enumerate(
             tqdm(loader, total=max_steps, desc=f"Training: {self.epoch}")
         ):
             # set up the data to have easy access throughout the methods
-            self.batch_idx = i
             self.batch = to_device(data, self.this_device)
 
             self.before_train_step()
@@ -371,7 +376,7 @@ class BaseModel(torch.nn.Module):
             self.after_train_step()
 
             self.global_step.add_(1)
-            if i >= max_steps:
+            if self.batch_idx >= max_steps:
                 break
 
         self.after_train_epoch()
@@ -436,7 +441,7 @@ class BaseModel(torch.nn.Module):
         self.after_eval()
 
     def train_step(self):
-        self.optim["optimizer"].zero_grad(set_to_none=True)
+
         with torch.amp.autocast("cuda", enabled=self.hardware["float16"]):
             loss = self.compute_loss()
 
@@ -444,16 +449,18 @@ class BaseModel(torch.nn.Module):
             log_and_raise(NanError, "Loss is NaN. Stopping training.")
 
         self.scaler.scale(loss).backward()
-        # Unscales the gradients of optimizer's assigned params in-place.
-        self.scaler.unscale_(self.optim["optimizer"])
-        if self.optim.get("grad_max_norm", None) is not None:
-            # Since the gradients of optimizer's assigned params are unscaled,
-            # clips as usual:
-            torch.nn.utils.clip_grad_norm_(
-                self.parameters(), self.optim.get("grad_max_norm")
-            )
-        self.scaler.step(self.optim["optimizer"])
-        self.scaler.update()
+        if (1 + self.batch_idx) % self.optim["accumulation_steps"] == 0:
+            # Unscales the gradients of optimizer's assigned params in-place.
+            self.scaler.unscale_(self.optim["optimizer"])
+            if self.optim["grad_max_norm"] is not None:
+                # Since the gradients of optimizer's assigned params are unscaled,
+                # clips as usual:
+                torch.nn.utils.clip_grad_norm_(
+                    self.parameters(), self.optim["grad_max_norm"]
+                )
+            self.scaler.step(self.optim["optimizer"])
+            self.scaler.update()
+            self.optim["optimizer"].zero_grad(set_to_none=True)
 
         self.optim["scheduler"].step()
 
@@ -697,6 +704,12 @@ class BaseModel(torch.nn.Module):
         if not hasattr(self, "_step"):
             return None
         return self._step
+
+    @property
+    def batch_idx(self):
+        if not hasattr(self, "_batch_idx"):
+            return None
+        return self._batch_idx
 
     @property
     def data(self):
