@@ -12,10 +12,7 @@ OmegaConf.register_new_resolver("eval", eval)
 @hydra.main(version_base="1.2")
 def main(cfg):
     """Load the configuration and launch the run."""
-    print(cfg)
     conf = hydra.utils.instantiate(cfg, _convert_="object")
-    print(conf["trainer"].optim["scheduler"].total_steps)
-    sdf
     conf["trainer"].execute()
 
 
