@@ -1,159 +1,16 @@
-import os
-from dataclasses import dataclass
 import logging
 from typing import Optional
 import numpy as np
 
 import torch
-from torch.utils.data import Dataset
-from torchvision.transforms.functional import to_pil_image
-
-from .augmentations import TransformsConfig
 from stable_ssl.utils import log_and_raise
-
-
-@dataclass
-class DatasetConfig:
-    """Configuration for the data.
-
-    Parameters
-    ----------
-    name : str, optional
-        Name of the dataset to use (e.g., "CIFAR10", "CIFAR100").
-        Default is "CIFAR10".
-    path : str | None, optional
-        Path to the directory containing the data.
-        Default is None.
-    split : str, optional
-        Name of the dataset split to use (e.g., "train", "test").
-        Default is "train".
-    num_workers : int, optional
-        Number of workers to use for data loading.
-        Default is -1 (use all available CPUs).
-    batch_size : int, optional
-        Batch size for training. Default is 256.
-    transforms : dict, optional
-        Dictionary of transformations to apply to the data. Default is None.
-    drop_last : bool, optional
-        Whether to drop the last incomplete batch. Default is False.
-    shuffle : bool, optional
-        Whether to shuffle the data. Default is False.
-    """
-
-    name: str = "CIFAR10"
-    path: Optional[str] = None
-    split: str = "train"
-    num_workers: int = -1
-    batch_size: int = 256
-    transforms: list[TransformsConfig] = None
-    drop_last: bool = False
-    shuffle: bool = False
-
-    def __post_init__(self):
-        """Initialize transforms if not provided."""
-        if self.transforms is None:
-            self.transforms = [TransformsConfig("None")]
-        else:
-            self.transforms = [
-                TransformsConfig(name, t) for name, t in self.transforms.items()
-            ]
-
-    @property
-    def num_classes(self):
-        """Return the number of classes in the dataset."""
-        if self.name == "CIFAR10":
-            return 10
-        elif self.name == "CIFAR100":
-            return 100
-        else:
-            dataset = self.get_dataset()
-            return len(dataset.classes)
-
-    @property
-    def resolution(self):
-        """Return the resolution of the images in the dataset."""
-        if self.name in ["CIFAR10", "CIFAR100"]:
-            return 32
-
-    @property
-    def data_path(self):
-        """Return the path to the dataset."""
-        if self.path is None:
-            raise RuntimeError(
-                "Path to the dataset or download location is not provided."
-            )
-        else:
-            self.path = os.path.expanduser(self.path)
-            return self.path
-
-
-@dataclass
-class DataConfig:
-    """Configuration for multiple datasets used for training the model.
-
-    Parameters
-    ----------
-    train_on : str
-        The dataset to train on.
-    datasets : dict[str, DatasetConfig]
-        A dictionary of dataset configurations.
-    """
-
-    train_on: str
-    datasets: dict[str, DatasetConfig]
-
-    def __init__(self, train_on, *args, **datasets):
-        """Initialize DataConfig.
-
-        Parameters
-        ----------
-        train_on : str
-            The dataset to train on.
-        datasets : dict
-            A dictionary of dataset configurations.
-        """
-        assert len(args) == 0, logging.error("DataConfig takes only keyword arguments.")
-        self.train_on = train_on
-        self.datasets = {name: DatasetConfig(**d) for name, d in datasets.items()}
-
-    def get_datasets(self):
-        """Get datasets for training and validation.
-
-        Returns
-        -------
-        dict
-            A dictionary containing datasets.
-        """
-        return {name: d.get_dataset() for name, d in self.datasets.items()}
-
-    def get_dataloaders(self, world_size=1):
-        """Get dataloaders for the datasets.
-
-        Returns
-        -------
-        dict
-            A dictionary containing dataloaders.
-        """
-        return {
-            name: d.get_dataloader(world_size=world_size)
-            for name, d in self.datasets.items()
-        }
-
-    @property
-    def train_dataset(self):
-        """Return the batch size for training."""
-        return self.datasets[self.train_on]
-
-    def set_epoch_train_sampler(self, epoch):
-        """Set the epoch for the training sampler."""
-        if self.train_dataset.sampler is not None:
-            self.train_dataset.sampler.set_epoch(epoch)
 
 
 class MultiViewSampler:
     """Apply a list of transforms to an input and return all outputs."""
 
     def __init__(self, transforms: list):
+        logging.info(f"MultiViewSampler initialized with {len(transforms)} views")
         self.transforms = transforms
 
     def __call__(self, x):
@@ -213,29 +70,6 @@ class MultiViewSampler:
 #     return CustomTorchvisionDataset(
 #         root=save_path, transform=PositivePairSampler(dataset=dataset_name)
 #     )
-
-
-# def from_torchvision(data_path, dataset):
-#     """Load dataset features and labels from torchvision.
-
-#     Parameters
-#     ----------
-#     data_path : str
-#         Path to the dataset.
-#     dataset : torch.utils.data.Dataset
-#         The dataset class from torchvision.
-
-#     Returns
-#     -------
-#     tuple
-#         Tuple of features and labels.
-#     """
-#     dataset = dataset(
-#         root=data_path, train=True, download=True, transform=transforms.ToTensor()
-#     )
-#     features = torch.stack([dataset[i][0] for i in range(len(dataset))])
-#     labels = torch.tensor([dataset[i][1] for i in range(len(dataset))])
-#     return features, labels
 
 
 def resample_classes(dataset, samples_or_freq, random_seed=None):
@@ -311,49 +145,27 @@ def resample_classes(dataset, samples_or_freq, random_seed=None):
     return torch.utils.data.Subset(dataset, indices=keep_indices)
 
 
-class CustomTorchvisionDataset(Dataset):
-    """A custom dataset class for loading torchvision datasets.
+class HuggingFace(torch.utils.data.Dataset):
+    def __init__(self, x: str, y: str, *args, transform: Optional[callable], **kwargs):
+        from datasets import load_dataset
 
-    Parameters
-    ----------
-    root : str
-        Path to the dataset.
-    transform : callable, optional
-        Transformation function to apply to the data. Default is None.
-    """
-
-    def __init__(self, root, transform=None):
-        """Initialize the dataset with the given root path and transform."""
+        self.dataset = load_dataset(*args, **kwargs)
+        assert x in self.dataset.column_names
+        assert y in self.dataset.column_names
+        self.x = x
+        self.y = y
         self.transform = transform
 
-        # Load the dataset from the .pt file
-        data = torch.load(root)
-        self.features = data["features"]
-        self.labels = data["labels"]
-
     def __len__(self):
-        """Return the length of the dataset."""
-        return len(self.features)
+        return len(self.dataset)
 
-    def __getitem__(self, idx):
-        """Get a sample from the dataset.
-
-        Parameters
-        ----------
-        idx : int
-            Index of the sample to retrieve.
-
-        Returns
-        -------
-        tuple
-            The feature and label of the sample.
-        """
-        feature = self.features[idx]
-        feature = to_pil_image(feature)
-
-        label = self.labels[idx]
-
-        if self.transform:
-            feature = self.transform(feature)
-
-        return feature, label
+    def __getitem__(self, i):
+        if torch.is_tensor(i) and i.dim() == 0:
+            i = i.item()
+        x = self.dataset[i][self.x]
+        if self.transform is not None:
+            xt = self.transform(x)
+        else:
+            xt = x
+        y = self.dataset[i][self.y]
+        return xt, y

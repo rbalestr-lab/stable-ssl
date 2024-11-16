@@ -1,6 +1,6 @@
 defaults:
   - method/resnet_je@trainer
-  - data/cifar10@trainer.data
+  - data/imagenette@trainer.data
   - override hydra/launcher: submitit_slurm
 
 hydra:
@@ -26,3 +26,6 @@ trainer:
     device: "cuda:0"
     world_size: 1
     cpus_per_task: 8
+  networks:
+    backbone:
+      dataset: "IMAGENET"
