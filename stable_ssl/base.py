@@ -154,6 +154,9 @@ class BaseModel(torch.nn.Module):
         # Data
         self.data = data
         for name, loader in self.data.items():
+            print(name)
+            if name[0] == "_":
+                continue
             logging.info(f"\t=> Found dataloader `{name}` with length {len(loader)}.")
             if not len(loader):
                 log_and_raise(ValueError, f"Length of dataset {name} is 0.")
@@ -376,10 +379,6 @@ class BaseModel(torch.nn.Module):
 
     def evaluate(self) -> dict:
 
-        if set(self.data) == set([self.train_on]):
-            logging.info("No val_loader hence skipping eval epoch.")
-            return
-
         self.before_eval()
         # We do not ensure that the model is still in eval mode to not
         # override any user desired behavior.
@@ -392,6 +391,8 @@ class BaseModel(torch.nn.Module):
         packet = {"epoch": min(self.epoch, self.optim["epochs"] - 1)}
         for name_loader, loader in self.data.items():
             if name_loader == self.train_on:
+                continue
+            if name_loader[0] == "_":
                 continue
             # Reset the metrics for the epoch.
             for _, v in self.logger["metrics"].get(name_loader, {}).items():

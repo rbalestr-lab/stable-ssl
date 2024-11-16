@@ -1,0 +1,55 @@
+_num_classes: 10
+_num_samples: 50000
+base:
+  _target_: torch.utils.data.DataLoader
+  batch_size: 256
+  drop_last: True
+  shuffle: True
+  num_workers: ${trainer.hardware.cpus_per_task}
+  dataset:
+    _target_: torchvision.datasets.CIFAR10
+    root: ~/data
+    train: True
+    transform:
+      _target_: stable_ssl.data.MultiViewSampler
+      transforms:
+        - _target_: torchvision.transforms.v2.Compose
+          transforms:
+            - _target_: torchvision.transforms.v2.RandomResizedCrop
+              size: 32
+              scale:
+                - 0.2
+                - 1.0
+            - _target_: torchvision.transforms.v2.RandomHorizontalFlip
+              p: 0.5
+            - _target_: torchvision.transforms.v2.ColorJitter
+              brightness: 0.4
+              contrast: 0.4
+              saturation: 0.2
+              hue: 0.1
+            - _target_: torchvision.transforms.v2.RandomGrayscale
+              p: 0.2
+            - _target_: torchvision.transforms.v2.ToImage
+            - _target_: torchvision.transforms.v2.ToDtype
+              dtype: 
+                _target_: stable_ssl.utils.str_to_dtype
+                _args_: [float32]
+              scale: True
+        - ${trainer.data.base.dataset.transform.transforms.0}
+test_out:
+  _target_: torch.utils.data.DataLoader
+  batch_size: 256
+  num_workers: ${trainer.hardware.cpus_per_task}
+  dataset:
+    _target_: torchvision.datasets.CIFAR10
+    train: False
+    root: ~/data
+    transform:
+      _target_: torchvision.transforms.v2.Compose
+      transforms:
+        - _target_: torchvision.transforms.v2.ToImage
+        - _target_: torchvision.transforms.v2.ToDtype
+          dtype: 
+            _target_: stable_ssl.utils.str_to_dtype
+            _args_: [float32]
+          scale: True

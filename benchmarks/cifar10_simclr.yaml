@@ -1,0 +1,98 @@
+defaults:
+  - data/cifar10@trainer.data
+  - override hydra/launcher: submitit_slurm
+
+hydra:
+  sweep:
+    dir: ${trainer.logger.base_dir}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}
+  run:
+    dir: ${trainer.logger.base_dir}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  job:
+    chdir: False
+  launcher:
+    tasks_per_node: ${trainer.hardware.world_size}
+    gpus_per_node: ${trainer.hardware.world_size}
+    partition: gpu-he
+    cpus_per_task: 4
+    max_num_timeout: 1
+    timeout_min: 5
+
+trainer:
+  _target_: stable_ssl.JointEmbedding
+  eval_only: False
+  objective:
+    _target_: stable_ssl.NTXEnt
+    temperature: 0.5
+  train_on: base
+  networks:
+    backbone:
+      _target_: stable_ssl.utils.load_backbone
+      name: resnet18
+      dataset: "CIFAR10"
+    projector:
+      _target_: torch.nn.Sequential
+      _args_:
+        - _target_: torch.nn.Linear
+          in_features: 512
+          out_features: 2048
+          bias: False
+        - _target_: torch.nn.BatchNorm1d
+          num_features: ${trainer.networks.projector._args_.0.out_features}
+        - _target_: torch.nn.ReLU
+        - _target_: torch.nn.Linear
+          in_features: ${trainer.networks.projector._args_.0.out_features}
+          out_features: 128
+          bias: False
+    projector_classifier:
+      _target_: torch.nn.Linear
+      in_features: 128
+      out_features: ${trainer.data._num_classes}
+    backbone_classifier:
+      _target_: torch.nn.Linear
+      in_features: 512
+      out_features: ${trainer.data._num_classes}
+  optim:
+    epochs: 1000
+    max_steps: 1000
+    optimizer: 
+      _target_: torch.optim.AdamW
+      _partial_: True
+      lr: 0.01
+      weight_decay: 1e-6
+    scheduler:
+      _target_: torch.optim.lr_scheduler.OneCycleLR
+      _partial_: True
+      max_lr: 0.01
+      epochs: ${trainer.optim.epochs}
+      steps_per_epoch: ${eval:'${trainer.data._num_samples} // ${trainer.data.${trainer.train_on}.batch_size}'}
+  logger:
+    base_dir: "./"
+    level: 20
+    checkpoint_frequency: 1
+    every_step: 1
+    metrics:
+      base:
+        acc1:
+          _target_: torchmetrics.classification.MulticlassAccuracy
+          num_classes: ${trainer.data._num_classes}
+          top_k: 1
+        acc5:
+          _target_: torchmetrics.classification.MulticlassAccuracy
+          num_classes: ${trainer.data._num_classes}
+          top_k: 5
+      test_out:
+        acc1:
+          _target_: torchmetrics.classification.MulticlassAccuracy
+          num_classes: ${trainer.data._num_classes}
+          top_k: 1
+        acc5:
+          _target_: torchmetrics.classification.MulticlassAccuracy
+          num_classes: ${trainer.data._num_classes}
+          top_k: 5
+  hardware:
+    seed: 0
+    float16: true
+    device: "cuda:0"
+    world_size: 1
+    cpus_per_task: 8

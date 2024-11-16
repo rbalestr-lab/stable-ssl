@@ -1,0 +1,4 @@
+defaults:
+  - cifar10_simclr
+  - data/cifar100@trainer.data
+  - override hydra/launcher: submitit_slurm
