@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 import numpy as np
-
+from typing import Union
 import torch
 from stable_ssl.utils import log_and_raise
 
@@ -146,7 +146,25 @@ def resample_classes(dataset, samples_or_freq, random_seed=None):
 
 
 class HuggingFace(torch.utils.data.Dataset):
-    def __init__(self, x: str, y: str, *args, transform: Optional[callable], **kwargs):
+    """Load a HuggingFace dataset.
+
+    Parameters
+    ----------
+    x: str
+        name of the column to treat as x (input)
+    y: str
+        name of the column to treat as y (label)
+    transform (optional): callable
+        transform to apply on x
+    *args: list
+        args to pass to datasets.load_dataset
+    **kwargs: dict
+        kwargs to pass to datasets.load_dataset
+    """
+
+    def __init__(
+        self, x: str, y: str, transform: Optional[callable], *args: list, **kwargs: dict
+    ):
         from datasets import load_dataset
 
         self.dataset = load_dataset(*args, **kwargs)
@@ -156,10 +174,27 @@ class HuggingFace(torch.utils.data.Dataset):
         self.y = y
         self.transform = transform
 
-    def __len__(self):
+    def __len__(self) -> int:
+        """Get length of dataset.
+
+        Returns
+        -------
+            int: lenght
+        """
         return len(self.dataset)
 
-    def __getitem__(self, i):
+    def __getitem__(self, i: Union[int, torch.Tensor]) -> tuple:
+        """Get an sample.
+
+        Parameters
+        ----------
+        i: int
+            index to sample from the dataset
+
+        Returns
+        -------
+            tuple: (transform(x), y)
+        """
         if torch.is_tensor(i) and i.dim() == 0:
             i = i.item()
         x = self.dataset[i][self.x]
