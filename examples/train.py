@@ -1,6 +1,8 @@
 """
 This script demonstrates how to launch a run using the stable-SSL library.
-python examples/train.py --config-dir examples/configs/simclr --config-name cifar10_requeue
+python examples/train.py\
+    --config-dir examples/configs/simclr\
+        --config-name cifar10_requeue
 """
 
 import hydra
