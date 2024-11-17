@@ -9,7 +9,7 @@
 import logging
 
 try:
-    import wandb
+    import wandb as wandbapi
 except ModuleNotFoundError:
     logging.warning(
         "Wandb module is not installed, make sure to not use wandb for logging "
@@ -82,7 +82,7 @@ def wandb_project(
     entity, project, max_steps=-1, keys=None, num_workers=10, state="finished"
 ):
     """Download configs and data from a wandb project."""
-    api = wandb.Api()
+    api = wandbapi.Api()
     runs = api.runs(f"{entity}/{project}")
     runs = [r for r in runs if r.state == state]
 
@@ -106,19 +106,16 @@ def wandb_project(
 
 def _wandb_run_packed(args):
     """Help function to unpack arguments for wandb_run."""
-    return wandb_run(*args)
+    return wandb(*args)
 
 
-def wandb_run(entity, project, run_id, max_steps=-1, keys=None):
-    """Download config and data for a single wandb run."""
-    api = wandb.Api()
+def wandb(entity, project, run_id, max_steps=-1, keys=None):
+    """Download data for a single wandb run."""
+    api = wandbapi.Api()
     run = api.run(f"{entity}/{project}/{run_id}")
 
     if max_steps == -1:
         max_steps = run.lastHistoryStep
-        # min_step = 0
-    # else:
-    # min_step = run.lastHistoryStep - max_steps
 
     summary = run.summary
     # extract names that are not hidden
@@ -133,8 +130,8 @@ def wandb_run(entity, project, run_id, max_steps=-1, keys=None):
         desc=f"Downloading run: {run.name}",
     ):
         df.update(pd.DataFrame([row], index=[row_idx]))
-    config = flatten_config(run.config)
-    return config, df
+    # config = flatten_config(run.config)
+    return df
 
 
 def flatten_config(config):

@@ -22,6 +22,7 @@ import subprocess
 import os
 from .data import DistributedSamplerWrapper
 from . import reader
+import omegaconf
 
 try:
     import wandb
@@ -114,6 +115,14 @@ class BaseModel(torch.nn.Module):
         self._eval_only = eval_only
         self.set_logger_defaults(self._logger)
         self.set_optim_defaults(self._optim)
+        c = self.get_config()
+        c["trainer"]["logger"] = self._logger
+        c["trainer"]["optim"] = self._optim
+
+        # dumps to file with defaults:
+        with open(self._logger["dump_path"] / ".hydra" / "config.yaml", "w") as f:
+            omegaconf.OmegaConf.save(c, f)
+
         logging.info(f"=> INIT OF {self.__class__.__name__} COMPLETED")
 
     def setup(self):
@@ -142,11 +151,14 @@ class BaseModel(torch.nn.Module):
                 wandb.init(
                     entity=self.logger["wandb"]["entity"],
                     project=self.logger["wandb"]["project"],
-                    config=dict(networks=self._networks, data=self._data),
-                    name=self.logger["wandb"]["run"],
+                    name=self.logger["wandb"]["name"],
                     dir=str(self.logger["dump_path"]),
                     resume="allow",
                 )
+                self.logger["wandb"]["entity"] = wandb.run.entity
+                self.logger["wandb"]["project"] = wandb.run.project
+                self.logger["wandb"]["name"] = wandb.run.name
+                self.logger["wandb"]["id"] = wandb.run.id
                 logging.info(f"\t\t- entity: {wandb.run.entity}")
                 logging.info(f"\t\t- project: {wandb.run.project}")
                 logging.info(f"\t\t- name: {wandb.run.name}")
@@ -247,16 +259,19 @@ class BaseModel(torch.nn.Module):
         self.load_checkpoint()
         logging.info(f"=> SETUP OF {self.__class__.__name__} COMPLETED")
 
-    @staticmethod
-    def set_logger_defaults(logger):
+    def set_logger_defaults(self, logger):
         logger["dump_path"] = logger.get(
             "dump_path", Path(HydraConfig.get().runtime.output_dir)
         )
         logger["wandb"] = logger.get("wandb", None)
-        if logger["wandb"]:
+        if type(logger["wandb"]) is bool and logger["wandb"] is True:
+            logger["wandb"] = {}
+        if logger["wandb"] is not None and self.rank == 0:
             logger["wandb"]["entity"] = logger["wandb"].get("entity", None)
             logger["wandb"]["project"] = logger["wandb"].get("project", None)
-            logger["wandb"]["run"] = logger["wandb"].get("run", None)
+            logger["wandb"]["name"] = logger["wandb"].get("name", None)
+            logger["wandb"]["id"] = logger["wandb"].get("id", None)
+
         logger["level"] = logger.get("level", 20)
         logger["metrics"] = logger.get("metrics", {})
         logger["save_final_model"] = logger.get("save_final_model", "final")
@@ -565,7 +580,7 @@ class BaseModel(torch.nn.Module):
                     self._log_buffer[name] = value.tolist()
 
         # Log in WandB.
-        if self.logger["wandb"]:
+        if self.logger["wandb"] and self.rank == 0:
             for name, value in self._log_buffer.items():
                 if isinstance(value, list):
                     # Create a WandB table if the value is a list.
@@ -679,9 +694,23 @@ class BaseModel(torch.nn.Module):
         logging.info("Device status after cleaning.")
         get_gpu_info()
 
-    def get_logs(self):
+    def get_logs(self, keys=None):
         if self.logger["wandb"] is None:
             return reader.jsonl(self.logger["dump_path"])
+        else:
+            return reader.wandb(
+                self.logger["wandb"]["entity"],
+                self.logger["wandb"]["project"],
+                self.logger["wandb"]["id"],
+                keys=keys,
+            )
+
+    def get_config(self):
+        # Load the config file.
+        config = omegaconf.OmegaConf.load(
+            self._logger["dump_path"] / ".hydra" / "config.yaml"
+        )
+        return config
 
     @property
     def rank(self):
