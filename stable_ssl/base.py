@@ -105,7 +105,7 @@ class BaseModel(torch.nn.Module):
         self, data, networks, objective, train_on, hardware, optim, logger, eval_only
     ):
         super().__init__()
-        logging.info(f"=> Initializing {self.__class__.__name__}... (start)")
+        logging.info(f"=> INIT OF {self.__class__.__name__} STARTED")
         self._data = data
         self._networks = networks
         self._objective = objective
@@ -116,10 +116,10 @@ class BaseModel(torch.nn.Module):
         self._eval_only = eval_only
         self.set_logger_defaults(self._logger)
         self.set_optim_defaults(self._optim)
-        logging.info(f"=> Initializing {self.__class__.__name__}... (end)")
+        logging.info(f"=> INIT OF {self.__class__.__name__} COMPLETED")
 
     def setup(self):
-        logging.info(f"=> Setting-up {self.__class__.__name__}... (start)")
+        logging.info(f"=> SETUP OF {self.__class__.__name__} STARTED")
 
         self.start_time = time.time()
 
@@ -231,7 +231,7 @@ class BaseModel(torch.nn.Module):
 
         logging.info("\tCalling load_checkpoint() method.")
         self.load_checkpoint()
-        logging.info(f"=> Setting-up {self.__class__.__name__}... (end)")
+        logging.info(f"=> SETUP OF {self.__class__.__name__} COMPLETED")
 
     @staticmethod
     def set_logger_defaults(logger):
@@ -505,14 +505,23 @@ class BaseModel(torch.nn.Module):
         # Set the CUDA device.
         torch.cuda.set_device(self._device)
 
-    def checkpoint(self):
+    def checkpoint(self) -> submitit.helpers.DelayedSubmission:
         # the checkpoint method is called asynchroneously when the slurm manager
         # sends a preemption signal, with the same arguments as the __call__ method
         # "self" is your callable, at its current state.
         # "self" therefore holds the current version of the model:
         logging.info("Requeuing the task...")
         self.save_checkpoint("tmp_checkpoint.ckpt", model_only=False)
-        model = type(self)(config)
+        model = type(self)(
+            self._data,
+            self._networks,
+            self._objective,
+            self._train_on,
+            self._hardware,
+            self._optim,
+            self._logger,
+            self._eval_only,
+        )
         logging.info("Cleaning up the current task before submitting a new one.")
         self.cleanup()
         return submitit.helpers.DelayedSubmission(model)
