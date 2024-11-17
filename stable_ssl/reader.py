@@ -39,7 +39,7 @@ def jsonl_project(folder, num_workers=8):
     with logging_redirect_tqdm():
         args = [run.parent for run in runs]
         with Pool(num_workers) as p:
-            results = list(tqdm(p.imap(jsonl_run, args), total=len(runs)))
+            results = list(tqdm(p.imap(jsonl, args), total=len(runs)))
         for c, v in results:
             configs.append(flatten_config(c))
             values.append(v)

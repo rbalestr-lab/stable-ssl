@@ -178,7 +178,7 @@ class BaseModel(torch.nn.Module):
             logging.info(f"\t- {name}  ({train}):")
             logging.info(f"\t\t- length: {len(loader)}.")
             if name in self.logger["metrics"]:
-                logging.info(f"\t\t- metrics:")
+                logging.info("\t\t- metrics:")
                 for mname in self.logger["metrics"][name]:
                     logging.info(f"\t\t\t- {mname}.")
             if not len(loader):
@@ -199,7 +199,7 @@ class BaseModel(torch.nn.Module):
                     loader, self.world_size, self.rank
                 )
                 logging.info(
-                    f"\t- New length after DDS on local process `{len(self.data[name])}."
+                    f"\t- Length after DDS on this process `{len(self.data[name])}."
                 )
 
         if not self.eval_only and self.train_on not in self.data:
