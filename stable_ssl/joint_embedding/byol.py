@@ -11,10 +11,10 @@ import logging
 import torch
 
 from stable_ssl.utils import MLP
-from .base import SelfDistillationModel
+from .base import SelfDistillation
 
 
-class BYOL(SelfDistillationModel):
+class BYOL(SelfDistillation):
     """BYOL model from [GSA+20].
 
     Reference
