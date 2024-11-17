@@ -2,6 +2,7 @@ defaults:
   - method/resnet_je@trainer
   - data/cifar10@trainer.data
   - override hydra/launcher: submitit_slurm
+  - _self_
 
 hydra:
   sweep:

@@ -12,8 +12,11 @@ OmegaConf.register_new_resolver("eval", eval)
 @hydra.main(version_base="1.2")
 def main(cfg):
     """Load the configuration and launch the run."""
-    conf = hydra.utils.instantiate(cfg, _convert_="object")
-    conf["trainer"].execute()
+    trainer = hydra.utils.instantiate(
+        cfg.trainer, _convert_="object", _recursive_=False
+    )
+    trainer.setup()
+    trainer.launch()
 
 
 if __name__ == "__main__":

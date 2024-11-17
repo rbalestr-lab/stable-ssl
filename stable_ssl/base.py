@@ -10,19 +10,17 @@
 from abc import abstractmethod
 import logging
 import time
-import copy
-import dataclasses
+import hydra
 import gc
 import numpy as np
 import submitit
 import jsonlines
-import omegaconf
 from pathlib import Path
 from tqdm import tqdm
 import torch
 import subprocess
 import os
-from typing_extensions import override
+from .data import DistributedSamplerWrapper
 
 try:
     import wandb
@@ -44,28 +42,6 @@ from .utils import (
 )
 
 __all__ = ["BreakStep"]
-
-
-class _DatasetSamplerWrapper(torch.utils.data.Dataset):
-    """Dataset to create indexes from `Sampler` or `Iterable`."""
-
-    def __init__(self, sampler) -> None:
-        self._sampler = sampler
-        # defer materializing an iterator until it is necessary
-        self._sampler_list = None
-
-    @override
-    def __getitem__(self, index: int):
-        if self._sampler_list is None:
-            self._sampler_list = list(self._sampler)
-        return self._sampler_list[index]
-
-    def __len__(self) -> int:
-        return len(self._sampler)
-
-    def reset(self) -> None:
-        """Reset the sampler list in order to get new sampling."""
-        self._sampler_list = list(self._sampler)
 
 
 # https://github.com/Lightning-AI/pytorch-lightning/blob/master/src/
@@ -115,16 +91,6 @@ class _DatasetSamplerWrapper(torch.utils.data.Dataset):
 #         return (self.dataset[index] for index in super().__iter__())
 
 
-class DistributedSamplerWrapper(torch.utils.data.DistributedSampler):
-    def __init__(self, sampler, *args, **kwargs) -> None:
-        super().__init__(_DatasetSamplerWrapper(sampler), *args, **kwargs)
-
-    @override
-    def __iter__(self):
-        self.dataset.reset()
-        return (self.dataset[index] for index in super().__iter__())
-
-
 class BaseModel(torch.nn.Module):
     r"""Base class for training a model.
 
@@ -139,23 +105,55 @@ class BaseModel(torch.nn.Module):
         self, data, networks, objective, train_on, hardware, optim, logger, eval_only
     ):
         super().__init__()
+        logging.info(f"=> Initializing {self.__class__.__name__}... (start)")
+        self._data = data
+        self._networks = networks
+        self._objective = objective
         self._train_on = train_on
+        self._hardware = hardware
+        self._optim = optim
+        self._logger = logger
         self._eval_only = eval_only
-        seed_everything(hardware.get("seed", None))
-        self._set_device(hardware)
-        self.set_logger_defaults(logger)
-        self.set_optim_defaults(optim)
-        self.logger = logger
-        self.hardware = hardware
-        self.dump_path = Path(HydraConfig.get().runtime.output_dir)
-        logging.info(f"\t=> Dump path: `{self.dump_path}`")
+        self.set_logger_defaults(self._logger)
+        self.set_optim_defaults(self._optim)
+        logging.info(f"=> Initializing {self.__class__.__name__}... (end)")
 
-        self.objective = objective.to(self._device)
+    def setup(self):
+        logging.info(f"=> Setting-up {self.__class__.__name__}... (start)")
+
+        self.start_time = time.time()
+
+        # we skip optim as we may not need it (see below)
+        self.data = hydra.utils.instantiate(self._data, _convert_="object")
+        self.networks = hydra.utils.instantiate(self._networks, _convert_="object")
+        self.objective = hydra.utils.instantiate(self._objective, _convert_="object")
+        self.hardware = hydra.utils.instantiate(self._hardware, _convert_="object")
+        self.logger = hydra.utils.instantiate(self._logger, _convert_="object")
+
+        seed_everything(self.hardware.get("seed", None))
+        self._set_device(self.hardware)
+        self.objective = self.objective.to(self._device)
+
+        logging.info(f"\t=> Dump path: `{self.logger['dump_path']}`")
+
+        # Use WandB if an entity or project name is provided.
+        if self.logger["wandb"]:
+            logging.info("\t=> Initializing wandb...")
+            try:
+                wandb.init(
+                    entity=self.logger["entity"],
+                    project=self.logger["project"],
+                    config=dict(networks=self._networks, data=self._data),
+                    name=self.logger["run"],
+                    dir=str(self.logger["dump_path"]),
+                    resume="allow",
+                )
+            except Exception:
+                logging.exception("Failed to initialize wandb.")
+                raise
 
         # Data
-        self.data = data
         for name, loader in self.data.items():
-            print(name)
             if name[0] == "_":
                 continue
             logging.info(f"\t=> Found dataloader `{name}` with length {len(loader)}.")
@@ -180,11 +178,13 @@ class BaseModel(torch.nn.Module):
                 f"\t=> New length after DDS on local process `{len(self.data[name])}."
             )
 
-        if not eval_only and train_on not in self.data:
-            log_and_raise(ValueError, f"Training data ({train_on}) not in {self.data}.")
+        if not self.eval_only and self.train_on not in self.data:
+            log_and_raise(
+                ValueError, f"Training data ({self.train_on}) not in {self.data}."
+            )
 
         # Modules and scaler
-        for name, module in networks.items():
+        for name, module in self.networks.items():
             # if self.config.model.memory_format == "channels_last":
             #     module.to(memory_format=torch.channels_last)
             if self.world_size > 1:
@@ -197,43 +197,47 @@ class BaseModel(torch.nn.Module):
                 module = torch.nn.parallel.DistributedDataParallel(
                     module, device_ids=[self._device]
                 )
-            networks[name] = module
+            self.networks[name] = module
             trainable = sum(
                 param.numel() for param in module.parameters() if param.requires_grad
             )
             logging.info(
                 f"\t=> Found module '{name}' with {trainable} trainable parameters."
             )
-        self.networks = torch.nn.ModuleDict(networks)
-        self.scaler = torch.amp.GradScaler("cuda", enabled=hardware["float16"])
+        self.networks = torch.nn.ModuleDict(self.networks)
+        self.scaler = torch.amp.GradScaler("cuda", enabled=self.hardware["float16"])
 
-        if not eval_only:
+        self.register_buffer("global_step", torch.zeros((1,), dtype=int))
+
+        if not self.eval_only:
             logging.info("Setting up self.optim.")
-            optim["optimizer"] = optim["optimizer"](self.parameters())
-            optim["scheduler"] = optim["scheduler"](optim["optimizer"])
-            self.optim = optim
+            self.optim = hydra.utils.instantiate(self._optim, _convert_="object")
+            self.optim["optimizer"] = self.optim["optimizer"](self.parameters())
+            self.optim["scheduler"] = self.optim["scheduler"](self.optim["optimizer"])
         else:
             logging.info(
                 "Mode is eval_only, skipping optimizer and scheduler initializations."
             )
 
-        self.register_buffer("global_step", torch.zeros((1,), dtype=int))
-
-        logging.info(f"\t=> Found metric(s) `{logger['metrics']}`.")
+        logging.info(f"\t=> Found metric(s) `{self.logger['metrics']}`.")
         for m in self.logger["metrics"]:
             for k in self.logger["metrics"][m]:
                 self.logger["metrics"][m][k] = self.logger["metrics"][m][k].to(
                     self._device
                 )
 
-        logging.getLogger().setLevel(logger["level"])
+        logging.getLogger().setLevel(self.logger["level"])
         self._log_buffer = {}
 
         logging.info("\tCalling load_checkpoint() method.")
         self.load_checkpoint()
+        logging.info(f"=> Setting-up {self.__class__.__name__}... (end)")
 
     @staticmethod
     def set_logger_defaults(logger):
+        logger["dump_path"] = logger.get(
+            "dump_path", Path(HydraConfig.get().runtime.output_dir)
+        )
         logger["wandb"] = logger.get("wandb", False)
         if logger["wandb"]:
             logger["entity"] = logger.get("entity", None)
@@ -262,37 +266,11 @@ class BaseModel(torch.nn.Module):
         pass
 
     def __call__(self):
-        seed_everything(self.config.hardware.seed)
+        self.setup()
+        self.launch()
 
-        # Use WandB if an entity or project name is provided.
-        if self.logger["wandb"]:
-            logging.info(f"\t=> Initializing wandb for logging in {self.dump_path}.")
-
-            try:
-                wandb.init(
-                    entity=self.logger["entity"],
-                    project=self.logger["project"],
-                    config=dataclasses.asdict(self.config),
-                    name=self.logger["run"],
-                    dir=str(self.dump_path),
-                    resume="allow",
-                )
-            except Exception:
-                logging.exception("Failed to initialize wandb.")
-                raise
-
-        logging.info(f"\t=> Dumping config file in {self.dump_path}.")
-        try:
-            omegaconf.OmegaConf.save(self.config, self.dump_path / "hparams.yaml")
-        except Exception:
-            logging.exception("Failed to dump config file.")
-            raise
-
-        self.start_time = time.time()
-        self.execute()
-
-    def execute(self):
-        """Routine that is executed after the class is initialized.
+    def launch(self):
+        """Routine that is launchd after the class is initialized.
 
         This will commonly consist of training + evaluation.
         Can be customized by the user to fit the use-cases.
@@ -300,23 +278,24 @@ class BaseModel(torch.nn.Module):
         """
         if self._eval_only:
             self.evaluate()
-        else:
-            try:
-                self.before_train()
-                self.fit()
-                self.after_train()
-                self.evaluate()  # always eval the model after training
-            except BreakAllEpochs:
-                logging.exception("Training stopped by user.")
-                raise
-            if self.logger["wandb"]:
-                wandb.finish()
             self.cleanup()
+            return
+        try:
+            self.before_fit()
+            self.fit()
+            self.after_fit()
+            self.evaluate()  # always eval the model after training
+        except BreakAllEpochs:
+            logging.exception("Training stopped by user.")
+            raise
+        if self.logger["wandb"]:
+            wandb.finish()
+        self.cleanup()
 
     def fit(self):
         while self.epoch < self.optim["epochs"]:
             try:
-                self.train_epoch()
+                self.fit_epoch()
             except BreakEpoch:
                 logging.info(
                     "Train epoch interrupted by user. Proceeding to the next one."
@@ -342,16 +321,16 @@ class BaseModel(torch.nn.Module):
             )
 
         logging.info("Cleaning up any temporary checkpoint.")
-        (self.dump_path / "tmp_checkpoint.ckpt").unlink(missing_ok=True)
+        (self.logger["dump_path"] / "tmp_checkpoint.ckpt").unlink(missing_ok=True)
 
-    def train_epoch(self):
-        self.before_train_epoch()
+    def fit_epoch(self):
+        self.before_fit_epoch()
         # We do not ensure that the model is still in train mode to not
         # override any user desired behavior, simply speak out.
         if not self.training:
             logging.warning(
                 "Starting training epoch but model is no longer in "
-                "train mode after call to before_train_epoch()."
+                "train mode after call to before_fit_epoch()."
             )
 
         loader = self.data[self.train_on]
@@ -371,15 +350,15 @@ class BaseModel(torch.nn.Module):
             # set up the data to have easy access throughout the methods
             self.batch = to_device(data, self.this_device)
 
-            self.before_train_step()
-            self.train_step()
-            self.after_train_step()
+            self.before_fit_step()
+            self.fit_step()
+            self.after_fit_step()
 
             self.global_step.add_(1)
             if self.batch_idx >= max_steps:
                 break
 
-        self.after_train_epoch()
+        self.after_fit_epoch()
         self.batch = None
 
     def evaluate(self) -> dict:
@@ -406,12 +385,11 @@ class BaseModel(torch.nn.Module):
             try:
                 max_steps = len(loader)
                 with torch.inference_mode():
-                    for step, data in tqdm(
+                    for self._batch_idx, data in tqdm(
                         enumerate(loader),
                         total=max_steps,
                         desc=f"Eval {name_loader}: {self.epoch=}",
                     ):
-                        self.batch_idx = step
                         self.batch = to_device(data, self.this_device)
 
                         # Call any user specified pre-step function.
@@ -440,7 +418,7 @@ class BaseModel(torch.nn.Module):
         # Call any user specified post-epoch function.
         self.after_eval()
 
-    def train_step(self):
+    def fit_step(self):
 
         with torch.amp.autocast("cuda", enabled=self.hardware["float16"]):
             loss = self.compute_loss()
@@ -532,8 +510,8 @@ class BaseModel(torch.nn.Module):
         # sends a preemption signal, with the same arguments as the __call__ method
         # "self" is your callable, at its current state.
         # "self" therefore holds the current version of the model:
-        logging.info("Requeuing the task.")
-        config = copy.deepcopy(self.config)
+        logging.info("Requeuing the task...")
+        self.save_checkpoint("tmp_checkpoint.ckpt", model_only=False)
         model = type(self)(config)
         logging.info("Cleaning up the current task before submitting a new one.")
         self.cleanup()
@@ -573,7 +551,7 @@ class BaseModel(torch.nn.Module):
         # Log in jsonl.
         else:
             with jsonlines.open(
-                self.dump_path / f"logs_rank_{self.rank}.jsonl", mode="a"
+                self.logger["dump_path"] / f"logs_rank_{self.rank}.jsonl", mode="a"
             ) as writer:
                 writer.write(self._log_buffer)
 
@@ -581,19 +559,19 @@ class BaseModel(torch.nn.Module):
         self._log_buffer = {}
 
     def load_checkpoint(self):
-        if not (self.dump_path / "tmp_checkpoint.ckpt").is_file():
+        if not (self.logger["dump_path"] / "tmp_checkpoint.ckpt").is_file():
             logging.info(
-                f"\t=> `{self.dump_path / 'tmp_checkpoint.ckpt'}` does not exist "
+                f"\t=> `{self.logger['dump_path'] / 'tmp_checkpoint.ckpt'}` not present"
             )
             logging.info("\t=> training from scratch...")
             self.epoch = 0
             return
 
         logging.info(
-            f"\t=> folder `{self.dump_path}/tmp_checkpoint.ckpt` exists "
+            f"\t=> folder `{self.logger['dump_path']}/tmp_checkpoint.ckpt` exists "
             "\n\t=> loading it."
         )
-        checkpoint = self.dump_path / "tmp_checkpoint.ckpt"
+        checkpoint = self.logger["dump_path"] / "tmp_checkpoint.ckpt"
 
         ckpt = torch.load(checkpoint, map_location="cpu")
 
@@ -621,7 +599,7 @@ class BaseModel(torch.nn.Module):
             if curr_rank != 0:
                 logging.info(f"On rank {curr_rank}, only rank 0 saves the checkpoint.")
                 return
-        saving_name = self.dump_path / name
+        saving_name = self.logger["dump_path"] / name
         state = {}
         for subname, model in self.named_children():
             state[subname] = model.state_dict()
@@ -690,6 +668,10 @@ class BaseModel(torch.nn.Module):
         return self._train_on
 
     @property
+    def eval_only(self):
+        return self._eval_only
+
+    @property
     def epoch(self):
         if not hasattr(self, "_epoch"):
             return None
@@ -712,10 +694,6 @@ class BaseModel(torch.nn.Module):
         return self._batch_idx
 
     @property
-    def data(self):
-        return self._data
-
-    @property
     def this_device(self):
         return self._device
 
@@ -727,28 +705,24 @@ class BaseModel(torch.nn.Module):
     def step(self, value):
         self._step = value
 
-    @data.setter
-    def data(self, value):
-        self._data = value
-
-    def before_train(self):
+    def before_fit(self):
         self.epoch = 0
 
-    def after_train(self):
+    def after_fit(self):
         pass
 
-    def before_train_epoch(self):
+    def before_fit_epoch(self):
         self.train()
         if self.world_size > 1:
             self.data[self._train_on].set_epoch(self.epoch)
 
-    def after_train_epoch(self):
+    def after_fit_epoch(self):
         pass
 
-    def before_train_step(self):
+    def before_fit_step(self):
         pass
 
-    def after_train_step(self):
+    def after_fit_step(self):
         pass
 
     def before_eval(self):

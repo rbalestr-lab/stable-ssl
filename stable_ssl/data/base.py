@@ -4,6 +4,39 @@ import numpy as np
 from typing import Union
 import torch
 from stable_ssl.utils import log_and_raise
+from typing_extensions import override
+
+
+class _DatasetSamplerWrapper(torch.utils.data.Dataset):
+    """Dataset to create indexes from `Sampler` or `Iterable`."""
+
+    def __init__(self, sampler) -> None:
+        self._sampler = sampler
+        # defer materializing an iterator until it is necessary
+        self._sampler_list = None
+
+    @override
+    def __getitem__(self, index: int):
+        if self._sampler_list is None:
+            self._sampler_list = list(self._sampler)
+        return self._sampler_list[index]
+
+    def __len__(self) -> int:
+        return len(self._sampler)
+
+    def reset(self) -> None:
+        """Reset the sampler list in order to get new sampling."""
+        self._sampler_list = list(self._sampler)
+
+
+class DistributedSamplerWrapper(torch.utils.data.DistributedSampler):
+    def __init__(self, sampler, *args, **kwargs) -> None:
+        super().__init__(_DatasetSamplerWrapper(sampler), *args, **kwargs)
+
+    @override
+    def __iter__(self):
+        self.dataset.reset()
+        return (self.dataset[index] for index in super().__iter__())
 
 
 class MultiViewSampler:
