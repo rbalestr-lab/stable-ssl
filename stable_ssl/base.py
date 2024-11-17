@@ -21,6 +21,7 @@ import torch
 import subprocess
 import os
 from .data import DistributedSamplerWrapper
+from . import reader
 
 try:
     import wandb
@@ -138,10 +139,10 @@ class BaseModel(torch.nn.Module):
             logging.info("\t=> Initializing wandb...")
             try:
                 wandb.init(
-                    entity=self.logger["entity"],
-                    project=self.logger["project"],
+                    entity=self.logger["wandb"]["entity"],
+                    project=self.logger["wandb"]["project"],
                     config=dict(networks=self._networks, data=self._data),
-                    name=self.logger["run"],
+                    name=self.logger["wandb"]["run"],
                     dir=str(self.logger["dump_path"]),
                     resume="allow",
                 )
@@ -235,11 +236,11 @@ class BaseModel(torch.nn.Module):
         logger["dump_path"] = logger.get(
             "dump_path", Path(HydraConfig.get().runtime.output_dir)
         )
-        logger["wandb"] = logger.get("wandb", False)
+        logger["wandb"] = logger.get("wandb", None)
         if logger["wandb"]:
-            logger["entity"] = logger.get("entity", None)
-            logger["project"] = logger.get("project", None)
-            logger["run"] = logger.get("run", None)
+            logger["wandb"]["entity"] = logger["wandb"].get("entity", None)
+            logger["wandb"]["project"] = logger["wandb"].get("project", None)
+            logger["wandb"]["run"] = logger["wandb"].get("run", None)
         logger["level"] = logger.get("level", 20)
         logger["metrics"] = logger.get("metrics", {})
         logger["save_final_model"] = logger.get("save_final_model", "final")
@@ -656,6 +657,11 @@ class BaseModel(torch.nn.Module):
 
         logging.info("Device status after cleaning.")
         get_gpu_info()
+
+    @property
+    def logs(self):
+        if self.logger["wandb"] is not None:
+            return reader.jsonl_run(self.logger["dump_path"])
 
     @property
     def rank(self):
