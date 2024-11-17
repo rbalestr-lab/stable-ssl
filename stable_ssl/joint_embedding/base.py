@@ -8,7 +8,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import copy
-import torch
 import torch.nn.functional as F
 from stable_ssl.utils import gather_processes
 
