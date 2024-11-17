@@ -32,62 +32,45 @@ class JointEmbedding(BaseModel):
 
     def compute_loss(self):
         embeddings = [self.networks["backbone"](view) for view in self.batch[0]]
-        loss_backbone = self._compute_backbone_classifier_loss(*embeddings)
+        loss_backbone_classifier = sum(
+            [
+                F.cross_entropy(
+                    self.networks["backbone_classifier"](embed.detach()), self.batch[1]
+                )
+                for embed in embeddings
+            ]
+        )
 
         projections = [self.networks["projector"](embed) for embed in embeddings]
-        loss_proj = self._compute_projector_classifier_loss(*projections)
+        loss_proj_classifier = sum(
+            [
+                F.cross_entropy(
+                    self.networks["projector_classifier"](proj.detach()), self.batch[1]
+                )
+                for proj in projections
+            ]
+        )
+
         loss_ssl = self.compute_ssl_loss(*projections)
 
         if self.global_step % self.logger["every_step"] == 0:
             self.log(
                 {
                     "train/loss_ssl": loss_ssl.item(),
-                    "train/loss_backbone_classifier": loss_backbone.item(),
-                    "train/loss_projector_classifier": loss_proj.item(),
+                    "train/loss_backbone_classifier": loss_backbone_classifier.item(),
+                    "train/loss_projector_classifier": loss_proj_classifier.item(),
                 },
                 commit=False,
             )
 
-        return loss_ssl + loss_proj + loss_backbone
+        return loss_ssl + loss_proj_classifier + loss_backbone_classifier
 
     @gather_processes
-    def compute_ssl_loss(self, z_i, z_j):
-        """Compute the contrastive loss for SimCLR.
-
-        Parameters
-        ----------
-        z_i : torch.Tensor
-            Latent representation of the first augmented view of the batch.
-        z_j : torch.Tensor
-            Latent representation of the second augmented view of the batch.
-
-        Returns
-        -------
-        float
-            The computed contrastive loss.
-        """
-        return self.objective(z_i, z_j)
-
-    def _compute_backbone_classifier_loss(self, *embeddings):
-        losses = [
-            F.cross_entropy(
-                self.networks["backbone_classifier"](embed.detach()), self.batch[1]
-            )
-            for embed in embeddings
-        ]
-        return sum(losses)
-
-    def _compute_projector_classifier_loss(self, *projections):
-        losses = [
-            F.cross_entropy(
-                self.networks["projector_classifier"](proj.detach()), self.batch[1]
-            )
-            for proj in projections
-        ]
-        return sum(losses)
+    def compute_ssl_loss(self, *projections):
+        return self.objective(*projections)
 
 
-class SelfDistillationModel(JointEmbedding):
+class SelfDistillation(JointEmbedding):
     r"""Base class for training a self-distillation SSL model.
 
     Parameters
@@ -99,55 +82,17 @@ class SelfDistillationModel(JointEmbedding):
 
     def initialize_modules(self):
         super().initialize_modules()
-        self.backbone_target = copy.deepcopy(self.backbone)
-        self.projector_target = copy.deepcopy(self.projector)
+        self.networks["backbone_target"] = copy.deepcopy(self.networks["backbone"])
+        self.networks["projector_target"] = copy.deepcopy(self.networks["projector"])
 
-        deactivate_requires_grad(self.backbone_target)
-        deactivate_requires_grad(self.projector_target)
-
-    def compute_loss(self):
-        embeddings = [self.backbone(view) for view in self.data[0]]
-        loss_backbone = self._compute_backbone_classifier_loss(*embeddings)
-
-        projections = [self.projector(embed) for embed in embeddings]
-        loss_proj = self._compute_projector_classifier_loss(*projections)
-
-        with torch.no_grad():
-            projections_target = [
-                self.projector_target(self.backbone_target(view))
-                for view in self.data[0]
-            ]
-        loss_ssl = self.compute_ssl_loss(projections, projections_target)
-
-        self.log(
-            {
-                "train/loss_ssl": loss_ssl.item(),
-                "train/loss_backbone_classifier": loss_backbone.item(),
-                "train/loss_projector_classifier": loss_proj.item(),
-            },
-            commit=False,
-        )
-
-        return loss_ssl + loss_proj + loss_backbone
+        deactivate_requires_grad(self.networks["backbone_target"])
+        deactivate_requires_grad(self.networks["projector_target"])
 
     def before_train_step(self):
-        # Update the target parameters as EMA of the online model parameters.
+        """Update the target parameters as EMA of the online model parameters."""
         update_momentum(
             self.backbone, self.backbone_target, m=self.config.model.momentum
         )
         update_momentum(
             self.projector, self.projector_target, m=self.config.model.momentum
         )
-
-
-# @dataclass
-# class SelfDistillationConfig(JointEmbeddingConfig):
-#     """Configuration for the self-distillation model parameters.
-
-#     Parameters
-#     ----------
-#     momentum : float
-#         Momentum for the EMA of the target parameters. Default is 0.999.
-#     """
-
-#     momentum: float = 0.999
