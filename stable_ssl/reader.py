@@ -55,13 +55,16 @@ def jsonl(path):
 
     values = []
     # Load the values from logs_rank_* files.
-    logs_files = list(_path.glob("logs_rank_*"))
+    logs_files = list(_path.glob("logs_rank_*.jsonl"))
+    logging.info(f"Reading .jsonl files from {_path}")
+    logging.info(f"\t=> {len(logs_files)} ranks detected")
     for log_file in logs_files:
         # Extract rank from the filename.
-        rank = int(log_file.name.split("_")[-1])
+        rank = int(log_file.stem.split("rank_")[1])
         for obj in jsonlines.open(log_file).iter(type=dict, skip_invalid=True):
             obj["rank"] = rank  # Add rank field to each dict.
             values.append(obj)
+    logging.info(f"\t=> total length of logs: {len(values)}")
     return values
 
 
