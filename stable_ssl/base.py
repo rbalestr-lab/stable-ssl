@@ -34,14 +34,11 @@ from .utils import (
     BreakAllEpochs,
     BreakEpoch,
     NanError,
-    BreakStep,
     seed_everything,
     to_device,
     get_gpu_info,
     log_and_raise,
 )
-
-__all__ = ["BreakStep"]
 
 
 # https://github.com/Lightning-AI/pytorch-lightning/blob/master/src/
@@ -189,7 +186,7 @@ class BaseModel(torch.nn.Module):
             #     module.to(memory_format=torch.channels_last)
             if self.world_size > 1:
                 module = torch.nn.SyncBatchNorm.convert_sync_batchnorm(module)
-            module.to(self.this_device)
+            module.to(self.device)
             has_parameters = False
             if sum(p.numel() for p in module.parameters() if p.requires_grad) > 0:
                 has_parameters = True
@@ -348,7 +345,7 @@ class BaseModel(torch.nn.Module):
             tqdm(loader, total=max_steps, desc=f"Training: {self.epoch}")
         ):
             # set up the data to have easy access throughout the methods
-            self.batch = to_device(data, self.this_device)
+            self.batch = to_device(data, self.device)
 
             self.before_fit_step()
             self.fit_step()
@@ -390,7 +387,7 @@ class BaseModel(torch.nn.Module):
                         total=max_steps,
                         desc=f"Eval {name_loader}: {self.epoch=}",
                     ):
-                        self.batch = to_device(data, self.this_device)
+                        self.batch = to_device(data, self.device)
 
                         # Call any user specified pre-step function.
                         self.before_eval_step()
@@ -703,7 +700,7 @@ class BaseModel(torch.nn.Module):
         return self._batch_idx
 
     @property
-    def this_device(self):
+    def device(self):
         return self._device
 
     @epoch.setter
