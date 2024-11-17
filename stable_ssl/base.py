@@ -313,7 +313,7 @@ class BaseModel(torch.nn.Module):
                 self.save_checkpoint("tmp_checkpoint.ckpt", model_only=False)
 
         # At the end of training, we (optionally) save the final model.
-        if self.save_final_model:
+        if self.logger["save_final_model"]:
             self.save_checkpoint(
                 f"{self.logger['save_final_model']}.ckpt", model_only=True
             )
@@ -425,6 +425,7 @@ class BaseModel(torch.nn.Module):
             log_and_raise(NanError, "Loss is NaN. Stopping training.")
 
         self.scaler.scale(loss).backward()
+        scale = self.scaler.get_scale()
         if (1 + self.batch_idx) % self.optim["accumulation_steps"] == 0:
             # Unscales the gradients of optimizer's assigned params in-place.
             self.scaler.unscale_(self.optim["optimizer"])
@@ -438,7 +439,11 @@ class BaseModel(torch.nn.Module):
             self.scaler.update()
             self.optim["optimizer"].zero_grad(set_to_none=True)
 
-        self.optim["scheduler"].step()
+        # to avoid warning
+        # see https://discuss.pytorch.org/t/
+        # optimizer-step-before-lr-scheduler-step-error-using-gradscaler/92930/7
+        if scale <= self.scaler.get_scale():
+            self.optim["scheduler"].step()
 
         if self.global_step % self.logger["every_step"] == 0:
             bucket = {}
@@ -658,10 +663,11 @@ class BaseModel(torch.nn.Module):
         logging.info("Device status after cleaning.")
         get_gpu_info()
 
-    @property
-    def logs(self):
+    def get_logs(self, rank=0):
         if self.logger["wandb"] is not None:
-            return reader.jsonl_run(self.logger["dump_path"])
+            return reader.jsonl_run(
+                self.logger["dump_path"] / f"logs_rank_{rank}.jsonl"
+            )
 
     @property
     def rank(self):

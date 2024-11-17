@@ -47,17 +47,12 @@ def jsonl_project(folder, num_workers=8):
     return config, values
 
 
-def jsonl_run(path):
+def jsonl(path):
     """Load config and values from a single run directory."""
     _path = Path(path)
     if not _path.is_dir():
         raise ValueError(f"The provided path ({path}) is not a directory!")
-    # Load the config file.
-    if not (_path / "hparams.yaml").is_file():
-        raise ValueError(
-            f"The provided path ({path}) must at least contain a `hparams.yaml` file."
-        )
-    config = omegaconf.OmegaConf.load(_path / "hparams.yaml")
+
     values = []
     # Load the values from logs_rank_* files.
     logs_files = list(_path.glob("logs_rank_*"))
@@ -67,7 +62,17 @@ def jsonl_run(path):
         for obj in jsonlines.open(log_file).iter(type=dict, skip_invalid=True):
             obj["rank"] = rank  # Add rank field to each dict.
             values.append(obj)
-    return config, values
+    return values
+
+
+def config(path):
+    """Load config and values from a single run directory."""
+    _path = Path(path)
+    if not _path.is_dir():
+        raise ValueError(f"The provided path ({path}) is not a directory!")
+    # Load the config file.
+    config = omegaconf.OmegaConf.load(_path / ".hydra" / "config.yaml")
+    return config
 
 
 def wandb_project(
