@@ -5,6 +5,7 @@ from typing import Union
 import torch
 from stable_ssl.utils import log_and_raise
 from typing_extensions import override
+from typing import Iterable
 
 
 class _DatasetSamplerWrapper(torch.utils.data.Dataset):
@@ -30,11 +31,25 @@ class _DatasetSamplerWrapper(torch.utils.data.Dataset):
 
 
 class DistributedSamplerWrapper(torch.utils.data.DistributedSampler):
+    """Wrap a dataloader for DDP.
+
+    Parameters
+    ----------
+    sampler: iterable
+        the original dataloader sampler
+    """
+
     def __init__(self, sampler, *args, **kwargs) -> None:
         super().__init__(_DatasetSamplerWrapper(sampler), *args, **kwargs)
 
     @override
-    def __iter__(self):
+    def __iter__(self) -> Iterable:
+        """Iterate over DDP dataset.
+
+        Returns
+        -------
+            Iterable: minibatch
+        """
         self.dataset.reset()
         return (self.dataset[index] for index in super().__iter__())
 
