@@ -1,5 +1,5 @@
-Stable-SSL: the Self-Supervised Learning Library by Researchers for Researchers
-===============================================================================
+Stable-SSL
+==========
 
 .. image:: https://github.com/rbalestr-lab/stable-SSL/raw/main/docs/source/figures/logo.jpg
    :alt: ssl logo
@@ -7,6 +7,25 @@ Stable-SSL: the Self-Supervised Learning Library by Researchers for Researchers
    :align: left
 
 |Pytorch| |Black| |License|
+
++--------------------------------------------------+---------------------------------------------------------------------+
+| .. image:: https://github.com/rbalestr-lab/stable-SSL/raw/main/docs/source/figures/logo.jpg                           |
+|    :alt: ssl logo                                                                                                     |
+|    :width: 200px                                                                                                     |
+|                                                                                                                      |
+|                                              | **Stable-SSL**: the Self-Supervised Learning Library                   |
+|                                              | by Researchers for Researchers                                         |
+|                                              |                                                                        |
+|                                              | You got a research idea? It shouldn't take you more than 10 minutes   |
+|                                              | to start from scratch and get it running with the ability to produce  |
+|                                              | high-quality figures/tables from the results: that's the goal of      |
+|                                              | stable-SSL.                                                            |
+|                                              |                                                                        |
+|                                              | We achieve that by taking the best--and only the best--from the most  |
+|                                              | eponymous AI libraries: PyTorchLightning, VISSL, Wandb, Hydra,        |
+|                                              | Submitit.                                                              |
++--------------------------------------------------+---------------------------------------------------------------------+
+
 
 
 *You got a research idea? It shouldn't take you more than 10 minutes to start from scratch and get it running with the ability to produce high quality figures/tables from the results: that's the goal of stable-SSL.*
