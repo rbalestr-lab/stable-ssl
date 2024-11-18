@@ -9,7 +9,6 @@
 
 import copy
 import torch.nn.functional as F
-from stable_ssl.utils import gather_processes
 
 from stable_ssl.utils import deactivate_requires_grad, update_momentum
 from stable_ssl.base import BaseModel
@@ -64,7 +63,6 @@ class JointEmbedding(BaseModel):
 
         return loss_ssl + loss_proj_classifier + loss_backbone_classifier
 
-    @gather_processes
     def compute_ssl_loss(self, *projections):
         return self.objective(*projections)
 
