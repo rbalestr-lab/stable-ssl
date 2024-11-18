@@ -305,14 +305,15 @@ class BaseModel(torch.nn.Module):
         optim["accumulation_steps"] = optim.get("accumulation_steps", 1)
         optim["grad_max_norm"] = optim.get("grad_max_norm", None)
 
-    def forward(self, x):
-        return self.config.networks["backbone"](x)
+    def forward(self):
+        return self.config.networks["backbone"](self.batch[0])
 
-    def predict(self, x):
-        return self.forward(x)
+    def predict(self):
+        return self.forward()
 
-    def compute_loss(self, *args, **kwargs):
-        return self.objective(*args, **kwargs)
+    def compute_loss(self):
+        predictions = [self.predict(view) for view in self.batch[0]]
+        return sum([self.objective(pred, self.batch[1]) for pred in predictions])
 
     def __call__(self):
         self.setup()
