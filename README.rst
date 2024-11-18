@@ -3,7 +3,7 @@
    :width: 200px
    :align: right
 
-|Pytorch| |Black| |License| |WandB|
+|CircleCI| |Pytorch| |Black| |License| |WandB|
 
 The Self-Supervised Learning Library by Researchers for Researchers
 ===================================================================
@@ -48,7 +48,8 @@ Or you can also run:
    pip install -U git+https://github.com/rbalestr-lab/stable-SSL
 
 
-
+.. |CircleCI| image:: https://dl.circleci.com/status-badge/img/gh/rbalestr-lab/stable-SSL/tree/main.svg?style=svg
+    :target: https://dl.circleci.com/status-badge/redirect/gh/rbalestr-lab/stable-SSL/tree/main
 .. |Pytorch| image:: https://img.shields.io/badge/PyTorch_1.8+-ee4c2c?logo=pytorch&logoColor=white
     :target: https://pytorch.org/get-started/locally/
 .. |Black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
