@@ -1,7 +1,7 @@
 Stable-SSL: the Self-Supervised Learning Library by Researchers for Researchers
 ===============================================================================
 
-.. image:: https://github.com/rbalestr-lab/stable-SSL/raw/main/docs/source/figures/logo.png
+.. image:: https://github.com/rbalestr-lab/stable-SSL/raw/main/docs/source/figures/logo.jpg
    :alt: ssl logo
    :width: 200px
    :align: left
