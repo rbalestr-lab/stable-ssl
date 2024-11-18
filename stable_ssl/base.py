@@ -311,8 +311,7 @@ class BaseModel(torch.nn.Module):
         return self.forward()
 
     def compute_loss(self):
-        predictions = [self.predict(view) for view in self.batch[0]]
-        return sum([self.objective(pred, self.batch[1]) for pred in predictions])
+        return self.objective(self.predict(), self.batch[1])
 
     def __call__(self):
         self.setup()
@@ -470,7 +469,14 @@ class BaseModel(torch.nn.Module):
     def fit_step(self):
 
         with torch.amp.autocast("cuda", enabled=self.hardware["float16"]):
-            loss = self.compute_loss()
+            returned_loss = self.compute_loss()
+
+        if isinstance(returned_loss, float):
+            loss = returned_loss
+        if isinstance(returned_loss, list):
+            loss = sum(returned_loss)
+        elif isinstance(loss, dict):
+            loss = sum(returned_loss.values())
 
         if np.isnan(loss.item()):
             log_and_raise(NanError, "Loss is NaN. Stopping training.")
@@ -498,14 +504,18 @@ class BaseModel(torch.nn.Module):
 
         if self.global_step % self.logger["every_step"] == 0:
             bucket = {}
-            bucket["train/loss"] = loss.item()
+            if isinstance(returned_loss, dict):
+                for name, value in returned_loss.items():
+                    bucket[f"train/{name}"] = value.item()
+            else:
+                bucket["train/loss"] = loss.item()
             bucket["train/lr"] = self.optim["scheduler"].get_last_lr()[0]
             bucket["step"] = self.batch_idx
             bucket["epoch"] = self.epoch
             self.log(bucket, commit=True)
 
     def eval_step(self, name_loader):
-        output = self.forward()
+        output = self.predict()
         if name_loader in self.logger["metrics"]:
             for metric in self.logger["metrics"][name_loader].values():
                 metric.update(output, self.batch[1])
