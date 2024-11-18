@@ -305,15 +305,14 @@ class BaseModel(torch.nn.Module):
         optim["accumulation_steps"] = optim.get("accumulation_steps", 1)
         optim["grad_max_norm"] = optim.get("grad_max_norm", None)
 
-    @abstractmethod
-    def forward(self):
-        """Define the forward pass of the model."""
-        pass
+    def forward(self, x):
+        return self.config.networks["backbone"](x)
 
-    @abstractmethod
-    def compute_loss(self):
-        """Compute the loss for the current batch."""
-        pass
+    def predict(self, x):
+        return self.forward(x)
+
+    def compute_loss(self, *args, **kwargs):
+        return self.objective(*args, **kwargs)
 
     def __call__(self):
         self.setup()

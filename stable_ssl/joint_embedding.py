@@ -63,9 +63,6 @@ class JointEmbedding(BaseModel):
 
         return loss_ssl + loss_proj_classifier + loss_backbone_classifier
 
-    def compute_ssl_loss(self, *projections):
-        return self.objective(*projections)
-
 
 class SelfDistillation(JointEmbedding):
     r"""Base class for training a self-distillation SSL model.
