@@ -13,8 +13,6 @@ from .__about__ import (
     __license__,
 )
 
-from .supervised import Supervised
-
 __all__ = [
     "__title__",
     "__summary__",
