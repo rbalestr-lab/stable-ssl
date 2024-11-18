@@ -95,13 +95,34 @@ class BaseModel(torch.nn.Module):
 
     Parameters
     ----------
-    config : TrainerConfig
-        Parameters for BaseModel organized in groups.
-        For details, see the `TrainerConfig` class in `config.py`.
+    data: dict
+        Data configuration.
+    networks: dict
+        Networks configuration.
+    objective: dict
+        Objective configuration.
+    train_on: str
+        Name of the dataset to train on.
+    hardware: dict
+        Hardware configuration.
+    optim: dict
+        Optimizer configuration.
+    logger: dict
+        Logger configuration.
+    eval_only: bool, optional
+        Whether to only evaluate the model. Default is False.
     """
 
     def __init__(
-        self, data, networks, objective, train_on, hardware, optim, logger, eval_only
+        self,
+        data,
+        networks,
+        objective,
+        train_on,
+        hardware,
+        optim,
+        logger,
+        eval_only=False,
     ):
         super().__init__()
         logging.info(f"=> INIT OF {self.__class__.__name__} STARTED")
