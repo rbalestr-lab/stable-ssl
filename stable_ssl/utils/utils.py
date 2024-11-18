@@ -6,21 +6,22 @@
 #
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
+
 import random
 import os
 import time
 import subprocess
-import functools
 import logging
 from contextlib import closing
 import socket
-import torch.distributed as dist
 import numpy as np
+
 import torch
+import torch.distributed as dist
 
 
-class FullGatherLayer(torch.autograd.Function):
-    """Gather tensors from all process. Supports backward propagation."""
+class GatherLayer(torch.autograd.Function):
+    """Module to gather tensors from all process. Supports backward propagation."""
 
     @staticmethod
     def forward(ctx, x):
@@ -33,6 +34,14 @@ class FullGatherLayer(torch.autograd.Function):
         all_gradients = torch.stack(grads)
         dist.all_reduce(all_gradients)
         return all_gradients[dist.get_rank()]
+
+
+def gather(x: torch.Tensor):
+    """Gather tensors from all processes if DDP is initialized."""
+    if not (dist.is_available() and dist.is_initialized()):
+        return x
+    else:
+        return torch.cat(GatherLayer.apply(x), dim=0)
 
 
 def str_to_dtype(v: str) -> torch.dtype:
@@ -53,32 +62,6 @@ def str_to_dtype(v: str) -> torch.dtype:
         return torch.half
     if v == "float64":
         return torch.double
-
-
-def gather_processes(func):
-    """Gather tensors from all processes before calling the function."""
-
-    @functools.wraps(func)
-    def wrapper(self, *args, **kwargs):
-        if self.hardware["world_size"] > 1:
-
-            def process(arg):
-                if isinstance(arg, torch.Tensor):
-                    return torch.cat(FullGatherLayer.apply(arg), dim=0)
-                elif isinstance(arg, (list, tuple)):
-                    return type(arg)(process(a) for a in arg)
-                elif isinstance(arg, dict):
-                    return {k: process(v) for k, v in arg.items()}
-                else:
-                    return arg
-
-            new_args = tuple(process(arg) for arg in args)
-            new_kwargs = {k: process(v) for k, v in kwargs.items()}
-            return func(self, *new_args, **new_kwargs)
-        else:
-            return func(self, *args, **kwargs)
-
-    return wrapper
 
 
 def count_SLURM_jobs(pending=True, running=True):

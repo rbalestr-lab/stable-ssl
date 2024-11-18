@@ -1,5 +1,14 @@
+# -*- coding: utf-8 -*-
+#
+# Author: Hugues Van Assel <vanasselhugues@gmail.com>
+#         Randall Balestriero <randallbalestriero@gmail.com>
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+
 from .utils import (
-    FullGatherLayer,
+    GatherLayer,
+    gather,
     seed_everything,
     to_device,
     off_diagonal,
@@ -19,7 +28,8 @@ from .nn import load_backbone, MLP
 __all__ = [
     "str_to_dtype",
     "mask_correlated_samples",
-    "FullGatherLayer",
+    "GatherLayer",
+    "gather",
     "seed_everything",
     "LinearWarmupCosineAnnealing",
     "LARS",
