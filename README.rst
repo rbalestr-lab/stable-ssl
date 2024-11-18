@@ -1,20 +1,18 @@
-Stable-SSL: the Self-Supervised Learning Library by Researchers for Researchers
-===============================================================================
+.. image:: https://github.com/rbalestr-lab/stable-SSL/raw/main/docs/source/figures/logo.jpg
+   :alt: ssl logo
+   :width: 200px
+   :align: right
+
+|Documentation| |Benchmark| |CircleCI| |Pytorch| |Black| |License| |WandB|
+
+The Self-Supervised Learning Library by Researchers for Researchers
+===================================================================
 
 *You got a research idea? It shouldn't take you more than 10 minutes to start from scratch and get it running with the ability to produce high quality figures/tables from the results: that's the goal of stable-SSL.*
 
 We achieve that by taking the best--and only the best--from the most eponymous AI libraries: PytorchLightning, VISSL, Wandb, Hydra, Submitit.
 
 ``stable-SSL`` implements all the basic boilerplate code, including data loader, logging, checkpointing, optimization, etc. You only need to implement 3 methods to get started: your loss, your model, and your prediction (see `example <#own_trainer>`_ below). But if you want to customize more things, simply inherit the base ``BaseModel`` and override any method! This could include different metrics, different data samples, different training loops, etc.
-
-
-.. .. image:: https://github.com/rbalestr-lab/stable-SSL/raw/main/docs/source/figures/logo.png
-..    :alt: ssl logo
-..    :width: 200px
-..    :align: right
-
-.. .. contents:: Table of Contents
-..    :depth: 2
 
 
 Why stable-SSL?
@@ -48,3 +46,19 @@ Or you can also run:
 .. code-block:: bash
 
    pip install -U git+https://github.com/rbalestr-lab/stable-SSL
+
+
+.. |Documentation| image:: https://img.shields.io/badge/Documentation-blue.svg
+    :target: https://rbalestr-lab.github.io/stable-SSL.github.io/dev/
+.. |Benchmark| image:: https://img.shields.io/badge/Benchmarks-blue.svg
+    :target: https://github.com/rbalestr-lab/stable-SSL/tree/main/benchmarks
+.. |CircleCI| image:: https://dl.circleci.com/status-badge/img/gh/rbalestr-lab/stable-SSL/tree/main.svg?style=svg
+    :target: https://dl.circleci.com/status-badge/redirect/gh/rbalestr-lab/stable-SSL/tree/main
+.. |Pytorch| image:: https://img.shields.io/badge/PyTorch_1.8+-ee4c2c?logo=pytorch&logoColor=white
+    :target: https://pytorch.org/get-started/locally/
+.. |Black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
+    :target: https://github.com/psf/black
+.. |License| image:: https://img.shields.io/badge/License-MIT-yellow.svg
+   :target: https://opensource.org/licenses/MIT
+.. |WandB| image:: https://raw.githubusercontent.com/wandb/assets/main/wandb-github-badge-gradient.svg
+   :target: https://wandb.ai/site

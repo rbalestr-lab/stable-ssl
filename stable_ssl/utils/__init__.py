@@ -15,7 +15,6 @@ from .utils import (
     get_open_port,
     get_gpu_info,
     deactivate_requires_grad,
-    gather_processes,
     update_momentum,
     log_and_raise,
     str_to_dtype,
@@ -44,7 +43,6 @@ __all__ = [
     "get_open_port",
     "get_gpu_info",
     "deactivate_requires_grad",
-    "gather_processes",
     "update_momentum",
     "log_and_raise",
 ]
