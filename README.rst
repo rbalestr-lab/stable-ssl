@@ -3,13 +3,10 @@
    :width: 200px
    :align: right
 
-Stable-SSL
-==========
-
-the Self-Supervised Learning Library by Researchers for Researchers
--------------------------------------------------------------------
-
 |Pytorch| |Black| |License|
+
+The Self-Supervised Learning Library by Researchers for Researchers
+===================================================================
 
 *You got a research idea? It shouldn't take you more than 10 minutes to start from scratch and get it running with the ability to produce high quality figures/tables from the results: that's the goal of stable-SSL.*
 
