@@ -7,10 +7,11 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
+import logging
 import torch
 import torch.nn.functional as F
 
-from stable_ssl.utils import gather
+from stable_ssl.utils import gather, off_diagonal
 
 
 class NTXEntLoss(torch.nn.Module):
@@ -181,6 +182,20 @@ class BarlowTwinsLoss(torch.nn.Module):
         self.bn = torch.nn.LazyBatchNorm1d()
 
     def compute_ssl_loss(self, z_i, z_j):
+        """Compute the loss of the Barlow Twins model.
+
+        Parameters
+        ----------
+        z_i : torch.Tensor
+            Latent representation of the first augmented view of the batch.
+        z_j : torch.Tensor
+            Latent representation of the second augmented view of the batch.
+
+        Returns
+        -------
+        float
+            The computed loss.
+        """
         # Empirical cross-correlation matrix.
         c = self.bn(z_i).T @ self.bn(z_j)
 
