@@ -10,6 +10,8 @@
 import torch
 import torch.nn.functional as F
 
+from stable_ssl.utils import gather
+
 
 class NTXEnt(torch.nn.Module):
     """Normalized temperature-scaled cross entropy loss.
@@ -45,6 +47,9 @@ class NTXEnt(torch.nn.Module):
         float
             The computed contrastive loss.
         """
+        z_i = gather(z_i)
+        z_j = gather(z_j)
+
         z = torch.cat([z_i, z_j], 0)
         N = z.size(0)
 
@@ -100,3 +105,48 @@ class BYOLLoss(torch.nn.Module):
             sim(predictions[0], projections_target[1]).mean()
             + sim(predictions[1], projections_target[0]).mean()
         )
+
+
+class VICRegLoss(torch.nn.Module):
+    """SSL objective used in VICReg [BPL21]_.
+
+    Reference
+    ---------
+    .. [BPL21] Bardes, A., Ponce, J., & LeCun, Y. (2021).
+            VICReg: Variance-Invariance-Covariance Regularization
+            For Self-Supervised Learning.
+            International Conference on Learning Representations (ICLR).
+    """
+
+    def __init__(self, sim_coeff, std_coeff, cov_coeff, epsilon):
+        super().__init__()
+        self.sim_coeff = sim_coeff
+        self.std_coeff = std_coeff
+        self.cov_coeff = cov_coeff
+        self.epsilon = epsilon
+
+    def forward(self, z_i, z_j):
+        repr_loss = F.mse_loss(z_i, z_j)
+
+        z_i = gather(z_i)
+        z_j = gather(z_j)
+
+        z_i = z_i - z_i.mean(dim=0)
+        z_j = z_j - z_j.mean(dim=0)
+
+        std_i = torch.sqrt(z_i.var(dim=0) + self.epsilon)
+        std_j = torch.sqrt(z_j.var(dim=0) + self.epsilon)
+        std_loss = torch.mean(F.relu(1 - std_i)) / 2 + torch.mean(F.relu(1 - std_j)) / 2
+
+        cov_i = (z_i.T @ z_i) / (z_i.size(0) - 1)
+        cov_j = (z_j.T @ z_j) / (z_i.size(0) - 1)
+        cov_loss = off_diagonal(cov_i).pow_(2).sum().div(z_i.size(1)) + off_diagonal(
+            cov_j
+        ).pow_(2).sum().div(z_i.size(1))
+
+        loss = (
+            self.sim_coeff * repr_loss
+            + self.std_coeff * std_loss
+            + self.cov_coeff * cov_loss
+        )
+        return loss

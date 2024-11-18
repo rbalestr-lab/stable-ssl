@@ -10,7 +10,7 @@
 from dataclasses import dataclass
 import torch
 
-from stable_ssl.utils import off_diagonal, gather_processes
+from stable_ssl.utils import off_diagonal, gather
 from .base import JointEmbedding
 
 
@@ -51,16 +51,3 @@ class VICReg(JointEmbedding):
             + self.config.model.cov_coeff * cov_loss
         )
         return loss
-
-
-@dataclass
-class VICRegLoss(torch.nn.Module):
-    """Configuration for the VICreg model parameters."""
-
-    sim_coeff: float = 25
-    std_coeff: float = 25
-    cov_coeff: float = 1
-    epsilon: float = 0.0001
-
-    def trainer(self):
-        return VICReg
