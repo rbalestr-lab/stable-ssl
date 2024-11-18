@@ -473,10 +473,15 @@ class BaseModel(torch.nn.Module):
 
         if isinstance(returned_loss, float):
             loss = returned_loss
-        if isinstance(returned_loss, list):
+        elif isinstance(returned_loss, list):
             loss = sum(returned_loss)
         elif isinstance(loss, dict):
             loss = sum(returned_loss.values())
+        else:
+            log_and_raise(
+                ValueError,
+                "Returned loss must be a float, a list of floats or a dict of floats.",
+            )
 
         if np.isnan(loss.item()):
             log_and_raise(NanError, "Loss is NaN. Stopping training.")
