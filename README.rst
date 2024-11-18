@@ -3,7 +3,7 @@
    :width: 200px
    :align: right
 
-|Pytorch| |Black| |License|
+|Pytorch| |Black| |License| |WandB|
 
 The Self-Supervised Learning Library by Researchers for Researchers
 ===================================================================
