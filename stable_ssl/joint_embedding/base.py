@@ -87,7 +87,7 @@ class SelfDistillation(JointEmbedding):
         deactivate_requires_grad(self.networks["backbone_target"])
         deactivate_requires_grad(self.networks["projector_target"])
 
-    def before_train_step(self):
+    def before_fit_step(self):
         """Update the target parameters as EMA of the online model parameters."""
         update_momentum(
             self.backbone, self.backbone_target, m=self.config.model.momentum
