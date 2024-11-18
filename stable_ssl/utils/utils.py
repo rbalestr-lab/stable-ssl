@@ -15,9 +15,10 @@ import functools
 import logging
 from contextlib import closing
 import socket
-import torch.distributed as dist
 import numpy as np
+
 import torch
+import torch.distributed as dist
 
 
 class GatherLayer(torch.autograd.Function):
@@ -37,8 +38,11 @@ class GatherLayer(torch.autograd.Function):
 
 
 def gather(x: torch.Tensor):
-    """Gather tensors from all processes."""
-    return torch.cat(GatherLayer.apply(x), dim=0)
+    """Gather tensors from all processes if DDP is initialized."""
+    if not (dist.is_available() and dist.is_initialized()):
+        return x
+    else:
+        return torch.cat(GatherLayer.apply(x), dim=0)
 
 
 def str_to_dtype(v: str) -> torch.dtype:

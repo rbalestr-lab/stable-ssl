@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""SimCLR model."""
+"""SSL losses."""
 #
 # Author: Hugues Van Assel <vanasselhugues@gmail.com>
 #         Randall Balestriero <randallbalestriero@gmail.com>
@@ -13,7 +13,7 @@ import torch.nn.functional as F
 from stable_ssl.utils import gather
 
 
-class NTXEnt(torch.nn.Module):
+class NTXEntLoss(torch.nn.Module):
     """Normalized temperature-scaled cross entropy loss.
 
     Introduced in the SimCLR paper [CKNH20]_. Also used in MoCo [HFW+20]_.
@@ -126,6 +126,20 @@ class VICRegLoss(torch.nn.Module):
         self.epsilon = epsilon
 
     def forward(self, z_i, z_j):
+        """Compute the loss of the VICReg model.
+
+        Parameters
+        ----------
+        z_i : torch.Tensor
+            Latent representation of the first augmented view of the batch.
+        z_j : torch.Tensor
+            Latent representation of the second augmented view of the batch.
+
+        Returns
+        -------
+        float
+            The computed loss.
+        """
         repr_loss = F.mse_loss(z_i, z_j)
 
         z_i = gather(z_i)
@@ -149,4 +163,32 @@ class VICRegLoss(torch.nn.Module):
             + self.std_coeff * std_loss
             + self.cov_coeff * cov_loss
         )
+        return loss
+
+
+class BarlowTwinsLoss(torch.nn.Module):
+    """SSL objective used in [ZJM+21]_.
+
+    Reference
+    ---------
+    .. [ZJM+21] Zbontar, J., Jing, L., Misra, I., LeCun, Y., & Deny, S. (2021).
+            Barlow Twins: Self-Supervised Learning via Redundancy Reduction.
+            In International conference on machine learning (pp. 12310-12320). PMLR.
+    """
+
+    def __init__(self, lamb: 0.1):
+        self.lamb = lamb
+        self.bn = torch.nn.LazyBatchNorm1d()
+
+    def compute_ssl_loss(self, z_i, z_j):
+        # Empirical cross-correlation matrix.
+        c = self.bn(z_i).T @ self.bn(z_j)
+
+        # Sum the cross-correlation matrix between all gpus.
+        c.div_(self.config.data.train_dataset.batch_size)
+        torch.distributed.all_reduce(c)
+
+        on_diag = torch.diagonal(c).add_(-1).pow_(2).sum()
+        off_diag = off_diagonal(c).pow_(2).sum()
+        loss = on_diag + self.config.model.lambd * off_diag
         return loss
