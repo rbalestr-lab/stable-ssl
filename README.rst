@@ -55,3 +55,5 @@ Or you can also run:
     :target: https://github.com/psf/black
 .. |License| image:: https://img.shields.io/badge/License-MIT-yellow.svg
    :target: https://opensource.org/licenses/MIT
+.. |WandB| image:: https://raw.githubusercontent.com/wandb/assets/main/wandb-github-badge-28.svg
+   :target: https://wandb.ai/site
