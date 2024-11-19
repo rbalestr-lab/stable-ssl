@@ -1,4 +1,4 @@
-.. _getting_started:
+.. _advanced_usage:
 
 .. currentmodule:: stable_ssl
 
@@ -7,23 +7,13 @@
    :no-inherited-members:
 
 
-Getting Started
-================
-
-Minimal Documentation
----------------------
-
-.. _minimal:
-
+Advanced Usage
+==============
 
 .. Classification case
 .. ~~~~~~~~~~~~~~~~~~~
 
 .. - **How is the accuracy calculated?** The predictions are assumed to be the output of the forward method, then this is fed into a few metrics along with ``self.data[1]`` which is assumed to encode the labels.
-
-
-Advanced Usage
---------------
 
 Setting params in command line
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

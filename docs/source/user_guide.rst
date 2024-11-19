@@ -1,4 +1,4 @@
-.. _config_guide:
+.. _user_guide:
 
 .. currentmodule:: stable_ssl
 
@@ -7,8 +7,8 @@
    :no-inherited-members:
 
 
-Configuration File Guide
-========================
+User Guide
+==========
 
 This guide explains how to construct a configuration file to launch a run with ``stable_ssl``. The configuration file is written in YAML format, and various sections map to different configuration classes corresponding to optimization, hardware, log, data and model settings.
 
@@ -90,13 +90,6 @@ The `data` keyword defines data loading, preprocessing and data augmentation set
                   - 1.0
                - _target_: torchvision.transforms.v2.RandomHorizontalFlip
                p: 0.5
-               - _target_: torchvision.transforms.v2.ColorJitter
-               brightness: 0.4
-               contrast: 0.4
-               saturation: 0.2
-               hue: 0.1
-               - _target_: torchvision.transforms.v2.RandomGrayscale
-               p: 0.2
                - _target_: torchvision.transforms.v2.ToImage
                - _target_: torchvision.transforms.v2.ToDtype
                dtype: 
@@ -121,53 +114,6 @@ The `data` keyword defines data loading, preprocessing and data augmentation set
                _target_: stable_ssl.utils.str_to_dtype
                _args_: [float32]
             scale: True
-
-   data:
-      train_on: base
-      base:
-         name: CIFAR10
-         batch_size: 32
-         drop_last: True
-         shuffle: True
-         split: train
-         num_workers: 10
-         transforms:
-            view1:
-            - name: RandomResizedCrop
-            kwargs:
-               size: 32
-               scale:
-                  - 0.1
-                  - 0.2
-            - name: RandomHorizontalFlip
-            - name: SpeckleNoise
-            kwargs:
-               severity: 2
-            p: 0.5
-            - name: GaussianBlur
-            kwargs:
-               kernel_size: 5
-            p: 0.2
-            view2:
-            - name: RandomResizedCrop
-            kwargs:
-               size: 32
-               scale:
-                  - 0.1
-                  - 0.2
-            - name: RandomHorizontalFlip
-      test_in:
-         name: CIFAR10
-         batch_size: 32
-         drop_last: False
-         split: train
-         num_workers: 10
-      test_out:
-         name: CIFAR10
-         batch_size: 32
-         drop_last: False
-         num_workers: 10
-         split: test
 
 
 Model Configuration (`model`)

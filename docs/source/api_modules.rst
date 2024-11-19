@@ -1,4 +1,4 @@
-.. _ssl_methods:
+.. _api_modules:
 
 .. currentmodule:: stable_ssl
 
@@ -7,11 +7,11 @@
    :no-inherited-members:
 
 
-SSL Methods
-===========
+API and Modules
+===============
 
-
-This module contains the following SSL methods:
+Losses
+------
 
 .. autosummary::
    :toctree: gen_modules/

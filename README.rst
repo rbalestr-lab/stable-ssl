@@ -117,10 +117,8 @@ At its core, ``Stable-SSL`` provides a ``BaseModel`` class that sequentially cal
 While the organization is similar to that of ``PyTorch Lightning``, the goal of ``Stable-SSL`` is to significantly reduce codebase complexity without sacrificing performance. Think of ``PyTorch Lightning`` as industry-driven (abstracting everything away), whereas ``Stable-SSL`` is academia-driven (bringing everything to the forefront for the user).
 
 
-.. _stable-SSL-dev-url: https://rbalestr-lab.github.io/stable-SSL.github.io/dev/
-
 .. |Documentation| image:: https://img.shields.io/badge/Documentation-blue.svg
-    :target: _stable-SSL-dev-url
+    :target: https://rbalestr-lab.github.io/stable-SSL.github.io/dev/
 .. |Benchmark| image:: https://img.shields.io/badge/Benchmarks-blue.svg
     :target: https://github.com/rbalestr-lab/stable-SSL/tree/main/benchmarks
 .. |CircleCI| image:: https://dl.circleci.com/status-badge/img/gh/rbalestr-lab/stable-SSL/tree/main.svg?style=svg
