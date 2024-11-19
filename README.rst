@@ -16,8 +16,8 @@ The Self-Supervised Learning Library by Researchers for Researchers
 
 We achieve that by taking the best--and only the best--from the most eponymous AI libraries: PytorchLightning, VISSL, Wandb, Hydra, Submitit.
 
-``stable-SSL`` implements all the basic boilerplate code, including data loading, logging, checkpointing, optimization, etc. It offers users full flexibility to customize each part of the pipeline through a configuration file, enabling easy selection of network architectures, loss functions, evaluation metrics, data augmentations and more.
-These components can be sourced from stable-SSL itself, popular libraries like PyTorch, or custom modules created by the user. This flexibility allows users to quickly get started with their research ideas.
+``stable-SSL`` implements all the basic boilerplate code, including data loading, logging, checkpointing and optimization. It offers users full flexibility to customize each part of the pipeline through a configuration file, enabling easy selection of network architectures, loss functions, evaluation metrics, data augmentations and more.
+These components can be sourced from stable-SSL itself, popular libraries like PyTorch, or custom modules created by the user.
 
 
 Why stable-SSL?
@@ -32,7 +32,6 @@ A quick search of ``AI libraries`` or ``Self Supervised Learning libraries`` wil
 - Standalone libraries such as Wandb, submitit, Hydra that do not offer enough boilerplate for AI research.
 
 Hence our goal is to fill that void.
-
 
 
 Installation
@@ -56,16 +55,16 @@ Or you can also run:
 Minimal Documentation
 ---------------------
 
-Implement your own `Trainer`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. Implement your own `Trainer`
+.. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. _own_trainer:
+.. .. _own_trainer:
 
-At the very least, you need to implement three methods:
+.. At the very least, you need to implement three methods:
 
-- ``initialize_modules``: this method initializes whatever model and parameters to use for training/inference
-- ``forward``: that method that will be doing the prediction, e.g., for classification it will be p(y|x)
-- ``compute_loss``: that method should return a scalar value used for backpropagation/training.
+.. - ``initialize_modules``: this method initializes whatever model and parameters to use for training/inference
+.. - ``forward``: that method that will be doing the prediction, e.g., for classification it will be p(y|x)
+.. - ``compute_loss``: that method should return a scalar value used for backpropagation/training.
 
 
 Library Design
