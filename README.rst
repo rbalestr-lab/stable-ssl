@@ -129,7 +129,7 @@ In this example, to launch the run using the configuration file ``default_config
 
 .. code-block:: bash
 
-   python3 run.py --config-name default_config --config-path configs/
+   python run.py --config-name default_config --config-path configs/
 
 
 
