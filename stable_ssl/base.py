@@ -774,10 +774,6 @@ class BaseModel(torch.nn.Module):
         return self._epoch
 
     @property
-    def config(self):
-        return self._config
-
-    @property
     def step(self):
         if not hasattr(self, "_step"):
             return None

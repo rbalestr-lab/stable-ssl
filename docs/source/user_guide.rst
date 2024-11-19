@@ -12,6 +12,30 @@ User Guide
 
 This guide explains how to construct a configuration file to launch a run with ``stable_ssl``. The configuration file is written in YAML format, and various sections map to different configuration classes corresponding to optimization, hardware, log, data and model settings.
 
+First step: define your model
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: gen_modules/
+   :template: myclass_template.rst
+
+   BaseModel
+   JointEmbedding
+   SelfDistillation
+
+
+The objective
+~~~~~~~~~~~~~
+
+.. autosummary::
+   :toctree: gen_modules/
+   :template: myclass_template.rst
+
+   NTXEntLoss
+   BYOLLoss
+   VICRegLoss
+   BarlowTwinsLoss
+
 
 Optimization Configuration (`optim`)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -21,9 +45,9 @@ The `optim` keyword is used to define the optimization settings for your model. 
 .. code-block:: yaml
 
    optim:
-     lr: 0.001
-     batch_size: 256
-     epochs: 500
+      lr: 0.001
+      batch_size: 256
+      epochs: 500
 
 
 The complete list of parameters for the `optim` section, including their descriptions and default values, is provided below:
@@ -35,16 +59,19 @@ The complete list of parameters for the `optim` section, including their descrip
    config.OptimConfig
 
 
-Hardware Configuration (`hardware`)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Hardware
+~~~~~~~~
 
-Use the `hardware` keyword to configure hardware-related settings such as the number of workers or GPU usage. The complete list of parameters for the `hardware` section is available below:
+Use the `hardware` keyword to configure hardware-related settings such as device, world_size (number of GPUs) or CPUs per task. The complete list of parameters for the `hardware` section is available below:
 
-.. autosummary::
-   :toctree: gen_modules/
-   :template: myclass_template.rst
+.. code-block:: yaml
 
-   config.HardwareConfig
+   hardware:
+      seed: 0
+      float16: true
+      device: "cuda:0"
+      world_size: 1
+      cpus_per_task: 8
 
 
 Log Configuration (`log`)

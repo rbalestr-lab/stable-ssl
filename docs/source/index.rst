@@ -8,4 +8,3 @@
     
     self
     user_guide
-    api_modules

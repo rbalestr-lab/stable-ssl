@@ -1,35 +1,35 @@
-.. _api_modules:
+.. .. _api_modules:
 
-.. currentmodule:: stable_ssl
+.. .. currentmodule:: stable_ssl
 
-.. automodule:: stable_ssl
-   :no-members:
-   :no-inherited-members:
+.. .. automodule:: stable_ssl
+..    :no-members:
+..    :no-inherited-members:
 
 
-API and Modules
-===============
+.. API and Modules
+.. ===============
 
-Base Models
------------
+.. Base Models
+.. -----------
 
-.. autosummary::
-   :toctree: gen_modules/
-   :template: myclass_template.rst
+.. .. autosummary::
+..    :toctree: gen_modules/
+..    :template: myclass_template.rst
 
-   BaseModel
-   JointEmbedding
-   SelfDistillation
-   
+..    BaseModel
+..    JointEmbedding
+..    SelfDistillation
 
-Losses
-------
 
-.. autosummary::
-   :toctree: gen_modules/
-   :template: myclass_template.rst
+.. Losses
+.. ------
 
-   NTXEntLoss
-   BYOLLoss
-   VICRegLoss
-   BarlowTwinsLoss
+.. .. autosummary::
+..    :toctree: gen_modules/
+..    :template: myclass_template.rst
+
+..    NTXEntLoss
+..    BYOLLoss
+..    VICRegLoss
+..    BarlowTwinsLoss
