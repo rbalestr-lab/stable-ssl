@@ -12,13 +12,12 @@
 The Self-Supervised Learning Library by Researchers for Researchers
 ===================================================================
 
-*You got a research idea? It shouldn't take you more than 10 minutes to start from scratch and get it running with the ability to produce high quality figures/tables from the results: that's the goal of stable-SSL.*
+*Have a research idea? With stable-SSL, you can go from concept to execution in under 10 minutes. Start from scratch and quickly set up your pipeline, all while being able to generate high-quality figures and tables from your results. That's the goal of stable-SSL.*
 
 We achieve that by taking the best--and only the best--from the most eponymous AI libraries: PytorchLightning, VISSL, Wandb, Hydra, Submitit.
 
 ``stable-SSL`` implements all the basic boilerplate code, including data loading, logging, checkpointing, optimization, etc. It offers users full flexibility to customize each part of the pipeline through a configuration file, enabling easy selection of network architectures, loss functions, evaluation metrics, data augmentations and more.
 These components can be sourced from stable-SSL itself, popular libraries like PyTorch, or custom modules created by the user. This flexibility allows users to quickly get started with their research ideas.
-.. But if you want to customize more things, simply inherit the base ``BaseModel`` and override any method! This could include different metrics, different data samples, different training loops, etc.
 
 
 Why stable-SSL?
