@@ -23,10 +23,8 @@ class JointEmbedding(BaseModel):
         the config
     """
 
-    def forward(self):
-        return self.networks["backbone_classifier"](
-            self.networks["backbone"](self.batch[0])
-        )
+    def predict(self):
+        return self.networks["backbone_classifier"](self.forward())
 
     def compute_loss(self):
         embeddings = [self.networks["backbone"](view) for view in self.batch[0]]
