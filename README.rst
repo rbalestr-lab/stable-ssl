@@ -60,7 +60,7 @@ How to launch runs
 
 .. _launch:
 
-`Stable-SSL` relies on a configuration file to specify the parameters. We recommend using `hydra` (see `Hydra documentation <https://hydra.cc/>`_) to manage the configuration files.
+When using `Stable-SSL`, we recommend relying on configuration files to specify the parameters, typically using `hydra` (see `Hydra documentation <https://hydra.cc/>`_).
 
 Start by building a configuration file with the parameters you want to use. These parameters should be organized into the following groups: `data`, `networks`, `hardware`, `optim`, and `logger`. Additionally, there are two key parameters: `objective`, which specifies the model's loss function, and `train_on`, which indicates the dataset used for training.
 
