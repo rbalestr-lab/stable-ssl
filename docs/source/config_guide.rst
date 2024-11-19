@@ -66,6 +66,62 @@ The `data` keyword defines data loading, preprocessing and data augmentation set
 
 .. code-block:: yaml
 
+   _num_classes: 10
+   _num_samples: 50000
+   base:
+   _target_: torch.utils.data.DataLoader
+   batch_size: 256
+   drop_last: True
+   shuffle: True
+   num_workers: ${trainer.hardware.cpus_per_task}
+   dataset:
+      _target_: torchvision.datasets.CIFAR10
+      root: ~/data
+      train: True
+      transform:
+         _target_: stable_ssl.data.MultiViewSampler
+         transforms:
+         - _target_: torchvision.transforms.v2.Compose
+            transforms:
+               - _target_: torchvision.transforms.v2.RandomResizedCrop
+               size: 32
+               scale:
+                  - 0.2
+                  - 1.0
+               - _target_: torchvision.transforms.v2.RandomHorizontalFlip
+               p: 0.5
+               - _target_: torchvision.transforms.v2.ColorJitter
+               brightness: 0.4
+               contrast: 0.4
+               saturation: 0.2
+               hue: 0.1
+               - _target_: torchvision.transforms.v2.RandomGrayscale
+               p: 0.2
+               - _target_: torchvision.transforms.v2.ToImage
+               - _target_: torchvision.transforms.v2.ToDtype
+               dtype: 
+                  _target_: stable_ssl.utils.str_to_dtype
+                  _args_: [float32]
+               scale: True
+         - ${trainer.data.base.dataset.transform.transforms.0}
+   test_out:
+   _target_: torch.utils.data.DataLoader
+   batch_size: 256
+   num_workers: ${trainer.hardware.cpus_per_task}
+   dataset:
+      _target_: torchvision.datasets.CIFAR10
+      train: False
+      root: ~/data
+      transform:
+         _target_: torchvision.transforms.v2.Compose
+         transforms:
+         - _target_: torchvision.transforms.v2.ToImage
+         - _target_: torchvision.transforms.v2.ToDtype
+            dtype: 
+               _target_: stable_ssl.utils.str_to_dtype
+               _args_: [float32]
+            scale: True
+
    data:
       train_on: base
       base:
@@ -114,15 +170,6 @@ The `data` keyword defines data loading, preprocessing and data augmentation set
          split: test
 
 
-The complete list of parameters for the `data` section can be found here:
-
-.. autosummary::
-   :toctree: gen_modules/
-   :template: myclass_template.rst
-
-   config.DataConfig
-
-
 Model Configuration (`model`)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -136,11 +183,4 @@ The `model` keyword is used to define the model settings, including the architec
 
 When defining a specific method, you can set method-specific parameters by creating a configuration class that inherits from `BaseModelConfig`. Examples of configurations for different methods in the library are provided below:
 
-.. autosummary::   
-   :toctree: gen_modules/
-   :template: myclass_template.rst
 
-   joint_embedding.SimCLRConfig
-   joint_embedding.BarlowTwinsConfig
-   joint_embedding.VICRegConfig
-   joint_embedding.WMSEConfig

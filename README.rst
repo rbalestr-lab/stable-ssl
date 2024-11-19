@@ -55,51 +55,14 @@ Or you can also run:
 Minimal Documentation
 ---------------------
 
-.. Implement your own `Trainer`
-.. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. .. _own_trainer:
-
-.. At the very least, you need to implement three methods:
-
-.. - ``initialize_modules``: this method initializes whatever model and parameters to use for training/inference
-.. - ``forward``: that method that will be doing the prediction, e.g., for classification it will be p(y|x)
-.. - ``compute_loss``: that method should return a scalar value used for backpropagation/training.
-
-
-Library Design
-~~~~~~~~~~~~~~
-
-.. _design:
-
-``Stable-SSL`` provides all the boilerplate to quickly get started with AI research, focusing on Self-Supervised Learning (SSL), albeit other applications can certainly build upon Stable-SSL.
-At its core, ``Stable-SSL`` provides a ``BaseModel`` class that sequentially calls the following methods:
-
-.. code-block:: text
-
-   1. INITIALIZATION PHASE:
-     - seed_everything()
-     - initialize_modules()
-     - initialize_optimizer()
-     - initialize_scheduler()
-     - load_checkpoint()
-
-   2. TRAIN/EVAL PHASE:
-     - before_fit_epoch()
-     - for batch in train_loader:
-       - before_fit_step()
-       - fit_step(batch)
-       - after_fit_step()
-     - after_fit_epoch()
-
-While the organization is similar to that of PyTorch Lightning, the goal of Stable-SSL is to significantly reduce codebase complexity without sacrificing performance. Think of PyTorch Lightning as industry-driven (abstracting everything away), whereas Stable-SSL is academia-driven (bringing everything to the forefront for the user).
-
 How to launch runs
 ------------------
 
 .. _launch:
 
-First build a config file with the parameters you want to use. The parameters should be structured in the following groups: data, model, hardware, log, optim.
+First build a config file with the parameters you want to use. The parameters should be structured in the following groups: 
+
+data, model, hardware, log, optim.
 See the :ref:`Configuration File Guide <config_guide>` for more details.
 
 Then, create a Python script that will load the configuration and launch the run. Here is an example:
@@ -128,9 +91,36 @@ To launch the run using the configuration file ``default_config.yaml`` located i
    python3 train.py --config-name default_config --config-path configs/
 
 
+Library Design
+~~~~~~~~~~~~~~
+
+.. _design:
+
+``Stable-SSL`` provides all the boilerplate to quickly get started with AI research, focusing on Self-Supervised Learning (SSL), albeit other applications can certainly build upon Stable-SSL.
+At its core, ``Stable-SSL`` provides a ``BaseModel`` class that sequentially calls the following methods:
+
+.. code-block:: text
+
+   1. INITIALIZATION PHASE:
+     - seed_everything()
+     - initialize_modules()
+     - load_checkpoint()
+
+   2. TRAIN/EVAL PHASE:
+     - before_fit_epoch()
+     - for batch in train_loader:
+       - before_fit_step()
+       - fit_step(batch)
+       - after_fit_step()
+     - after_fit_epoch()
+
+While the organization is similar to that of ``PyTorch Lightning``, the goal of ``Stable-SSL`` is to significantly reduce codebase complexity without sacrificing performance. Think of ``PyTorch Lightning`` as industry-driven (abstracting everything away), whereas ``Stable-SSL`` is academia-driven (bringing everything to the forefront for the user).
+
+
+.. _stable-SSL-dev-url: https://rbalestr-lab.github.io/stable-SSL.github.io/dev/
 
 .. |Documentation| image:: https://img.shields.io/badge/Documentation-blue.svg
-    :target: https://rbalestr-lab.github.io/stable-SSL.github.io/dev/
+    :target: _stable-SSL-dev-url
 .. |Benchmark| image:: https://img.shields.io/badge/Benchmarks-blue.svg
     :target: https://github.com/rbalestr-lab/stable-SSL/tree/main/benchmarks
 .. |CircleCI| image:: https://dl.circleci.com/status-badge/img/gh/rbalestr-lab/stable-SSL/tree/main.svg?style=svg
