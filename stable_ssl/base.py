@@ -305,7 +305,7 @@ class BaseModel(torch.nn.Module):
         optim["grad_max_norm"] = optim.get("grad_max_norm", None)
 
     def forward(self):
-        return self.config.networks["backbone"](self.batch[0])
+        return self.networks["backbone"](self.batch[0])
 
     def predict(self):
         return self.forward()
