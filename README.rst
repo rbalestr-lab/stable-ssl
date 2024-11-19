@@ -64,10 +64,10 @@ When using ``Stable-SSL``, we recommend relying on configuration files to specif
 
 The parameters should be organized into the following groups: 
 
-* ``data``: Specifies the dataset, loading, and augmentation pipelines. Multiple datasets can be defined, but only one dataset is used for training: the one specified by the ``train_on`` parameter.
-* ``networks``: Defines the different neural network modules. All methods require a ``backbone`` network, which is the main component of the model.
-* ``objective``: Specifies the loss function of the model.
-* ``optim``: Gives the optimization parameters, including ``epochs``, ``max_steps`` (per epoch), as well as the optimizer, scheduler, and their respective modules and parameters.
+* ``data``: Defines the dataset, loading, and augmentation pipelines. Only the dataset specified by ``train_on`` is used for training.
+* ``networks``: Specifies the neural network modules, with a required ``backbone`` as the model's core.
+* ``objective``: Defines the model's loss function.
+* ``optim``: Contains optimization parameters, including ``epochs``, ``max_steps`` (per epoch), and optimizer/scheduler settings.
 * ``hardware``
 * ``logger``
 
