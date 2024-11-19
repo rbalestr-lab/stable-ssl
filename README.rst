@@ -62,7 +62,7 @@ How to launch runs
 
 When using ``Stable-SSL``, we recommend relying on configuration files to specify the parameters, typically using ``Hydra`` (see `Hydra documentation <https://hydra.cc/>`_).
 
-Start by building a configuration file with the parameters you want to use. These parameters should be organized into the following groups: 
+The parameters should be organized into the following groups: 
 
 * ``data``: Specifies the dataset, loading, and augmentation pipelines. Multiple datasets can be defined, but only one dataset is used for training: the one specified by the ``train_on`` parameter.
 * ``networks``: Defines the different neural network modules. All methods require a ``backbone`` network, which is the main component of the model.
@@ -71,12 +71,11 @@ Start by building a configuration file with the parameters you want to use. Thes
 * ``hardware``
 * ``logger``
 
+Additionally, the parameter ``eval_only`` specifies whether the model should run in evaluation mode only, without training.
 
-Additionally, there are two parameters: ``eval_only``, which specifies the model's loss function, and ``train_on``, which indicates the dataset used for training.
+For more details about configurations, we refer to the `User Guide <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/user_guide.html>`_ section of the documentation.
 
-For more details on how to structure the configuration file, refer to the `User Guide <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/user_guide.html>`_ section of the documentation.
-
-Then, create a Python script that will load the configuration and launch the run. Here is an example:
+Then, create a Python script that will load the configuration and launch the run. Here is an example with Hydra:
 
 .. code-block:: python
    :name: run.py
@@ -99,12 +98,11 @@ Then, create a Python script that will load the configuration and launch the run
     if __name__ == "__main__":
        main()
 
-
-To launch the run using the configuration file ``default_config.yaml`` located in the ``./configs/`` folder, use the following command:
+In this example, to launch the run using the configuration file ``default_config.yaml`` located in the ``./configs/`` folder, use the following command, where ``run.py`` is the above script: 
 
 .. code-block:: bash
 
-   python3 train.py --config-name default_config --config-path configs/
+   python3 run.py --config-name default_config --config-path configs/
 
 
 Library Design
