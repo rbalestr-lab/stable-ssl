@@ -62,7 +62,7 @@ How to launch runs
 
 When using ``Stable-SSL``, we recommend relying on configuration files to specify the parameters, typically using ``Hydra`` (see `Hydra documentation <https://hydra.cc/>`_).
 
-The parameters should be organized into the following groups: 
+The parameters are organized into the following groups:
 
 * ``data``: Defines the dataset, loading, and augmentation pipelines. Only the dataset specified by ``train_on`` is used for training.
 * ``networks``: Specifies the neural network modules, with a required ``backbone`` as the model's core.
