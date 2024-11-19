@@ -16,7 +16,9 @@ The Self-Supervised Learning Library by Researchers for Researchers
 
 We achieve that by taking the best--and only the best--from the most eponymous AI libraries: PytorchLightning, VISSL, Wandb, Hydra, Submitit.
 
-``stable-SSL`` implements all the basic boilerplate code, including data loader, logging, checkpointing, optimization, etc. You only need to implement 3 methods to get started: your loss, your model, and your prediction (see `example <#own_trainer>`_ below). But if you want to customize more things, simply inherit the base ``BaseModel`` and override any method! This could include different metrics, different data samples, different training loops, etc.
+``stable-SSL`` implements all the basic boilerplate code, including data loading, logging, checkpointing, optimization, etc. It offers users full flexibility to customize each part of the pipeline through a configuration file, enabling easy selection of network architectures, loss functions, evaluation metrics, data augmentations and more.
+These components can be sourced from stable-SSL itself, popular libraries like PyTorch, or custom modules created by the user. This flexibility allows users to quickly get started with their research ideas.
+.. But if you want to customize more things, simply inherit the base ``BaseModel`` and override any method! This could include different metrics, different data samples, different training loops, etc.
 
 
 Why stable-SSL?
@@ -52,6 +54,9 @@ Or you can also run:
    pip install -U git+https://github.com/rbalestr-lab/stable-SSL
 
 
+Minimal Documentation
+---------------------
+
 Implement your own `Trainer`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -81,12 +86,12 @@ Stable-SSL provides all the boilerplate to quickly get started doing AI research
      - load_checkpoint()
 
    2. TRAIN/EVAL PHASE:
-     - before_train_epoch()
+     - before_fit_epoch()
      - for batch in train_loader:
-       - before_train_step()
-       - train_step(batch)
-       - after_train_step()
-     - after_train_epoch()
+       - before_fit_step()
+       - fit_step(batch)
+       - after_fit_step()
+     - after_fit_epoch()
 
 While the organization is related to the one provided by PytorchLightning, the goal here is to greatly reduce the codebase complexity without sacrificing performances. Think of PytorchLightning as industry driven (abstracting everything away) while Stable-SSL is academia driven (bringing everything in front of the user).
 
@@ -96,7 +101,7 @@ How to launch runs
 
 .. _launch:
 
-First build a confif file with the parameters you want to use. The parameters should be structured in the following groups: data, model, hardware, log, optim.
+First build a config file with the parameters you want to use. The parameters should be structured in the following groups: data, model, hardware, log, optim.
 See the :ref:`Configuration File Guide <config_guide>` for more details.
 
 Then, create a Python script that will load the configuration and launch the run. Here is an example:
