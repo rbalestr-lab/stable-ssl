@@ -5,7 +5,8 @@
 
 |Documentation| |Benchmark| |CircleCI| |Pytorch| |Black| |License| |WandB|
 
-.. warning::
+
+.. warning:: ⚠️
    This library is currently in a phase of active development. All features are subject to change without prior notice.
 
 
