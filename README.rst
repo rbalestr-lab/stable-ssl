@@ -55,8 +55,35 @@ Or you can also run:
 Minimal Documentation
 ---------------------
 
+
+Library Design
+~~~~~~~~~~~~~~
+
+.. _design:
+
+``Stable-SSL`` provides all the boilerplate to quickly get started with AI research, focusing on Self-Supervised Learning (SSL), albeit other applications can certainly build upon Stable-SSL.
+At its core, ``Stable-SSL`` provides a ``BaseModel`` class that sequentially calls the following methods:
+
+.. code-block:: text
+
+   1. INITIALIZATION PHASE:
+     - seed_everything()
+     - initialize_modules()
+     - load_checkpoint()
+
+   2. TRAIN/EVAL PHASE:
+     - before_fit_epoch()
+     - for batch in train_loader:
+       - before_fit_step()
+       - fit_step(batch)
+       - after_fit_step()
+     - after_fit_epoch()
+
+While the organization is similar to that of ``PyTorch Lightning``, the goal of ``Stable-SSL`` is to significantly reduce codebase complexity without sacrificing performance. Think of ``PyTorch Lightning`` as industry-driven (abstracting everything away), whereas ``Stable-SSL`` is academia-driven (bringing everything to the forefront for the user).
+
+
 How to launch runs
-------------------
+~~~~~~~~~~~~~~~~~~
 
 .. _launch:
 
@@ -68,8 +95,8 @@ The parameters are organized into the following groups:
 * ``networks``: Specifies the neural network modules, with a required ``backbone`` as the model's core.
 * ``objective``: Defines the model's loss function.
 * ``optim``: Contains optimization parameters, including ``epochs``, ``max_steps`` (per epoch), and optimizer/scheduler settings.
-* ``hardware``
-* ``logger``
+* ``hardware``: Specifies the hardware used, including the number of GPUs, CPUs, etc.
+* ``logger``: Configures model performance monitoring. APIs like `WandB <https://wandb.ai/home>`_ are supported.
 
 Additionally, the parameter ``eval_only`` specifies whether the model should run in evaluation mode only, without training.
 
@@ -104,31 +131,6 @@ In this example, to launch the run using the configuration file ``default_config
 
    python3 run.py --config-name default_config --config-path configs/
 
-
-Library Design
-~~~~~~~~~~~~~~
-
-.. _design:
-
-``Stable-SSL`` provides all the boilerplate to quickly get started with AI research, focusing on Self-Supervised Learning (SSL), albeit other applications can certainly build upon Stable-SSL.
-At its core, ``Stable-SSL`` provides a ``BaseModel`` class that sequentially calls the following methods:
-
-.. code-block:: text
-
-   1. INITIALIZATION PHASE:
-     - seed_everything()
-     - initialize_modules()
-     - load_checkpoint()
-
-   2. TRAIN/EVAL PHASE:
-     - before_fit_epoch()
-     - for batch in train_loader:
-       - before_fit_step()
-       - fit_step(batch)
-       - after_fit_step()
-     - after_fit_epoch()
-
-While the organization is similar to that of ``PyTorch Lightning``, the goal of ``Stable-SSL`` is to significantly reduce codebase complexity without sacrificing performance. Think of ``PyTorch Lightning`` as industry-driven (abstracting everything away), whereas ``Stable-SSL`` is academia-driven (bringing everything to the forefront for the user).
 
 
 .. |Documentation| image:: https://img.shields.io/badge/Documentation-blue.svg
