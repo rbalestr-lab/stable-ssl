@@ -10,6 +10,18 @@
 API and Modules
 ===============
 
+Base Models
+-----------
+
+.. autosummary::
+   :toctree: gen_modules/
+   :template: myclass_template.rst
+
+   BaseModel
+   JointEmbedding
+   SelfDistillation
+   
+
 Losses
 ------
 
@@ -17,7 +29,7 @@ Losses
    :toctree: gen_modules/
    :template: myclass_template.rst
 
-   SimCLR
-   BarlowTwins
-   VICReg
-   WMSE
+   NTXEntLoss
+   BYOLLoss
+   VICRegLoss
+   BarlowTwinsLoss

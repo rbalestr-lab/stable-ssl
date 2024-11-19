@@ -8,5 +8,4 @@
     
     self
     user_guide
-    advanced_usage
     api_modules

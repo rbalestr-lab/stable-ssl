@@ -15,6 +15,7 @@ from .__about__ import (
 
 from .base import BaseModel
 from .joint_embedding import JointEmbedding, SelfDistillation
+from .losses import NTXEntLoss, BYOLLoss, VICRegLoss, BarlowTwinsLoss
 
 __all__ = [
     "__title__",
@@ -26,4 +27,8 @@ __all__ = [
     "BaseModel",
     "JointEmbedding",
     "SelfDistillation",
+    "NTXEntLoss",
+    "BYOLLoss",
+    "VICRegLoss",
+    "BarlowTwinsLoss",
 ]
