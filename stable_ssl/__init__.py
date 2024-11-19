@@ -13,6 +13,9 @@ from .__about__ import (
     __license__,
 )
 
+from .base import BaseModel
+from .joint_embedding import JointEmbedding, SelfDistillation
+
 __all__ = [
     "__title__",
     "__summary__",
@@ -20,4 +23,7 @@ __all__ = [
     "__url__",
     "__author__",
     "__license__",
+    "BaseModel",
+    "JointEmbedding",
+    "SelfDistillation",
 ]
