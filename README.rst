@@ -62,13 +62,14 @@ How to launch runs
 
 When using `Stable-SSL`, we recommend relying on configuration files to specify the parameters, typically using `hydra` (see `Hydra documentation <https://hydra.cc/>`_).
 
-Start by building a configuration file with the parameters you want to use. These parameters should be organized into the following groups: `data`, `networks`, `hardware`, `optim`, and `logger`. Additionally, there are two key parameters: `objective`, which specifies the model's loss function, and `train_on`, which indicates the dataset used for training.
+Start by building a configuration file with the parameters you want to use. These parameters should be organized into the following groups: ``data``, ``networks``, ``hardware``, ``optim``, and ``logger``. Additionally, there are two key parameters: ``objective``, which specifies the model's loss function, and ``train_on``, which indicates the dataset used for training.
 
 For more details on how to structure the configuration file, refer to the `User Guide <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/user_guide.html>`_ section of the documentation.
 
 Then, create a Python script that will load the configuration and launch the run. Here is an example:
 
 .. code-block:: python
+   :name: run.py
 
    import hydra
    from omegaconf import OmegaConf
@@ -83,6 +84,10 @@ Then, create a Python script that will load the configuration and launch the run
        )
        trainer.setup()
        trainer.launch()
+
+
+    if __name__ == "__main__":
+       main()
 
 
 To launch the run using the configuration file ``default_config.yaml`` located in the ``./configs/`` folder, use the following command:
