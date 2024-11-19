@@ -67,7 +67,7 @@ The parameters should be organized into the following groups:
 * ``data``: Specifies the dataset, loading, and augmentation pipelines. Multiple datasets can be defined, but only one dataset is used for training: the one specified by the ``train_on`` parameter.
 * ``networks``: Defines the different neural network modules. All methods require a ``backbone`` network, which is the main component of the model.
 * ``objective``: Specifies the loss function of the model.
-* ``optim``: Specifies the optimization parameters, including ``epochs``, ``max_steps`` (per epoch), as well as the optimizer, scheduler, and their respective modules and parameters.
+* ``optim``: Gives the optimization parameters, including ``epochs``, ``max_steps`` (per epoch), as well as the optimizer, scheduler, and their respective modules and parameters.
 * ``hardware``
 * ``logger``
 
