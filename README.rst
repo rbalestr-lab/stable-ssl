@@ -72,7 +72,8 @@ Library Design
 
 .. _design:
 
-Stable-SSL provides all the boilerplate to quickly get started doing AI research, with a focus on Self Supervised Learning (SSL) albeit other applications can certainly build upon Stable-SSL. In short, we provide a ``BaseModel`` class that calls the following methods (in order):
+``Stable-SSL`` provides all the boilerplate to quickly get started with AI research, focusing on Self-Supervised Learning (SSL), albeit other applications can certainly build upon Stable-SSL.
+At its core, ``Stable-SSL`` provides a ``BaseModel`` class that sequentially calls the following methods:
 
 .. code-block:: text
 
@@ -91,8 +92,7 @@ Stable-SSL provides all the boilerplate to quickly get started doing AI research
        - after_fit_step()
      - after_fit_epoch()
 
-While the organization is related to the one provided by PytorchLightning, the goal here is to greatly reduce the codebase complexity without sacrificing performances. Think of PytorchLightning as industry driven (abstracting everything away) while Stable-SSL is academia driven (bringing everything in front of the user).
-
+While the organization is similar to that of PyTorch Lightning, the goal of Stable-SSL is to significantly reduce codebase complexity without sacrificing performance. Think of PyTorch Lightning as industry-driven (abstracting everything away), whereas Stable-SSL is academia-driven (bringing everything to the forefront for the user).
 
 How to launch runs
 ------------------
