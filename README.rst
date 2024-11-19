@@ -62,7 +62,16 @@ How to launch runs
 
 When using `Stable-SSL`, we recommend relying on configuration files to specify the parameters, typically using `hydra` (see `Hydra documentation <https://hydra.cc/>`_).
 
-Start by building a configuration file with the parameters you want to use. These parameters should be organized into the following groups: ``data``, ``networks``, ``hardware``, ``optim``, and ``logger``. Additionally, there are two key parameters: ``objective``, which specifies the model's loss function, and ``train_on``, which indicates the dataset used for training.
+Start by building a configuration file with the parameters you want to use. These parameters should be organized into the following groups: 
+
+* ``data``
+* ``networks``
+* ``hardware``
+* ``optim``
+* ``logger``
+* ``bjective```
+
+Additionally, there are two parameters: ``eval_only``, which specifies the model's loss function, and ``train_on``, which indicates the dataset used for training.
 
 For more details on how to structure the configuration file, refer to the `User Guide <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/user_guide.html>`_ section of the documentation.
 
