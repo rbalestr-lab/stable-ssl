@@ -60,10 +60,11 @@ How to launch runs
 
 .. _launch:
 
-First build a config file with the parameters you want to use. The parameters should be structured in the following groups: 
+`Stable-SSL` relies on a configuration file to specify the parameters. We recommend using `hydra` (see [Hydra documentation](https://hydra.cc/){:target="_blank"}) to manage the configuration files.
 
-data, model, hardware, log, optim.
-See the :ref:`Configuration File Guide <config_guide>` for more details.
+Start by building a configuration file with the parameters you want to use. These parameters should be organized into the following groups: `data`, `networks`, `hardware`, `optim`, and `logger`. Additionally, there are two key parameters: `objective`, which specifies the model's loss function, and `train_on`, which indicates the dataset used for training.
+
+For more details on how to structure the configuration file, refer to the [User Guide](https://rbalestr-lab.github.io/stable-SSL.github.io/dev/user_guide.html){:target="_blank"} section of the documentation.
 
 Then, create a Python script that will load the configuration and launch the run. Here is an example:
 
