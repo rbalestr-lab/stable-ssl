@@ -23,10 +23,8 @@ class JointEmbedding(BaseModel):
         the config
     """
 
-    def forward(self):
-        return self.networks["backbone_classifier"](
-            self.networks["backbone"](self.batch[0])
-        )
+    def predict(self):
+        return self.networks["backbone_classifier"](self.forward())
 
     def compute_loss(self):
         embeddings = [self.networks["backbone"](view) for view in self.batch[0]]
@@ -51,20 +49,11 @@ class JointEmbedding(BaseModel):
 
         loss_ssl = self.compute_ssl_loss(*projections)
 
-        if self.global_step % self.logger["every_step"] == 0:
-            self.log(
-                {
-                    "train/loss_ssl": loss_ssl.item(),
-                    "train/loss_backbone_classifier": loss_backbone_classifier.item(),
-                    "train/loss_projector_classifier": loss_proj_classifier.item(),
-                },
-                commit=False,
-            )
-
-        return loss_ssl + loss_proj_classifier + loss_backbone_classifier
-
-    def compute_ssl_loss(self, *projections):
-        return self.objective(*projections)
+        return {
+            "train/loss_ssl": loss_ssl.item(),
+            "train/loss_backbone_classifier": loss_backbone_classifier.item(),
+            "train/loss_projector_classifier": loss_proj_classifier.item(),
+        }
 
 
 class SelfDistillation(JointEmbedding):

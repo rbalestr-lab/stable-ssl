@@ -7,7 +7,6 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-from abc import abstractmethod
 import logging
 import time
 import hydra
@@ -95,13 +94,34 @@ class BaseModel(torch.nn.Module):
 
     Parameters
     ----------
-    config : TrainerConfig
-        Parameters for BaseModel organized in groups.
-        For details, see the `TrainerConfig` class in `config.py`.
+    data: dict
+        Data configuration.
+    networks: dict
+        Networks configuration.
+    objective: dict
+        Objective configuration.
+    train_on: str
+        Name of the dataset to train on.
+    hardware: dict
+        Hardware configuration.
+    optim: dict
+        Optimizer configuration.
+    logger: dict
+        Logger configuration.
+    eval_only: bool, optional
+        Whether to only evaluate the model. Default is False.
     """
 
     def __init__(
-        self, data, networks, objective, train_on, hardware, optim, logger, eval_only
+        self,
+        data,
+        networks,
+        objective,
+        train_on,
+        hardware,
+        optim,
+        logger,
+        eval_only=False,
     ):
         super().__init__()
         logging.info(f"=> INIT OF {self.__class__.__name__} STARTED")
@@ -284,15 +304,14 @@ class BaseModel(torch.nn.Module):
         optim["accumulation_steps"] = optim.get("accumulation_steps", 1)
         optim["grad_max_norm"] = optim.get("grad_max_norm", None)
 
-    @abstractmethod
     def forward(self):
-        """Define the forward pass of the model."""
-        pass
+        return self.networks["backbone"](self.batch[0])
 
-    @abstractmethod
+    def predict(self):
+        return self.forward()
+
     def compute_loss(self):
-        """Compute the loss for the current batch."""
-        pass
+        return self.objective(self.predict(), self.batch[1])
 
     def __call__(self):
         self.setup()
@@ -450,7 +469,19 @@ class BaseModel(torch.nn.Module):
     def fit_step(self):
 
         with torch.amp.autocast("cuda", enabled=self.hardware["float16"]):
-            loss = self.compute_loss()
+            returned_loss = self.compute_loss()
+
+        if isinstance(returned_loss, float):
+            loss = returned_loss
+        elif isinstance(returned_loss, list):
+            loss = sum(returned_loss)
+        elif isinstance(loss, dict):
+            loss = sum(returned_loss.values())
+        else:
+            log_and_raise(
+                ValueError,
+                "Returned loss must be a float, a list of floats or a dict of floats.",
+            )
 
         if np.isnan(loss.item()):
             log_and_raise(NanError, "Loss is NaN. Stopping training.")
@@ -478,14 +509,18 @@ class BaseModel(torch.nn.Module):
 
         if self.global_step % self.logger["every_step"] == 0:
             bucket = {}
-            bucket["train/loss"] = loss.item()
+            if isinstance(returned_loss, dict):
+                for name, value in returned_loss.items():
+                    bucket[f"train/{name}"] = value.item()
+            else:
+                bucket["train/loss"] = loss.item()
             bucket["train/lr"] = self.optim["scheduler"].get_last_lr()[0]
             bucket["step"] = self.batch_idx
             bucket["epoch"] = self.epoch
             self.log(bucket, commit=True)
 
     def eval_step(self, name_loader):
-        output = self.forward()
+        output = self.predict()
         if name_loader in self.logger["metrics"]:
             for metric in self.logger["metrics"][name_loader].values():
                 metric.update(output, self.batch[1])
@@ -737,10 +772,6 @@ class BaseModel(torch.nn.Module):
         if not hasattr(self, "_epoch"):
             return None
         return self._epoch
-
-    @property
-    def config(self):
-        return self._config
 
     @property
     def step(self):
