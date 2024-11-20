@@ -9,7 +9,7 @@ from omegaconf import OmegaConf
 OmegaConf.register_new_resolver("eval", eval)
 
 
-@hydra.main(version_base="1.2")
+@hydra.main(version_base="1.2", config_path="config", config_name="global_config")
 def main(cfg):
     """Load the configuration and launch the run."""
     trainer = hydra.utils.instantiate(

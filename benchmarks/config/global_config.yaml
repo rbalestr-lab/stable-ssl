@@ -1,0 +1,39 @@
+defaults:
+  - /data/cifar10@trainer.data
+  - network/default@trainer.networks
+  - optim/default@trainer.optim
+  - metric/multiclass_accuracy@trainer.logger.metrics
+  - method/resnet_je@trainer
+  - _self_
+  - override /hydra/launcher: submitit_slurm
+
+hydra:
+  sweep:
+    dir: ${trainer.logger.base_dir}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}
+  run:
+    dir: ${trainer.logger.base_dir}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  job:
+    chdir: False
+  launcher:
+    gpus_per_node: ${trainer.hardware.world_size}
+    tasks_per_node: ${trainer.hardware.world_size}
+    partition: gpu
+    cpus_per_task: ${trainer.hardware.cpus_per_task}
+    timeout_min: 1000
+    max_num_timeout: 5
+
+trainer:
+  eval_only: False
+  train_on: base
+  hardware:
+    seed: 0
+    float16: true
+    device: "cuda:0"
+    world_size: 1
+    cpus_per_task: 6
+  logger:
+    base_dir: "./"
+    level: 20
+    checkpoint_frequency: 1
+    every_step: 1

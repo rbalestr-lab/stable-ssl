@@ -1,0 +1,18 @@
+base:
+  acc1:
+    _target_: torchmetrics.classification.MulticlassAccuracy
+    num_classes: ${trainer.data._num_classes}
+    top_k: 1
+  acc5:
+    _target_: torchmetrics.classification.MulticlassAccuracy
+    num_classes: ${trainer.data._num_classes}
+    top_k: 5
+test_out:
+  acc1:
+    _target_: torchmetrics.classification.MulticlassAccuracy
+    num_classes: ${trainer.data._num_classes}
+    top_k: 1
+  acc5:
+    _target_: torchmetrics.classification.MulticlassAccuracy
+    num_classes: ${trainer.data._num_classes}
+    top_k: 5

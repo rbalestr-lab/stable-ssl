@@ -1,0 +1,5 @@
+_target_: stable_ssl.JointEmbedding
+objective:
+  _target_: stable_ssl.NTXEntLoss
+  temperature: 0.5
+  

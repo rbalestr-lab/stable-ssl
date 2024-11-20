@@ -1,8 +1,0 @@
-hydra:
-  sweep:
-    dir: ${trainer.logger.base_dir}/${now:%Y-%m-%d}/${now:%H-%M-%S}
-    subdir: ${hydra.job.num}
-  run:
-    dir: ${trainer.logger.base_dir}/${now:%Y-%m-%d}/${now:%H-%M-%S}
-  job:
-    chdir: False

@@ -1,0 +1,13 @@
+epochs: 1000
+max_steps: 1000
+optimizer: 
+  _target_: torch.optim.AdamW
+  _partial_: True
+  lr: 0.01
+  weight_decay: 1e-6
+scheduler:
+  _target_: torch.optim.lr_scheduler.OneCycleLR
+  _partial_: True
+  max_lr: 0.01
+  epochs: ${trainer.optim.epochs}
+  steps_per_epoch: ${eval:'${trainer.data._num_samples} // ${trainer.data.${trainer.train_on}.batch_size}'}

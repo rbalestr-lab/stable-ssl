@@ -1,0 +1,147 @@
+trainer:
+  data:
+    _num_classes: 10
+    _num_samples: 50000
+    base:
+      _target_: torch.utils.data.DataLoader
+      batch_size: 256
+      drop_last: true
+      shuffle: true
+      num_workers: ${trainer.hardware.cpus_per_task}
+      dataset:
+        _target_: torchvision.datasets.CIFAR10
+        root: ~/data
+        train: true
+        download: true
+        transform:
+          _target_: stable_ssl.data.MultiViewSampler
+          transforms:
+          - _target_: torchvision.transforms.v2.Compose
+            transforms:
+            - _target_: torchvision.transforms.v2.RandomResizedCrop
+              size: 32
+              scale:
+              - 0.2
+              - 1.0
+            - _target_: torchvision.transforms.v2.RandomHorizontalFlip
+              p: 0.5
+            - _target_: torchvision.transforms.v2.ColorJitter
+              brightness: 0.4
+              contrast: 0.4
+              saturation: 0.2
+              hue: 0.1
+            - _target_: torchvision.transforms.v2.RandomGrayscale
+              p: 0.2
+            - _target_: torchvision.transforms.v2.ToImage
+            - _target_: torchvision.transforms.v2.ToDtype
+              dtype:
+                _target_: stable_ssl.utils.str_to_dtype
+                _args_:
+                - float32
+              scale: true
+          - ${trainer.data.base.dataset.transform.transforms.0}
+    test_out:
+      _target_: torch.utils.data.DataLoader
+      batch_size: 256
+      num_workers: ${trainer.hardware.cpus_per_task}
+      dataset:
+        _target_: torchvision.datasets.CIFAR10
+        train: false
+        root: ~/data
+        transform:
+          _target_: torchvision.transforms.v2.Compose
+          transforms:
+          - _target_: torchvision.transforms.v2.ToImage
+          - _target_: torchvision.transforms.v2.ToDtype
+            dtype:
+              _target_: stable_ssl.utils.str_to_dtype
+              _args_:
+              - float32
+            scale: true
+  networks:
+    backbone:
+      _target_: stable_ssl.utils.load_backbone
+      name: resnet18
+      dataset: CIFAR10
+    projector:
+      _target_: torch.nn.Sequential
+      _args_:
+      - _target_: torch.nn.Linear
+        in_features: 512
+        out_features: 2048
+        bias: false
+      - _target_: torch.nn.BatchNorm1d
+        num_features: ${trainer.networks.projector._args_.0.out_features}
+      - _target_: torch.nn.ReLU
+      - _target_: torch.nn.Linear
+        in_features: ${trainer.networks.projector._args_.0.out_features}
+        out_features: 128
+        bias: false
+    projector_classifier:
+      _target_: torch.nn.Linear
+      in_features: 128
+      out_features: ${trainer.data._num_classes}
+    backbone_classifier:
+      _target_: torch.nn.Linear
+      in_features: 512
+      out_features: ${trainer.data._num_classes}
+  optim:
+    epochs: 1000
+    max_steps: 1000
+    optimizer:
+      _target_: torch.optim.AdamW
+      _partial_: true
+      lr: 0.01
+      weight_decay: 1.0e-06
+    scheduler:
+      _target_: torch.optim.lr_scheduler.OneCycleLR
+      _partial_: true
+      max_lr: 0.01
+      epochs: 1000
+      steps_per_epoch: 195
+    accumulation_steps: 1
+    grad_max_norm: null
+  logger:
+    metrics:
+      base:
+        acc1:
+          _target_: torchmetrics.classification.MulticlassAccuracy
+          num_classes: 10
+          top_k: 1
+        acc5:
+          _target_: torchmetrics.classification.MulticlassAccuracy
+          num_classes: 10
+          top_k: 5
+      test_out:
+        acc1:
+          _target_: torchmetrics.classification.MulticlassAccuracy
+          num_classes: 10
+          top_k: 1
+        acc5:
+          _target_: torchmetrics.classification.MulticlassAccuracy
+          num_classes: 10
+          top_k: 5
+    base_dir: ./
+    level: 20
+    checkpoint_frequency: 1
+    every_step: 1
+    dump_path: !!python/object/apply:pathlib.PosixPath
+    - /
+    - oscar
+    - home
+    - hvanasse
+    - stable-SSL
+    - benchmarks
+    - '2024-11-20'
+    - 18-08-04
+    - '0'
+    wandb: null
+    save_final_model: final
+    eval_every_epoch: 1
+  _target_: stable_ssl.JointEmbedding
+  objective:
+    _target_: stable_ssl.NTXEntLoss
+    temperature: 0.5
+  eval_only: false
+  train_on: base
+  hardware:
