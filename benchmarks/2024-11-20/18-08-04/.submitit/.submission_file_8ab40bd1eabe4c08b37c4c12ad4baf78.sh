@@ -1,1 +1,0 @@
-/oscar/home/hvanasse/stable-SSL/benchmarks/2024-11-20/18-08-04/.submitit/6503008/6503008_submission.sh
