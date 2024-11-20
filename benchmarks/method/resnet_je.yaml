@@ -1,7 +1,7 @@
 _target_: stable_ssl.JointEmbedding
 eval_only: False
 objective:
-  _target_: stable_ssl.NTXEnt
+  _target_: stable_ssl.NTXEntLoss
   temperature: 0.5
 train_on: base
 networks:

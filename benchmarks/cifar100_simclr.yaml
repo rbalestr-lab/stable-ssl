@@ -1,4 +1,6 @@
 defaults:
-  - cifar10_simclr
+  - hydra_defaults
+  - method/resnet_je@trainer
   - data/cifar100@trainer.data
-  - override hydra/launcher: submitit_slurm
+  - hardware/gpu_partition
+  - _self_
