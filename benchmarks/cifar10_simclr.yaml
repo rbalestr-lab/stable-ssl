@@ -1,29 +1,6 @@
 defaults:
+  - hydra_defaults
   - method/resnet_je@trainer
   - data/cifar10@trainer.data
-  - override hydra/launcher: submitit_slurm
+  - hardware/gpu_partition
   - _self_
-
-hydra:
-  sweep:
-    dir: ${trainer.logger.base_dir}/${now:%Y-%m-%d}/${now:%H-%M-%S}
-    subdir: ${hydra.job.num}
-  run:
-    dir: ${trainer.logger.base_dir}/${now:%Y-%m-%d}/${now:%H-%M-%S}
-  job:
-    chdir: False
-  launcher:
-    tasks_per_node: ${trainer.hardware.world_size}
-    gpus_per_node: ${trainer.hardware.world_size}
-    partition: gpu-he
-    cpus_per_task: 4
-    max_num_timeout: 1
-    timeout_min: 5
-
-trainer:
-  hardware:
-    seed: 0
-    float16: true
-    device: "cuda:0"
-    world_size: 1
-    cpus_per_task: 8

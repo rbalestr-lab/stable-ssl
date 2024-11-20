@@ -471,11 +471,11 @@ class BaseModel(torch.nn.Module):
         with torch.amp.autocast("cuda", enabled=self.hardware["float16"]):
             returned_loss = self.compute_loss()
 
-        if isinstance(returned_loss, float):
+        if isinstance(returned_loss, torch.Tensor) and returned_loss.numel() == 1:
             loss = returned_loss
         elif isinstance(returned_loss, list):
             loss = sum(returned_loss)
-        elif isinstance(loss, dict):
+        elif isinstance(returned_loss, dict):
             loss = sum(returned_loss.values())
         else:
             log_and_raise(

@@ -10,6 +10,7 @@ base:
     _target_: torchvision.datasets.CIFAR10
     root: ~/data
     train: True
+    download: True
     transform:
       _target_: stable_ssl.data.MultiViewSampler
       transforms:
