@@ -10,22 +10,46 @@
 User Guide
 ==========
 
-This guide explains how to construct a configuration file to launch a run with ``stable_ssl``. The configuration file is written in YAML format, and various sections map to different configuration classes corresponding to optimization, hardware, log, data and model settings.
+This guide will walk you through launching runs with ``stable-SSL``. 
 
-First step: define your model
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+To make the process streamlined and efficient, we recommend using configuration files to define parameters and utilizing `Hydra <https://hydra.cc/>`_ to manage these configurations.
+
+**General Idea.** ``stable-SSL`` is designed to minimize boilerplate code, providing a highly flexible framework with minimal hardcoded utilities. Most modules in the pipeline are modular and can instantiate objects from various sources, including ``stable-SSL``, ``PyTorch``, ``torchmetrics``, or even custom objects provided by the user. This allows you to seamlessly integrate your own components into the pipeline while leveraging the capabilities of ``stable-SSL``.
+
+
+First step: define your base ``trainer`` module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In ``stable-SSL``, the main ``trainer`` object must inherit from the ``BaseModel`` class. This class serves as the primary entry point for the training loop and provides all the essential methods required to train and evaluate your model effectively.
 
 .. autosummary::
    :toctree: gen_modules/
    :template: myclass_template.rst
 
    BaseModel
+
+
+More specifically, if you want to train a self-supervised learning model, you can inherit from the following classes, depending on the type of model you are interested in:
+
+
+.. autosummary::
+   :toctree: gen_modules/
+   :template: myclass_template.rst
+
    JointEmbedding
    SelfDistillation
 
+Here is what this instantiation looks like in the YAML configuration file:
 
-The objective
-~~~~~~~~~~~~~
+.. code-block:: yaml
+
+   _target_: stable_ssl.JointEmbedding
+
+
+The objective to minimize (``objective``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``objective`` keyword is used to define the loss function for your model. ``stable-SSL`` offers a variety of loss functions to suit different training needs. Below is a list of the available loss functions:
 
 .. autosummary::
    :toctree: gen_modules/
@@ -36,33 +60,43 @@ The objective
    VICRegLoss
    BarlowTwinsLoss
 
+Here's an example of how to define the `objective` section in your YAML file:
 
-Optimization Configuration (`optim`)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. code-block:: yaml
 
-The `optim` keyword is used to define the optimization settings for your model. Here's an example of how to define the `optim` section in your YAML file:
+   objective:
+      _target_: stable_ssl.NTXEntLoss
+      temperature: 0.5
+
+
+Optimization Configuration (``optim``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``optim`` keyword is used to define the optimization settings for your model. It allows users to specify both the ``optimizer`` object and the ``scheduler``. Below is an example configuration:
+
 
 .. code-block:: yaml
 
    optim:
-      lr: 0.001
-      batch_size: 256
-      epochs: 500
+      epochs: 1000
+      max_steps: 1000
+      optimizer: 
+         _target_: torch.optim.AdamW
+         _partial_: True
+         lr: 0.01
+         weight_decay: 1e-6
+      scheduler:
+         _target_: torch.optim.lr_scheduler.OneCycleLR
+         _partial_: True
+         max_lr: 0.01
+         epochs: ${trainer.optim.epochs}
+         steps_per_epoch: ${eval:'${trainer.data._num_samples} // ${trainer.data.${trainer.train_on}.batch_size}'}
 
 
-The complete list of parameters for the `optim` section, including their descriptions and default values, is provided below:
+Hardware (``hardware``)
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autosummary::
-   :toctree: gen_modules/
-   :template: myclass_template.rst
-
-   config.OptimConfig
-
-
-Hardware
-~~~~~~~~
-
-Use the `hardware` keyword to configure hardware-related settings such as device, world_size (number of GPUs) or CPUs per task. The complete list of parameters for the `hardware` section is available below:
+Use the `hardware` keyword to configure hardware-related settings such as device, world_size (number of GPUs) or CPUs per task. An example is available below:
 
 .. code-block:: yaml
 
@@ -74,86 +108,138 @@ Use the `hardware` keyword to configure hardware-related settings such as device
       cpus_per_task: 8
 
 
-Log Configuration (`log`)
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Data Configuration (``data``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The `log` keyword configures the logging settings for your run. The complete list of parameters for the `log` section is provided here:
-
-.. autosummary::
-   :toctree: gen_modules/
-   :template: myclass_template.rst
-
-   config.LogConfig
-
-
-Data Configuration (`data`)   
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The `data` keyword defines data loading, preprocessing and data augmentation settings. Here is an example of how to define the `data` section in your YAML file:
+The ``data`` keyword defines data loading, preprocessing and data augmentation settings. Here is an example of how to define the ``data`` section in your YAML file:
 
 .. code-block:: yaml
 
-   _num_classes: 10
-   _num_samples: 50000
-   base:
-   _target_: torch.utils.data.DataLoader
-   batch_size: 256
-   drop_last: True
-   shuffle: True
-   num_workers: ${trainer.hardware.cpus_per_task}
-   dataset:
-      _target_: torchvision.datasets.CIFAR10
-      root: ~/data
-      train: True
-      transform:
-         _target_: stable_ssl.data.MultiViewSampler
-         transforms:
-         - _target_: torchvision.transforms.v2.Compose
+   train_on: base
+   data:
+      _num_classes: 10
+      _num_samples: 50000
+      base:
+      _target_: torch.utils.data.DataLoader
+      batch_size: 256
+      drop_last: True
+      shuffle: True
+      num_workers: ${trainer.hardware.cpus_per_task}
+      dataset:
+         _target_: torchvision.datasets.CIFAR10
+         root: ~/data
+         train: True
+         transform:
+            _target_: stable_ssl.data.MultiViewSampler
             transforms:
-               - _target_: torchvision.transforms.v2.RandomResizedCrop
-               size: 32
-               scale:
-                  - 0.2
-                  - 1.0
-               - _target_: torchvision.transforms.v2.RandomHorizontalFlip
-               p: 0.5
-               - _target_: torchvision.transforms.v2.ToImage
-               - _target_: torchvision.transforms.v2.ToDtype
+            - _target_: torchvision.transforms.v2.Compose
+               transforms:
+                  - _target_: torchvision.transforms.v2.RandomResizedCrop
+                  size: 32
+                  scale:
+                     - 0.2
+                     - 1.0
+                  - _target_: torchvision.transforms.v2.RandomHorizontalFlip
+                  p: 0.5
+                  - _target_: torchvision.transforms.v2.ToImage
+                  - _target_: torchvision.transforms.v2.ToDtype
+                  dtype: 
+                     _target_: stable_ssl.utils.str_to_dtype
+                     _args_: [float32]
+                  scale: True
+            - ${trainer.data.base.dataset.transform.transforms.0}
+      test_out:
+      _target_: torch.utils.data.DataLoader
+      batch_size: 256
+      num_workers: ${trainer.hardware.cpus_per_task}
+      dataset:
+         _target_: torchvision.datasets.CIFAR10
+         train: False
+         root: ~/data
+         transform:
+            _target_: torchvision.transforms.v2.Compose
+            transforms:
+            - _target_: torchvision.transforms.v2.ToImage
+            - _target_: torchvision.transforms.v2.ToDtype
                dtype: 
                   _target_: stable_ssl.utils.str_to_dtype
                   _args_: [float32]
                scale: True
-         - ${trainer.data.base.dataset.transform.transforms.0}
-   test_out:
-   _target_: torch.utils.data.DataLoader
-   batch_size: 256
-   num_workers: ${trainer.hardware.cpus_per_task}
-   dataset:
-      _target_: torchvision.datasets.CIFAR10
-      train: False
-      root: ~/data
-      transform:
-         _target_: torchvision.transforms.v2.Compose
-         transforms:
-         - _target_: torchvision.transforms.v2.ToImage
-         - _target_: torchvision.transforms.v2.ToDtype
-            dtype: 
-               _target_: stable_ssl.utils.str_to_dtype
-               _args_: [float32]
-            scale: True
+
+.. note::
+
+   The ``train_on`` parameter specifies the dataset to train on. The ``data`` section can contain multiple datasets, each with its own configuration, but only one is used for training. The others can be used for evaluation.
 
 
-Model Configuration (`model`)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Log Configuration (``logger``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The `model` keyword is used to define the model settings, including the architecture of the backbone, objectives, and more. Below is a list of parameters shared across all models:
+The ``logger`` keyword is used to configure the logging settings for your run. 
 
-.. autosummary::
-   :toctree: gen_modules/
-   :template: myclass_template.rst
-
-   config.BaseModelConfig
-
-When defining a specific method, you can set method-specific parameters by creating a configuration class that inherits from `BaseModelConfig`. Examples of configurations for different methods in the library are provided below:
+One important section is ``metrics``, which lets you define the evaluation metrics to track during training. Metrics can be specified for each dataset, as shown below:
 
 
+.. code-block:: yaml
+
+   logger:
+      base_dir: "./"
+      level: 20
+      checkpoint_frequency: 1
+      every_step: 1
+      metrics:
+         base:
+            acc1:
+            _target_: torchmetrics.classification.MulticlassAccuracy
+            num_classes: ${trainer.data._num_classes}
+            top_k: 1
+            acc5:
+            _target_: torchmetrics.classification.MulticlassAccuracy
+            num_classes: ${trainer.data._num_classes}
+            top_k: 5
+         test_out:
+            acc1:
+            _target_: torchmetrics.classification.MulticlassAccuracy
+            num_classes: ${trainer.data._num_classes}
+            top_k: 1
+            acc5:
+            _target_: torchmetrics.classification.MulticlassAccuracy
+            num_classes: ${trainer.data._num_classes}
+            top_k: 5
+
+
+Networks Configuration (``networks``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``networks`` keyword is used to define the neural networks settings, including the architecture of the backbone, projectors etc. Below is an example:
+
+.. code-block:: yaml
+
+   networks:
+      backbone:
+         _target_: stable_ssl.utils.load_backbone
+         name: resnet18
+         dataset: "CIFAR10"
+      projector:
+         _target_: torch.nn.Sequential
+         _args_:
+            - _target_: torch.nn.Linear
+            in_features: 512
+            out_features: 2048
+            bias: False
+            - _target_: torch.nn.BatchNorm1d
+            num_features: ${trainer.networks.projector._args_.0.out_features}
+            - _target_: torch.nn.ReLU
+            - _target_: torch.nn.Linear
+            in_features: ${trainer.networks.projector._args_.0.out_features}
+            out_features: 128
+            bias: False
+      projector_classifier:
+         _target_: torch.nn.Linear
+         in_features: 128
+         out_features: ${trainer.data._num_classes}
+      backbone_classifier:
+         _target_: torch.nn.Linear
+         in_features: 512
+         out_features: ${trainer.data._num_classes}
+
+The various components defined above can be accessed through the dictionary ``self.networks`` in your trainer class. This allows you to define the forward pass, compute losses, and specify evaluation metrics efficiently.
