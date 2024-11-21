@@ -1,9 +1,8 @@
 defaults:
-  - /data/cifar10@trainer.data
-  - network/default@trainer.networks
+  - data/cifar10@trainer.data
   - optim/default@trainer.optim
   - metric/multiclass_accuracy@trainer.logger.metrics
-  - method/resnet_je@trainer
+  - method/simclr@trainer
   - _self_
   - override /hydra/launcher: submitit_slurm
 
