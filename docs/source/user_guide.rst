@@ -10,7 +10,7 @@
 User Guide
 ==========
 
-This guide will walk you through launching runs with ``stable-SSL``. 
+This guide provides instructions for launching runs with ``stable-SSL``.
 
 To make the process streamlined and efficient, we recommend using configuration files to define parameters and utilizing `Hydra <https://hydra.cc/>`_ to manage these configurations.
 
