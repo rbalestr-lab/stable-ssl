@@ -9,6 +9,7 @@ networks:
     _target_: stable_ssl.utils.load_backbone
     name: resnet18
     dataset: "CIFAR10"
+    num_classes: None
   projector:
     _target_: torch.nn.Sequential
     _args_:
