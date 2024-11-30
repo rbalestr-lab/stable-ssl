@@ -61,8 +61,8 @@ Library Design
 
 .. _design:
 
-``Stable-SSL`` provides all the boilerplate to quickly get started with AI research, focusing on Self-Supervised Learning (SSL), albeit other applications can certainly build upon Stable-SSL.
-At its core, ``Stable-SSL`` provides a ``BaseModel`` class that sequentially calls the following methods:
+``stable-SSL`` provides all the boilerplate to quickly get started with AI research, focusing on Self-Supervised Learning (SSL), albeit other applications can certainly build upon ``stable-SSL``.
+At its core, ``stable-SSL`` provides a ``BaseModel`` class that sequentially calls the following methods:
 
 .. code-block:: text
 
@@ -79,7 +79,7 @@ At its core, ``Stable-SSL`` provides a ``BaseModel`` class that sequentially cal
        - after_fit_step()
      - after_fit_epoch()
 
-While the organization is similar to that of ``PyTorch Lightning``, the goal of ``Stable-SSL`` is to significantly reduce codebase complexity without sacrificing performance. Think of ``PyTorch Lightning`` as industry-driven (abstracting everything away), whereas ``Stable-SSL`` is academia-driven (bringing everything to the forefront for the user).
+While the organization is similar to that of ``PyTorch Lightning``, the goal of ``stable-SSL`` is to significantly reduce codebase complexity without sacrificing performance. Think of ``PyTorch Lightning`` as industry-driven (abstracting everything away), whereas ``stable-SSL`` is academia-driven (bringing everything to the forefront for the user).
 
 
 How to launch runs
@@ -87,14 +87,14 @@ How to launch runs
 
 .. _launch:
 
-When using ``Stable-SSL``, we recommend relying on configuration files to specify the parameters, typically using ``Hydra`` (see `Hydra documentation <https://hydra.cc/>`_).
+When using ``stable-SSL``, we recommend relying on configuration files to specify the parameters, typically using ``Hydra`` (see `Hydra documentation <https://hydra.cc/>`_).
 
 The parameters are organized into the following groups:
 
 * ``data``: Defines the dataset, loading, and augmentation pipelines. Only the dataset specified by ``train_on`` is used for training.
 * ``networks``: Specifies the neural network modules, with a required ``backbone`` as the model's core.
 * ``objective``: Defines the model's loss function.
-* ``optim``: Contains optimization parameters, including ``epochs``, ``max_steps`` (per epoch), and optimizer/scheduler settings.
+* ``optim``: Contains optimization parameters, including ``epochs``, ``max_steps`` (per epoch), and ``optimizer`` / ``scheduler`` settings.
 * ``hardware``: Specifies the hardware used, including the number of GPUs, CPUs, etc.
 * ``logger``: Configures model performance monitoring. APIs like `WandB <https://wandb.ai/home>`_ are supported.
 

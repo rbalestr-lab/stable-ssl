@@ -297,7 +297,8 @@ class BaseModel(torch.nn.Module):
         logger["save_final_model"] = logger.get("save_final_model", "final")
         logger["eval_every_epoch"] = logger.get("eval_every_epoch", 1)
         logger["every_step"] = logger.get("every_step", 1)
-        logger["checkpoint_frequency"] = logger.get("checkpoint_frequency", 1)
+        logger["checkpoint_frequency"] = logger.get("checkpoint_frequency", 10)
+        logger["checkpoint_model_only"] = logger.get("checkpoint_model_only", True)
 
     @staticmethod
     def set_optim_defaults(optim):
@@ -360,7 +361,10 @@ class BaseModel(torch.nn.Module):
             self.epoch = self.epoch + 1
 
             if self.epoch % self.logger["checkpoint_frequency"] == 0:
-                self.save_checkpoint("tmp_checkpoint.ckpt", model_only=False)
+                self.save_checkpoint(
+                    f"checkpoint_{self.epoch}.ckpt",
+                    model_only=self.logger["checkpoint_model_only"],
+                )
 
         # At the end of training, we (optionally) save the final model.
         if self.logger["save_final_model"]:

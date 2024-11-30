@@ -1,6 +1,6 @@
 defaults:
   - hydra_defaults
-  - method/resnet_je@trainer
+  - method/simclr@trainer
   - data/cifar10@trainer.data
   - hardware/gpu_partition
   - _self_
