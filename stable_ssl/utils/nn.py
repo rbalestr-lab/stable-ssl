@@ -13,7 +13,7 @@ import torch.nn as nn
 
 def get_backbone_dim(
     name,
-    n_classes=None,
+    num_classes,
 ):
     """Load a neural network model with a given backbone.
 
@@ -21,7 +21,7 @@ def get_backbone_dim(
     ----------
     name : str
         Name of the backbone model.
-    n_classes : int
+    num_classes : int
         Number of classes in the dataset.
         If None, the model is loaded without the classifier.
         Default is None.
@@ -43,42 +43,42 @@ def get_backbone_dim(
             raise ValueError(f"Unknown model: {name}.")
 
     # Adapt the last layer, either linear or identity.
-    def last_layer(n_classes, in_features):
-        if n_classes is not None:
-            return nn.Linear(in_features, n_classes)
+    def last_layer(num_classes, in_features):
+        if num_classes is not None:
+            return nn.Linear(in_features, num_classes)
         else:
             return nn.Identity()
 
     # For models like ResNet.
     if hasattr(model, "fc"):
         in_features = model.fc.in_features
-        model.fc = last_layer(n_classes, in_features)
+        model.fc = last_layer(num_classes, in_features)
     # For models like VGG or AlexNet.
     elif hasattr(model, "classifier"):
         in_features = model.classifier[-1].in_features
-        model.classifier[-1] = last_layer(n_classes, in_features)
+        model.classifier[-1] = last_layer(num_classes, in_features)
     # For models like ViT.
     elif hasattr(model, "heads"):
         in_features = model.heads.head.in_features
-        model.heads.head = last_layer(n_classes, in_features)
+        model.heads.head = last_layer(num_classes, in_features)
     # For models like Swin Transformer.
     elif hasattr(model, "head"):
         in_features = model.head.in_features
-        model.head = last_layer(n_classes, in_features)
+        model.head = last_layer(num_classes, in_features)
     else:
         raise ValueError(f"Unknown model structure for : '{name}'.")
 
     return in_features
 
 
-def load_backbone(name, n_classes=None, weights=None, dataset="imagenet", **kwargs):
+def load_backbone(name, num_classes, weights=None, dataset="imagenet", **kwargs):
     """Load a neural network model with a given backbone.
 
     Parameters
     ----------
     name : str
         Name of the backbone model.
-    n_classes : int
+    num_classes : int
         Number of classes in the dataset.
         If None, the model is loaded without the classifier.
         Default is None.
@@ -108,28 +108,28 @@ def load_backbone(name, n_classes=None, weights=None, dataset="imagenet", **kwar
             raise ValueError(f"Unknown model: {name}.")
 
     # Adapt the last layer, either linear or identity.
-    def last_layer(n_classes, in_features):
-        if n_classes is not None:
-            return nn.Linear(in_features, n_classes)
+    def last_layer(num_classes, in_features):
+        if num_classes is not None:
+            return nn.Linear(in_features, num_classes)
         else:
             return nn.Identity()
 
     # For models like ResNet.
     if hasattr(model, "fc"):
         in_features = model.fc.in_features
-        model.fc = last_layer(n_classes, in_features)
+        model.fc = last_layer(num_classes, in_features)
     # For models like VGG or AlexNet.
     elif hasattr(model, "classifier"):
         in_features = model.classifier[-1].in_features
-        model.classifier[-1] = last_layer(n_classes, in_features)
+        model.classifier[-1] = last_layer(num_classes, in_features)
     # For models like ViT.
     elif hasattr(model, "heads"):
         in_features = model.heads.head.in_features
-        model.heads.head = last_layer(n_classes, in_features)
+        model.heads.head = last_layer(num_classes, in_features)
     # For models like Swin Transformer.
     elif hasattr(model, "head"):
         in_features = model.head.in_features
-        model.head = last_layer(n_classes, in_features)
+        model.head = last_layer(num_classes, in_features)
     else:
         raise ValueError(f"Unknown model structure for : '{name}'.")
 
