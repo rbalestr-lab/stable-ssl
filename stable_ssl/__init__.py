@@ -13,8 +13,7 @@ from .__about__ import (
     __license__,
 )
 
-from .base import BaseModel
-from .joint_embedding import JointEmbedding, SelfDistillation
+from .base import BaseModel, JointEmbedding, SelfDistillation
 from .losses import NTXEntLoss, BYOLLoss, VICRegLoss, BarlowTwinsLoss
 
 __all__ = [
