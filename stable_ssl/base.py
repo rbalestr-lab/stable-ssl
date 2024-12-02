@@ -25,6 +25,7 @@ import torch.nn.functional as F
 
 from .data import DistributedSamplerWrapper
 from . import reader
+from .utils import deactivate_requires_grad, update_momentum
 
 try:
     import wandb
