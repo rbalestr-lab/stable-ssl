@@ -71,7 +71,7 @@ def get_backbone_dim(
     return in_features
 
 
-def load_backbone(name, num_classes, weights=None, dataset="imagenet", **kwargs):
+def load_backbone(name, num_classes=None, weights=None, low_resolution=False, **kwargs):
     """Load a neural network model with a given backbone.
 
     Parameters
@@ -84,8 +84,9 @@ def load_backbone(name, num_classes, weights=None, dataset="imagenet", **kwargs)
         Default is None.
     weights : bool, optional
         Whether to load a weights model, by default False.
-    dataset : str, optional
-        Name of the dataset, by default "CIFAR10".
+    low_resolution : bool, optional
+        Whether to adapt the resolution of the model (for CIFAR typically).
+        By default False.
     **kwargs: dict
         Additional keyword arguments for the model.
 
@@ -133,9 +134,7 @@ def load_backbone(name, num_classes, weights=None, dataset="imagenet", **kwargs)
     else:
         raise ValueError(f"Unknown model structure for : '{name}'.")
 
-    # TODO: enhance flexibility, this is too hardcoded.
-    # Adapt the resolution of the model if using CIFAR with resnet.
-    if "CIFAR" in dataset and "resnet" in name and name != "resnet9":
+    if low_resolution and "resnet" in name and name != "resnet9":
         model.conv1 = nn.Conv2d(
             3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False
         )

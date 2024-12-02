@@ -1,5 +1,4 @@
 _num_classes: 10
-_num_samples: 50000
 base:
   _target_: torch.utils.data.DataLoader
   batch_size: 256

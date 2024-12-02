@@ -15,33 +15,27 @@ from stable_ssl.base import BaseModel
 
 
 class JointEmbedding(BaseModel):
-    """Joint embedding version of Base Model.
-
-    Parameters
-    ----------
-    cfg: dict
-        the config
-    """
+    r"""Base class for training a joint-embedding SSL model."""
 
     def predict(self):
-        return self.networks["backbone_classifier"](self.forward())
+        return self.network["backbone_classifier"](self.forward())
 
     def compute_loss(self):
-        embeddings = [self.networks["backbone"](view) for view in self.batch[0]]
+        embeddings = [self.network["backbone"](view) for view in self.batch[0]]
         loss_backbone_classifier = sum(
             [
                 F.cross_entropy(
-                    self.networks["backbone_classifier"](embed.detach()), self.batch[1]
+                    self.network["backbone_classifier"](embed.detach()), self.batch[1]
                 )
                 for embed in embeddings
             ]
         )
 
-        projections = [self.networks["projector"](embed) for embed in embeddings]
+        projections = [self.network["projector"](embed) for embed in embeddings]
         loss_proj_classifier = sum(
             [
                 F.cross_entropy(
-                    self.networks["projector_classifier"](proj.detach()), self.batch[1]
+                    self.network["projector_classifier"](proj.detach()), self.batch[1]
                 )
                 for proj in projections
             ]
@@ -57,22 +51,15 @@ class JointEmbedding(BaseModel):
 
 
 class SelfDistillation(JointEmbedding):
-    r"""Base class for training a self-distillation SSL model.
-
-    Parameters
-    ----------
-    config : GlobalConfig
-        Parameters organized in groups.
-        For details, see the `GlobalConfig` class in `config.py`.
-    """
+    r"""Base class for training a self-distillation SSL model."""
 
     def initialize_modules(self):
         super().initialize_modules()
-        self.networks["backbone_target"] = copy.deepcopy(self.networks["backbone"])
-        self.networks["projector_target"] = copy.deepcopy(self.networks["projector"])
+        self.network["backbone_target"] = copy.deepcopy(self.network["backbone"])
+        self.network["projector_target"] = copy.deepcopy(self.network["projector"])
 
-        deactivate_requires_grad(self.networks["backbone_target"])
-        deactivate_requires_grad(self.networks["projector_target"])
+        deactivate_requires_grad(self.network["backbone_target"])
+        deactivate_requires_grad(self.network["projector_target"])
 
     def before_fit_step(self):
         """Update the target parameters as EMA of the online model parameters."""

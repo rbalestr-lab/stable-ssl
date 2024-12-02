@@ -1,0 +1,173 @@
+defaults:
+  - override /hydra/launcher: submitit_slurm
+  - _self_
+
+hydra:
+  sweep:
+    dir: ${trainer.logger.base_dir}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}
+  run:
+    dir: ${trainer.logger.base_dir}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  job:
+    chdir: False
+  launcher:
+    gpus_per_node: ${trainer.hardware.world_size}
+    tasks_per_node: ${trainer.hardware.world_size}
+    partition: gpu
+    cpus_per_task: ${trainer.hardware.cpus_per_task}
+    timeout_min: 1000
+    max_num_timeout: 5
+
+trainer:
+  # ===== Base Model =====
+  _target_: stable_ssl.JointEmbedding
+  eval_only: False
+
+  # ===== Objective Parameters =====
+  objective:
+    _target_: stable_ssl.NTXEntLoss
+    temperature: 0.5
+
+  # ===== Data Parameters =====
+  train_on: base
+  data:
+    _num_classes: 10
+    _num_samples: 50000
+    base: # training dataset as indicated by train_on
+      _target_: torch.utils.data.DataLoader
+      batch_size: 256
+      drop_last: True
+      shuffle: True
+      num_workers: ${trainer.hardware.cpus_per_task}
+      dataset:
+        _target_: torchvision.datasets.CIFAR10
+        root: ~/data
+        train: True
+        download: True
+        transform:
+          _target_: stable_ssl.data.MultiViewSampler
+          transforms:
+            - _target_: torchvision.transforms.v2.Compose
+              transforms:
+                - _target_: torchvision.transforms.v2.RandomResizedCrop
+                  size: 32
+                  scale:
+                    - 0.2
+                    - 1.0
+                - _target_: torchvision.transforms.v2.RandomHorizontalFlip
+                  p: 0.5
+                - _target_: torchvision.transforms.v2.RandomApply
+                  p: 0.8
+                  transforms:
+                    - { 
+                        _target_: torchvision.transforms.v2.ColorJitter,
+                        brightness: 0.8,
+                        contrast: 0.8,
+                        saturation: 0.8,
+                        hue: 0.2 
+                      }
+                - _target_: stable_ssl.data.augmentations.GaussianBlur
+                  sigma:
+                    - 0.1
+                    - 2.0
+                - _target_: torchvision.transforms.v2.ToImage
+                - _target_: torchvision.transforms.v2.ToDtype
+                  dtype: 
+                    _target_: stable_ssl.utils.str_to_dtype
+                    _args_: [float32]
+                  scale: True
+            - ${trainer.data.base.dataset.transform.transforms.0}
+    test: # can be any name
+      _target_: torch.utils.data.DataLoader
+      batch_size: 256
+      num_workers: ${trainer.hardware.cpus_per_task}
+      dataset:
+        _target_: torchvision.datasets.CIFAR10
+        train: False
+        root: ~/data
+        transform:
+          _target_: torchvision.transforms.v2.Compose
+          transforms:
+            - _target_: torchvision.transforms.v2.ToImage
+            - _target_: torchvision.transforms.v2.ToDtype
+              dtype: 
+                _target_: stable_ssl.utils.str_to_dtype
+                _args_: [float32]
+              scale: True
+
+  # ===== Network Parameters =====
+  network:
+    backbone:
+      _target_: stable_ssl.utils.load_backbone
+      name: resnet18
+      low_resolution: True
+    projector:
+      _target_: torch.nn.Sequential
+      _args_:
+        - _target_: torch.nn.Linear
+          in_features: 512
+          out_features: 2048
+          bias: False
+        - _target_: torch.nn.BatchNorm1d
+          num_features: ${trainer.network.projector._args_.0.out_features}
+        - _target_: torch.nn.ReLU
+        - _target_: torch.nn.Linear
+          in_features: ${trainer.network.projector._args_.0.out_features}
+          out_features: 128
+          bias: False
+    projector_classifier:
+      _target_: torch.nn.Linear
+      in_features: 128
+      out_features: ${trainer.data._num_classes}
+    backbone_classifier:
+      _target_: torch.nn.Linear
+      in_features: 512
+      out_features: ${trainer.data._num_classes}
+
+  # ===== Optim Parameters =====
+  optim:
+    epochs: 1000
+    max_steps: 1000
+    optimizer: 
+      _target_: stable_ssl.utils.LARS
+      _partial_: True
+      lr: 5
+      weight_decay: 1e-6
+    scheduler:
+      _target_: stable_ssl.utils.scheduler.LinearWarmupCosineAnnealing
+      _partial_: True
+      total_steps: ${eval:'${trainer.optim.epochs} * ${trainer.data._num_samples} // ${trainer.data.${trainer.train_on}.batch_size}'}
+
+  # ===== Hardware Parameters =====
+  hardware:
+    seed: 0
+    float16: true
+    device: "cuda:0"
+    world_size: 1
+    cpus_per_task: 6
+
+  # ===== Logging Parameters =====
+  logger:
+    base_dir: "multirun"
+    level: 20
+    checkpoint_frequency: 1
+    every_step: 1
+    metrics:
+      base:
+        acc1:
+          _target_: torchmetrics.classification.MulticlassAccuracy
+          num_classes: ${trainer.data._num_classes}
+          top_k: 1
+        acc5:
+          _target_: torchmetrics.classification.MulticlassAccuracy
+          num_classes: ${trainer.data._num_classes}
+          top_k: 5
+      test_out:
+        acc1:
+          _target_: torchmetrics.classification.MulticlassAccuracy
+          num_classes: ${trainer.data._num_classes}
+          top_k: 1
+        acc5:
+          _target_: torchmetrics.classification.MulticlassAccuracy
+          num_classes: ${trainer.data._num_classes}
+          top_k: 5

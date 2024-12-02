@@ -19,7 +19,6 @@ from .utils import (
     log_and_raise,
     str_to_dtype,
 )
-from .schedulers import LinearWarmupCosineAnnealing
 from .optim import LARS
 from .exceptions import BreakEpoch, BreakStep, NanError, BreakAllEpochs
 from .nn import load_backbone, MLP
@@ -30,7 +29,6 @@ __all__ = [
     "GatherLayer",
     "gather",
     "seed_everything",
-    "LinearWarmupCosineAnnealing",
     "LARS",
     "BreakEpoch",
     "BreakStep",

@@ -96,8 +96,8 @@ class BaseModel(torch.nn.Module):
     ----------
     data: dict
         Data configuration.
-    networks: dict
-        Networks configuration.
+    network: dict
+        Network configuration.
     objective: dict
         Objective configuration.
     train_on: str
@@ -115,7 +115,7 @@ class BaseModel(torch.nn.Module):
     def __init__(
         self,
         data,
-        networks,
+        network,
         objective,
         train_on,
         hardware,
@@ -126,7 +126,7 @@ class BaseModel(torch.nn.Module):
         super().__init__()
         logging.info(f"=> INIT OF {self.__class__.__name__} STARTED")
         self._data = data
-        self._networks = networks
+        self._network = network
         self._objective = objective
         self._train_on = train_on
         self._hardware = hardware
@@ -154,7 +154,7 @@ class BaseModel(torch.nn.Module):
         self.start_time = time.time()
         # we skip optim as we may not need it (see below)
         self.data = hydra.utils.instantiate(self._data, _convert_="object")
-        self.networks = hydra.utils.instantiate(self._networks, _convert_="object")
+        self.network = hydra.utils.instantiate(self._network, _convert_="object")
         self.objective = hydra.utils.instantiate(self._objective, _convert_="object")
         self.hardware = hydra.utils.instantiate(self._hardware, _convert_="object")
         self.logger = hydra.utils.instantiate(self._logger, _convert_="object")
@@ -241,7 +241,7 @@ class BaseModel(torch.nn.Module):
 
         # Modules and scaler
         logging.info("Modules:")
-        for name, module in self.networks.items():
+        for name, module in self.network.items():
             # if self.config.model.memory_format == "channels_last":
             #     module.to(memory_format=torch.channels_last)
             if self.world_size > 1:
@@ -254,12 +254,12 @@ class BaseModel(torch.nn.Module):
                 module = torch.nn.parallel.DistributedDataParallel(
                     module, device_ids=[self._device]
                 )
-            self.networks[name] = module
+            self.network[name] = module
             trainable = sum(
                 param.numel() for param in module.parameters() if param.requires_grad
             )
             logging.info(f"\t- {name} with {trainable} trainable parameters.")
-        self.networks = torch.nn.ModuleDict(self.networks)
+        self.network = torch.nn.ModuleDict(self.network)
         self.scaler = torch.amp.GradScaler("cuda", enabled=self.hardware["float16"])
 
         self.register_buffer("global_step", torch.zeros((1,), dtype=int))
@@ -306,7 +306,7 @@ class BaseModel(torch.nn.Module):
         optim["grad_max_norm"] = optim.get("grad_max_norm", None)
 
     def forward(self):
-        return self.networks["backbone"](self.batch[0])
+        return self.network["backbone"](self.batch[0])
 
     def predict(self):
         return self.forward()
@@ -572,7 +572,7 @@ class BaseModel(torch.nn.Module):
         else:
             self._device = hardware["device"]
 
-        # cleanup the device
+        # Cleanup the device.
         logging.info("Device status at start of process:")
         get_gpu_info()
 
@@ -588,7 +588,7 @@ class BaseModel(torch.nn.Module):
         self.save_checkpoint("tmp_checkpoint.ckpt", model_only=False)
         model = type(self)(
             self._data,
-            self._networks,
+            self._network,
             self._objective,
             self._train_on,
             self._hardware,
