@@ -152,7 +152,7 @@ trainer:
   logger:
     base_dir: "multirun"
     level: 20
-    checkpoint_frequency: 1
+    checkpoint_frequency: 10
     every_step: 1
     metrics:
       base:
