@@ -91,14 +91,12 @@ When using ``stable-SSL``, we recommend relying on configuration files to specif
 
 The parameters are organized into the following groups:
 
-* ``data``: Defines the dataset, loading, and augmentation pipelines. Only the dataset specified by ``train_on`` is used for training.
-* ``networks``: Specifies the neural network modules, with a required ``backbone`` as the model's core.
+* ``data``: Defines the dataset, loading, and augmentation pipelines. Only the dataset named ``train`` is used for training. If there is no dataset named ``train``, the model runs in evaluation mode.
+* ``modules``: Specifies the neural network modules, with a required ``backbone`` as the model's core.
 * ``objective``: Defines the model's loss function.
 * ``optim``: Contains optimization parameters, including ``epochs``, ``max_steps`` (per epoch), and ``optimizer`` / ``scheduler`` settings.
 * ``hardware``: Specifies the hardware used, including the number of GPUs, CPUs, etc.
 * ``logger``: Configures model performance monitoring. APIs like `WandB <https://wandb.ai/home>`_ are supported.
-
-Additionally, the parameter ``eval_only`` specifies whether the model should run in evaluation mode only, without training.
 
 For more details about configurations, we refer to the `User Guide <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/user_guide.html>`_ section of the documentation.
 
