@@ -16,12 +16,16 @@ import submitit
 import jsonlines
 from pathlib import Path
 from tqdm import tqdm
-import torch
 import subprocess
 import os
+import omegaconf
+import copy
+import torch
+import torch.nn.functional as F
+
 from .data import DistributedSamplerWrapper
 from . import reader
-import omegaconf
+from .utils import deactivate_requires_grad, update_momentum
 
 try:
     import wandb
@@ -96,8 +100,8 @@ class BaseModel(torch.nn.Module):
     ----------
     data: dict
         Data configuration.
-    networks: dict
-        Networks configuration.
+    network: dict
+        Network configuration.
     objective: dict
         Objective configuration.
     train_on: str
@@ -115,7 +119,7 @@ class BaseModel(torch.nn.Module):
     def __init__(
         self,
         data,
-        networks,
+        network,
         objective,
         train_on,
         hardware,
@@ -126,7 +130,7 @@ class BaseModel(torch.nn.Module):
         super().__init__()
         logging.info(f"=> INIT OF {self.__class__.__name__} STARTED")
         self._data = data
-        self._networks = networks
+        self._network = network
         self._objective = objective
         self._train_on = train_on
         self._hardware = hardware
@@ -154,7 +158,7 @@ class BaseModel(torch.nn.Module):
         self.start_time = time.time()
         # we skip optim as we may not need it (see below)
         self.data = hydra.utils.instantiate(self._data, _convert_="object")
-        self.networks = hydra.utils.instantiate(self._networks, _convert_="object")
+        self.network = hydra.utils.instantiate(self._network, _convert_="object")
         self.objective = hydra.utils.instantiate(self._objective, _convert_="object")
         self.hardware = hydra.utils.instantiate(self._hardware, _convert_="object")
         self.logger = hydra.utils.instantiate(self._logger, _convert_="object")
@@ -241,7 +245,7 @@ class BaseModel(torch.nn.Module):
 
         # Modules and scaler
         logging.info("Modules:")
-        for name, module in self.networks.items():
+        for name, module in self.network.items():
             # if self.config.model.memory_format == "channels_last":
             #     module.to(memory_format=torch.channels_last)
             if self.world_size > 1:
@@ -254,12 +258,12 @@ class BaseModel(torch.nn.Module):
                 module = torch.nn.parallel.DistributedDataParallel(
                     module, device_ids=[self._device]
                 )
-            self.networks[name] = module
+            self.network[name] = module
             trainable = sum(
                 param.numel() for param in module.parameters() if param.requires_grad
             )
             logging.info(f"\t- {name} with {trainable} trainable parameters.")
-        self.networks = torch.nn.ModuleDict(self.networks)
+        self.network = torch.nn.ModuleDict(self.network)
         self.scaler = torch.amp.GradScaler("cuda", enabled=self.hardware["float16"])
 
         self.register_buffer("global_step", torch.zeros((1,), dtype=int))
@@ -306,7 +310,7 @@ class BaseModel(torch.nn.Module):
         optim["grad_max_norm"] = optim.get("grad_max_norm", None)
 
     def forward(self):
-        return self.networks["backbone"](self.batch[0])
+        return self.network["backbone"](self.batch[0])
 
     def predict(self):
         return self.forward()
@@ -572,7 +576,7 @@ class BaseModel(torch.nn.Module):
         else:
             self._device = hardware["device"]
 
-        # cleanup the device
+        # Cleanup the device.
         logging.info("Device status at start of process:")
         get_gpu_info()
 
@@ -588,7 +592,7 @@ class BaseModel(torch.nn.Module):
         self.save_checkpoint("tmp_checkpoint.ckpt", model_only=False)
         model = type(self)(
             self._data,
-            self._networks,
+            self._network,
             self._objective,
             self._train_on,
             self._hardware,
@@ -832,3 +836,60 @@ class BaseModel(torch.nn.Module):
 
     def after_eval_step(self):
         pass
+
+
+class JointEmbedding(BaseModel):
+    r"""Base class for training a joint-embedding SSL model."""
+
+    def predict(self):
+        return self.network["backbone_classifier"](self.forward())
+
+    def compute_loss(self):
+        embeddings = [self.network["backbone"](view) for view in self.batch[0]]
+        loss_backbone_classifier = sum(
+            [
+                F.cross_entropy(
+                    self.network["backbone_classifier"](embed.detach()), self.batch[1]
+                )
+                for embed in embeddings
+            ]
+        )
+
+        projections = [self.network["projector"](embed) for embed in embeddings]
+        loss_proj_classifier = sum(
+            [
+                F.cross_entropy(
+                    self.network["projector_classifier"](proj.detach()), self.batch[1]
+                )
+                for proj in projections
+            ]
+        )
+
+        loss_ssl = self.objective(*projections)
+
+        return {
+            "train/loss_ssl": loss_ssl,
+            "train/loss_backbone_classifier": loss_backbone_classifier,
+            "train/loss_projector_classifier": loss_proj_classifier,
+        }
+
+
+class SelfDistillation(JointEmbedding):
+    r"""Base class for training a self-distillation SSL model."""
+
+    def initialize_modules(self):
+        super().initialize_modules()
+        self.network["backbone_target"] = copy.deepcopy(self.network["backbone"])
+        self.network["projector_target"] = copy.deepcopy(self.network["projector"])
+
+        deactivate_requires_grad(self.network["backbone_target"])
+        deactivate_requires_grad(self.network["projector_target"])
+
+    def before_fit_step(self):
+        """Update the target parameters as EMA of the online model parameters."""
+        update_momentum(
+            self.backbone, self.backbone_target, m=self.config.model.momentum
+        )
+        update_momentum(
+            self.projector, self.projector_target, m=self.config.model.momentum
+        )

@@ -1,6 +1,0 @@
-# slurm_config.yaml
-
-hydra.launcher:
-  gpus_per_node: 1              # Number of GPUs per node
-  nodes: 1                      # Number of nodes
-  

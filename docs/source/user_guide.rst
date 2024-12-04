@@ -207,14 +207,14 @@ One important section is ``metrics``, which lets you define the evaluation metri
             top_k: 5
 
 
-Networks Configuration (``networks``)
+Network Configuration (``network``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The ``networks`` keyword is used to define the neural networks settings, including the architecture of the backbone, projectors etc. Below is an example:
+The ``network`` keyword is used to define the settings of all the neural networks used, including the architecture of the backbone, projectors etc. Below is an example:
 
 .. code-block:: yaml
 
-   networks:
+   network:
       backbone:
          _target_: stable_ssl.utils.load_backbone
          name: resnet18
@@ -227,10 +227,10 @@ The ``networks`` keyword is used to define the neural networks settings, includi
             out_features: 2048
             bias: False
             - _target_: torch.nn.BatchNorm1d
-            num_features: ${trainer.networks.projector._args_.0.out_features}
+            num_features: ${trainer.network.projector._args_.0.out_features}
             - _target_: torch.nn.ReLU
             - _target_: torch.nn.Linear
-            in_features: ${trainer.networks.projector._args_.0.out_features}
+            in_features: ${trainer.network.projector._args_.0.out_features}
             out_features: 128
             bias: False
       projector_classifier:
@@ -242,4 +242,4 @@ The ``networks`` keyword is used to define the neural networks settings, includi
          in_features: 512
          out_features: ${trainer.data._num_classes}
 
-The various components defined above can be accessed through the dictionary ``self.networks`` in your trainer class. This allows you to define the forward pass, compute losses, and specify evaluation metrics efficiently.
+The various components defined above can be accessed through the dictionary ``self.network`` in your trainer class. This allows you to define the forward pass, compute losses, and specify evaluation metrics efficiently.
