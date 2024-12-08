@@ -71,7 +71,7 @@ def get_backbone_dim(
     return in_features
 
 
-def load_backbone(name, num_classes=None, weights=None, low_resolution=False, **kwargs):
+def load_backbone(name, num_classes, weights=None, low_resolution=False, **kwargs):
     """Load a neural network model with a given backbone.
 
     Parameters
