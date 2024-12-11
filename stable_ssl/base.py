@@ -906,8 +906,8 @@ class SelfDistillation(JointEmbedding):
         self.modules["backbone_target"] = copy.deepcopy(self.modules["backbone"])
         self.modules["projector_target"] = copy.deepcopy(self.modules["projector"])
 
-        deactivate_requires_grad(self.modules["backbone_target"])
-        deactivate_requires_grad(self.modules["projector_target"])
+        self.modules["backbone_target"].requires_grad_(False)
+        self.modules["projector_target"].requires_grad_(False)
 
     def before_fit_step(self):
         """Update the target parameters as EMA of the online model parameters."""
