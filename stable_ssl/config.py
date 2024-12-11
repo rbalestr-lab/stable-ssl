@@ -12,6 +12,20 @@ import logging
 
 # from omegaconf import OmegaConf
 from pathlib import Path
+import pickle
+import lzma
+import hydra
+
+
+def instanciate_config(cfg=None, debug_hash=None) -> object:
+    if debug_hash is None:
+        assert cfg is not None
+        print("Your debugging hash:", lzma.compress(pickle.dumps(cfg)))
+    else:
+        print("Using debugging hash")
+        cfg = pickle.loads(lzma.decompress(debug_hash))
+    return hydra.utils.instantiate(cfg.trainer, _convert_="object", _recursive_=False)
+
 
 # import torch
 

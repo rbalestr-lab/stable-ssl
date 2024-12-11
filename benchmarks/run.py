@@ -1,10 +1,12 @@
 """
 This script demonstrates how to launch a run using the stable-SSL library.
-python benchmarks/run.py --config-dir benchmarks --config-name cifar10_simclr
+python benchmarks/run.py --config-dir benchmarks/config --config-name simclr/cifar10
 """
 
+import stable_ssl
 import hydra
 from omegaconf import OmegaConf
+import pickle
 
 OmegaConf.register_new_resolver("eval", eval)
 
@@ -12,9 +14,7 @@ OmegaConf.register_new_resolver("eval", eval)
 @hydra.main(version_base="1.2")
 def main(cfg):
     """Load the configuration and launch the run."""
-    trainer = hydra.utils.instantiate(
-        cfg.trainer, _convert_="object", _recursive_=False
-    )
+    trainer = stable_ssl.instanciate_config(cfg.trainer)
     trainer.setup()
     trainer.launch()
     print(trainer.get_logs())

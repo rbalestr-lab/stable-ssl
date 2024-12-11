@@ -15,6 +15,7 @@ from .__about__ import (
 
 from .base import BaseModel, JointEmbedding, SelfDistillation
 from .losses import NTXEntLoss, BYOLLoss, VICRegLoss, BarlowTwinsLoss
+from .config import instanciate_config
 
 __all__ = [
     "__title__",
@@ -30,4 +31,5 @@ __all__ = [
     "BYOLLoss",
     "VICRegLoss",
     "BarlowTwinsLoss",
+    "instanciate_config",
 ]

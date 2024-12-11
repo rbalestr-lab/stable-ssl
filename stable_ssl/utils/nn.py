@@ -81,7 +81,6 @@ def load_backbone(name, num_classes, weights=None, low_resolution=False, **kwarg
     num_classes : int
         Number of classes in the dataset.
         If None, the model is loaded without the classifier.
-        Default is None.
     weights : bool, optional
         Whether to load a weights model, by default False.
     low_resolution : bool, optional

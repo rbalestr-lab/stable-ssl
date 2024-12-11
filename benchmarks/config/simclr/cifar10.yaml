@@ -1,5 +1,7 @@
+# @package _global_
+
 defaults:
-  - override /hydra/launcher: submitit_slurm
+  - override hydra/launcher: submitit_slurm
   - _self_
 
 hydra:
@@ -101,6 +103,7 @@ trainer:
       _target_: stable_ssl.utils.load_backbone
       name: resnet18
       low_resolution: True
+      num_classes: null
     projector:
       _target_: torch.nn.Sequential
       _args_:
