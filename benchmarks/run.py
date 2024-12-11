@@ -6,7 +6,6 @@ python benchmarks/run.py --config-dir benchmarks/config --config-name simclr/cif
 import stable_ssl
 import hydra
 from omegaconf import OmegaConf
-import pickle
 
 OmegaConf.register_new_resolver("eval", eval)
 
