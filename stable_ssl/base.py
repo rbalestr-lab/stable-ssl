@@ -104,16 +104,12 @@ class BaseModel(torch.nn.Module):
         modules configuration.
     objective: dict
         Objective configuration.
-    train_on: str
-        Name of the dataset to train on.
     hardware: dict
         Hardware configuration.
     optim: dict
         Optimizer configuration.
     logger: dict
         Logger configuration.
-    eval_only: bool, optional
-        Whether to only evaluate the model. Default is False.
     """
 
     def __init__(
@@ -121,22 +117,18 @@ class BaseModel(torch.nn.Module):
         data,
         modules,
         objective,
-        train_on,
         hardware,
         optim,
         logger,
-        eval_only=False,
     ):
         super().__init__()
         logging.info(f"=> INIT OF {self.__class__.__name__} STARTED")
         self._data = data
         self._modules = modules
         self._objective = objective
-        self._train_on = train_on
         self._hardware = hardware
         self._optim = optim
         self._logger = logger
-        self._eval_only = eval_only
         self.set_logger_defaults(self._logger)
         self.set_optim_defaults(self._optim)
         c = self.get_config()
@@ -210,7 +202,7 @@ class BaseModel(torch.nn.Module):
             if name[0] == "_":
                 logging.info(f"\t- `{name}` ignored (starts with `_`).")
                 continue
-            train = "train" if name == self.train_on else "eval"
+            train = "train" if name == self.train else "eval"
             logging.info(f"\t- {name}  ({train}):")
             logging.info(f"\t\t- length: {len(loader)}.")
             if name in self.logger["metrics"]:
@@ -237,11 +229,6 @@ class BaseModel(torch.nn.Module):
                 logging.info(
                     f"\t- Length after DDS on this process `{len(self.data[name])}."
                 )
-
-        if not self.eval_only and self.train_on not in self.data:
-            log_and_raise(
-                ValueError, f"Training data ({self.train_on}) not in {self.data}."
-            )
 
         # Modules and scaler
         logging.info("Modules:")
@@ -389,7 +376,7 @@ class BaseModel(torch.nn.Module):
                 "train mode after call to before_fit_epoch()."
             )
 
-        loader = self.data[self.train_on]
+        loader = self.data["train"]
         # If max_steps is negative, train on the full dataset.
         if self.optim["max_steps"] < 0:
             max_steps = len(loader)
@@ -430,7 +417,7 @@ class BaseModel(torch.nn.Module):
 
         packet = {"epoch": min(self.epoch, self.optim["epochs"] - 1)}
         for name_loader, loader in self.data.items():
-            if name_loader == self.train_on or name_loader[0] == "_":
+            if name_loader == "train" or name_loader[0] == "_":
                 continue
             # Reset the metrics for the epoch.
             if name_loader in self.logger["metrics"]:
@@ -594,7 +581,6 @@ class BaseModel(torch.nn.Module):
             self._data,
             self._modules,
             self._objective,
-            self._train_on,
             self._hardware,
             self._optim,
             self._logger,
@@ -768,10 +754,6 @@ class BaseModel(torch.nn.Module):
         return 1
 
     @property
-    def train_on(self):
-        return self._train_on
-
-    @property
     def eval_only(self):
         return self._eval_only
 
@@ -814,7 +796,7 @@ class BaseModel(torch.nn.Module):
     def before_fit_epoch(self):
         self.train()
         if self.world_size > 1:
-            self.data[self._train_on].set_epoch(self.epoch)
+            self.data["train"].set_epoch(self.epoch)
 
     def after_fit_epoch(self):
         pass
