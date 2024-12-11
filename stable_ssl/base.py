@@ -648,6 +648,7 @@ class BaseModel(torch.nn.Module):
 
         # Log in jsonl.
         else:
+            self._log_buffer.update(self.generate_logging_default_bucket())
             with jsonlines.open(
                 self.logger["dump_path"] / f"logs_rank_{self.rank}.jsonl", mode="a"
             ) as writer:
@@ -720,12 +721,8 @@ class BaseModel(torch.nn.Module):
     def generate_logging_default_bucket(self):
         cur_time = time.time()
         rel_time = cur_time - self.start_time
-        if self.world_size > 1:
-            rank = torch.distributed.get_rank()
-        else:
-            rank = 0
         bucket = {
-            "rank": rank,
+            "rank": self.rank,
             "timestamp": cur_time,
             "relative_time": rel_time,
             "training": self.training,
