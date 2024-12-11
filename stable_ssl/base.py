@@ -844,10 +844,7 @@ class BaseModel(torch.nn.Module):
 class JointEmbedding(BaseModel):
     r"""Base class for training a joint-embedding SSL model."""
 
-    def predict(self):
-        return self.modules["backbone_classifier"](self.forward())
-
-    def compute_loss(self):
+    def format_views_labels(self):
         if (
             len(self.batch) == 2
             and torch.is_tensor(self.batch[1])
@@ -868,6 +865,13 @@ class JointEmbedding(BaseModel):
             Make sure to double check your config and datasets definition. 
             Most methods expect 2 views, some can use more."""
             log_and_raise(ValueError, msg)
+        return views, labels
+
+    def predict(self):
+        return self.modules["backbone_classifier"](self.forward())
+
+    def compute_loss(self):
+        views, labels = self.format_views_labels()
         embeddings = [self.modules["backbone"](view) for view in views]
         projections = [self.modules["projector"](embed) for embed in embeddings]
 
