@@ -96,6 +96,29 @@ from .utils import (
 class BaseModel(torch.nn.Module):
     r"""Base class for training a model.
 
+    Execution flow when calling `launch`:
+
+    - self.before_fit (nothing by default)
+    - self.fit (executes all the training/intermitent evaluation by default)
+      - for `self.optim["epochs"]` epochs:
+        - self.fit_epoch (one training epoch by default)
+          - self.before_fit_epoch (setup in train mode)
+          - loop over mini-batches
+            - self.before_fit_step (moves data to device)
+            - self.fit_step
+            - self.after_fit_step (nothing by default)
+          - self.after_fit_epoch
+        - self.evaluate (if asked by user config, looping over all non train datasets)
+          - self.before_eval (setup in eval mode)
+          - loop over mini-batches
+            - self.before_eval_step (moves data to device)
+            - self.eval_step
+            - self.after_eval_step (nothing by default)
+          - self.after_eval
+        - save intermitent checkpoint if asked by user config
+      - save final checkpoint if asked by user config
+    - self.after_fit (evaluates by default)
+
     Parameters
     ----------
     data: dict
@@ -323,7 +346,6 @@ class BaseModel(torch.nn.Module):
             self.before_fit()
             self.fit()
             self.after_fit()
-            self.evaluate()  # always eval the model after training
         except BreakAllEpochs:
             logging.exception("Training stopped by user.")
             raise
@@ -387,12 +409,9 @@ class BaseModel(torch.nn.Module):
         else:
             max_steps = min(self.optim["max_steps"], len(loader))
 
-        for self._batch_idx, data in enumerate(
+        for self._batch_idx, self.batch in enumerate(
             tqdm(loader, total=max_steps, desc=f"Training: {self.epoch}")
         ):
-            # set up the data to have easy access throughout the methods
-            self.batch = to_device(data, self.device)
-
             self.before_fit_step()
             self.fit_step()
             self.after_fit_step()
@@ -427,12 +446,11 @@ class BaseModel(torch.nn.Module):
             try:
                 max_steps = len(loader)
                 with torch.inference_mode():
-                    for self._batch_idx, data in tqdm(
+                    for self._batch_idx, self.batch in tqdm(
                         enumerate(loader),
                         total=max_steps,
                         desc=f"Eval {name_loader}: {self.epoch=}",
                     ):
-                        self.batch = to_device(data, self.device)
 
                         # Call any user specified pre-step function.
                         self.before_eval_step()
@@ -786,7 +804,7 @@ class BaseModel(torch.nn.Module):
         self.epoch = 0
 
     def after_fit(self):
-        pass
+        self.evaluate()
 
     def before_fit_epoch(self):
         self.train()
@@ -797,7 +815,8 @@ class BaseModel(torch.nn.Module):
         pass
 
     def before_fit_step(self):
-        pass
+        # set up the data to have easy access throughout the methods
+        self.batch = to_device(self.batch, self.device)
 
     def after_fit_step(self):
         pass
@@ -809,7 +828,7 @@ class BaseModel(torch.nn.Module):
         pass
 
     def before_eval_step(self):
-        pass
+        self.batch = to_device(self.batch, self.device)
 
     def after_eval_step(self):
         pass
