@@ -340,7 +340,7 @@ class BaseModel(torch.nn.Module):
         Can be customized by the user to fit the use-cases.
         This is just a boilerplate version that provides minimal things.
         """
-        if not "train" in self.data:
+        if "train" not in self.data:
             self.evaluate()
             self.cleanup()
             return
@@ -853,8 +853,8 @@ class JointEmbedding(BaseModel):
             views = self.batch
             labels = None
         else:
-            msg = """You are using the JointEmbedding class with only 1 view! 
-            Make sure to double check your config and datasets definition. 
+            msg = """You are using the JointEmbedding class with only 1 view!
+            Make sure to double check your config and datasets definition.
             Most methods expect 2 views, some can use more."""
             log_and_raise(ValueError, msg)
         return views, labels
