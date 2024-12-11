@@ -503,7 +503,7 @@ class BaseModel(torch.nn.Module):
                 "Returned loss must be a float, a list of floats or a dict of floats.",
             )
 
-        if np.isnan(loss.item()):
+        if torch.isnan(loss):
             log_and_raise(NanError, "Loss is NaN. Stopping training.")
 
         self.scaler.scale(loss).backward()
@@ -885,8 +885,8 @@ class JointEmbedding(BaseModel):
                     self.modules["projector_classifier"](proj.detach()), labels
                 )
         else:
-            loss_backbone_classifier = np.nan
-            loss_proj_classifier = np.nan
+            loss_backbone_classifier = 0
+            loss_proj_classifier = 0
         return {
             "train/loss_ssl": loss_ssl,
             "train/loss_backbone_classifier": loss_backbone_classifier,
