@@ -18,6 +18,7 @@ import hydra
 
 
 def instanciate_config(cfg=None, debug_hash=None) -> object:
+    """Instanciate the config and debug hash."""
     if debug_hash is None:
         assert cfg is not None
         print("Your debugging hash:", lzma.compress(pickle.dumps(cfg)))
