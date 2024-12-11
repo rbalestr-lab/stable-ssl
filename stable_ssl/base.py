@@ -143,17 +143,11 @@ class BaseModel(torch.nn.Module):
         Logger configuration.
     """
 
-    def __init__(
-        self,
-        data,
-        modules,
-        objective,
-        hardware,
-        optim,
-        logger,
-    ):
+    def __init__(self, data, modules, objective, hardware, optim, logger, **kwargs):
         super().__init__()
         logging.info(f"=> INIT OF {self.__class__.__name__} STARTED")
+        for key, value in kwargs.items():
+            setattr(self, key, value)
         self._data = data
         self._modules = modules
         self._objective = objective
