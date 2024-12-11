@@ -848,6 +848,11 @@ class JointEmbedding(BaseModel):
         return self.modules["backbone_classifier"](self.forward())
 
     def compute_loss(self):
+        if torch.is_tensor(self.batch[0]):
+            msg = """You are using the JointEmbedding class with only 1 view! 
+            Make sure to double check your config and datasets definition. 
+            Most methods expect 2 views, some can use more."""
+            log_and_raise(ValueError, msg)
         embeddings = [self.modules["backbone"](view) for view in self.batch[0]]
         loss_backbone_classifier = sum(
             [
