@@ -96,6 +96,13 @@ from .utils import (
 class BaseModel(torch.nn.Module):
     r"""Base class for training a model.
 
+    That method provides a general boilerplate for all the internal operations
+    that always occur no matter the actual application and project. This includes
+    training, evaluation, checkpointing, restarting training, ... the internals
+    can be modified from the configs.
+
+    This class should be subclassed by your specific method (see examples).
+
     Execution flow when calling `launch`:
 
     - self.before_fit (nothing by default)
