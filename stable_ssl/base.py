@@ -99,44 +99,37 @@ class BaseModel(torch.nn.Module):
     Parameters
     ----------
     data: dict
-        Data configuration.
-    network: dict
-        Network configuration.
+        Data mapper of name->mini-batch. The `train` name is used for training.
+        Any other name is used for validation.
+    modules: dict
+        Modules (NNs) configuration.
     objective: dict
         Objective configuration.
-    train_on: str
-        Name of the dataset to train on.
     hardware: dict
         Hardware configuration.
     optim: dict
         Optimizer configuration.
     logger: dict
         Logger configuration.
-    eval_only: bool, optional
-        Whether to only evaluate the model. Default is False.
     """
 
     def __init__(
         self,
         data,
-        network,
+        modules,
         objective,
-        train_on,
         hardware,
         optim,
         logger,
-        eval_only=False,
     ):
         super().__init__()
         logging.info(f"=> INIT OF {self.__class__.__name__} STARTED")
         self._data = data
-        self._network = network
+        self._modules = modules
         self._objective = objective
-        self._train_on = train_on
         self._hardware = hardware
         self._optim = optim
         self._logger = logger
-        self._eval_only = eval_only
         self.set_logger_defaults(self._logger)
         self.set_optim_defaults(self._optim)
         c = self.get_config()
@@ -158,7 +151,7 @@ class BaseModel(torch.nn.Module):
         self.start_time = time.time()
         # we skip optim as we may not need it (see below)
         self.data = hydra.utils.instantiate(self._data, _convert_="object")
-        self.network = hydra.utils.instantiate(self._network, _convert_="object")
+        self.modules = hydra.utils.instantiate(self._modules, _convert_="object")
         self.objective = hydra.utils.instantiate(self._objective, _convert_="object")
         self.hardware = hydra.utils.instantiate(self._hardware, _convert_="object")
         self.logger = hydra.utils.instantiate(self._logger, _convert_="object")
@@ -210,8 +203,6 @@ class BaseModel(torch.nn.Module):
             if name[0] == "_":
                 logging.info(f"\t- `{name}` ignored (starts with `_`).")
                 continue
-            train = "train" if name == self.train_on else "eval"
-            logging.info(f"\t- {name}  ({train}):")
             logging.info(f"\t\t- length: {len(loader)}.")
             if name in self.logger["metrics"]:
                 logging.info("\t\t- metrics:")
@@ -238,14 +229,9 @@ class BaseModel(torch.nn.Module):
                     f"\t- Length after DDS on this process `{len(self.data[name])}."
                 )
 
-        if not self.eval_only and self.train_on not in self.data:
-            log_and_raise(
-                ValueError, f"Training data ({self.train_on}) not in {self.data}."
-            )
-
         # Modules and scaler
         logging.info("Modules:")
-        for name, module in self.network.items():
+        for name, module in self.modules.items():
             # if self.config.model.memory_format == "channels_last":
             #     module.to(memory_format=torch.channels_last)
             if self.world_size > 1:
@@ -258,24 +244,24 @@ class BaseModel(torch.nn.Module):
                 module = torch.nn.parallel.DistributedDataParallel(
                     module, device_ids=[self._device]
                 )
-            self.network[name] = module
+            self.modules[name] = module
             trainable = sum(
                 param.numel() for param in module.parameters() if param.requires_grad
             )
             logging.info(f"\t- {name} with {trainable} trainable parameters.")
-        self.network = torch.nn.ModuleDict(self.network)
+        self.modules = torch.nn.ModuleDict(self.modules)
         self.scaler = torch.amp.GradScaler("cuda", enabled=self.hardware["float16"])
 
         self.register_buffer("global_step", torch.zeros((1,), dtype=int))
 
-        if not self.eval_only:
+        if "train" in self.data:
             logging.info("Setting up self.optim.")
             self.optim = hydra.utils.instantiate(self._optim, _convert_="object")
             self.optim["optimizer"] = self.optim["optimizer"](self.parameters())
             self.optim["scheduler"] = self.optim["scheduler"](self.optim["optimizer"])
         else:
             logging.info(
-                "Mode is eval_only, skipping optimizer and scheduler initializations."
+                "No `train` in data, skipping optimizer and scheduler initializations."
             )
 
         self._log_buffer = {}
@@ -310,7 +296,7 @@ class BaseModel(torch.nn.Module):
         optim["grad_max_norm"] = optim.get("grad_max_norm", None)
 
     def forward(self):
-        return self.network["backbone"](self.batch[0])
+        return self.modules["backbone"](self.batch[0])
 
     def predict(self):
         return self.forward()
@@ -329,7 +315,7 @@ class BaseModel(torch.nn.Module):
         Can be customized by the user to fit the use-cases.
         This is just a boilerplate version that provides minimal things.
         """
-        if self._eval_only:
+        if not "train" in self.data:
             self.evaluate()
             self.cleanup()
             return
@@ -380,6 +366,7 @@ class BaseModel(torch.nn.Module):
         (self.logger["dump_path"] / "tmp_checkpoint.ckpt").unlink(missing_ok=True)
 
     def fit_epoch(self):
+        assert "train" in self.data
         self.before_fit_epoch()
         # We do not ensure that the model is still in train mode to not
         # override any user desired behavior, simply speak out.
@@ -389,7 +376,7 @@ class BaseModel(torch.nn.Module):
                 "train mode after call to before_fit_epoch()."
             )
 
-        loader = self.data[self.train_on]
+        loader = self.data["train"]
         # If max_steps is negative, train on the full dataset.
         if self.optim["max_steps"] < 0:
             max_steps = len(loader)
@@ -430,7 +417,7 @@ class BaseModel(torch.nn.Module):
 
         packet = {"epoch": min(self.epoch, self.optim["epochs"] - 1)}
         for name_loader, loader in self.data.items():
-            if name_loader == self.train_on or name_loader[0] == "_":
+            if name_loader == "train" or name_loader[0] == "_":
                 continue
             # Reset the metrics for the epoch.
             if name_loader in self.logger["metrics"]:
@@ -592,13 +579,11 @@ class BaseModel(torch.nn.Module):
         self.save_checkpoint("tmp_checkpoint.ckpt", model_only=False)
         model = type(self)(
             self._data,
-            self._network,
+            self._modules,
             self._objective,
-            self._train_on,
             self._hardware,
             self._optim,
             self._logger,
-            self._eval_only,
         )
         logging.info("Cleaning up the current task before submitting a new one.")
         self.cleanup()
@@ -768,14 +753,6 @@ class BaseModel(torch.nn.Module):
         return 1
 
     @property
-    def train_on(self):
-        return self._train_on
-
-    @property
-    def eval_only(self):
-        return self._eval_only
-
-    @property
     def epoch(self):
         if not hasattr(self, "_epoch"):
             return None
@@ -814,7 +791,7 @@ class BaseModel(torch.nn.Module):
     def before_fit_epoch(self):
         self.train()
         if self.world_size > 1:
-            self.data[self._train_on].set_epoch(self.epoch)
+            self.data["train"].set_epoch(self.epoch)
 
     def after_fit_epoch(self):
         pass
@@ -842,24 +819,24 @@ class JointEmbedding(BaseModel):
     r"""Base class for training a joint-embedding SSL model."""
 
     def predict(self):
-        return self.network["backbone_classifier"](self.forward())
+        return self.modules["backbone_classifier"](self.forward())
 
     def compute_loss(self):
-        embeddings = [self.network["backbone"](view) for view in self.batch[0]]
+        embeddings = [self.modules["backbone"](view) for view in self.batch[0]]
         loss_backbone_classifier = sum(
             [
                 F.cross_entropy(
-                    self.network["backbone_classifier"](embed.detach()), self.batch[1]
+                    self.modules["backbone_classifier"](embed.detach()), self.batch[1]
                 )
                 for embed in embeddings
             ]
         )
 
-        projections = [self.network["projector"](embed) for embed in embeddings]
+        projections = [self.modules["projector"](embed) for embed in embeddings]
         loss_proj_classifier = sum(
             [
                 F.cross_entropy(
-                    self.network["projector_classifier"](proj.detach()), self.batch[1]
+                    self.modules["projector_classifier"](proj.detach()), self.batch[1]
                 )
                 for proj in projections
             ]
@@ -879,11 +856,11 @@ class SelfDistillation(JointEmbedding):
 
     def initialize_modules(self):
         super().initialize_modules()
-        self.network["backbone_target"] = copy.deepcopy(self.network["backbone"])
-        self.network["projector_target"] = copy.deepcopy(self.network["projector"])
+        self.modules["backbone_target"] = copy.deepcopy(self.modules["backbone"])
+        self.modules["projector_target"] = copy.deepcopy(self.modules["projector"])
 
-        deactivate_requires_grad(self.network["backbone_target"])
-        deactivate_requires_grad(self.network["projector_target"])
+        deactivate_requires_grad(self.modules["backbone_target"])
+        deactivate_requires_grad(self.modules["projector_target"])
 
     def before_fit_step(self):
         """Update the target parameters as EMA of the online model parameters."""
