@@ -143,13 +143,13 @@ class BaseModel(torch.nn.Module):
         Logger configuration.
     """
 
-    def __init__(self, data, modules, objective, hardware, optim, logger, **kwargs):
+    def __init__(self, data, module, objective, hardware, optim, logger, **kwargs):
         super().__init__()
         logging.info(f"=> INIT OF {self.__class__.__name__} STARTED")
         for key, value in kwargs.items():
             setattr(self, key, value)
         self._data = data
-        self._modules = modules
+        self._module = module
         self._objective = objective
         self._hardware = hardware
         self._optim = optim
@@ -172,7 +172,7 @@ class BaseModel(torch.nn.Module):
         self.start_time = time.time()
         # we skip optim as we may not need it (see below)
         self.data = hydra.utils.instantiate(self._data, _convert_="object")
-        self.modules = hydra.utils.instantiate(self._modules, _convert_="object")
+        self.module = hydra.utils.instantiate(self._module, _convert_="object")
         self.objective = hydra.utils.instantiate(self._objective, _convert_="object")
         self.hardware = hydra.utils.instantiate(self._hardware, _convert_="object")
         self.logger = hydra.utils.instantiate(self._logger, _convert_="object")
@@ -252,7 +252,7 @@ class BaseModel(torch.nn.Module):
 
         # Modules and scaler
         logging.info("Modules:")
-        for name, module in self.modules.items():
+        for name, module in self.module.items():
             # if self.config.model.memory_format == "channels_last":
             #     module.to(memory_format=torch.channels_last)
             if self.world_size > 1:
@@ -265,12 +265,12 @@ class BaseModel(torch.nn.Module):
                 module = torch.nn.parallel.DistributedDataParallel(
                     module, device_ids=[self._device]
                 )
-            self.modules[name] = module
+            self.module[name] = module
             trainable = sum(
                 param.numel() for param in module.parameters() if param.requires_grad
             )
             logging.info(f"\t- {name} with {trainable} trainable parameters.")
-        self.modules = torch.nn.ModuleDict(self.modules)
+        self.module = torch.nn.ModuleDict(self.module)
         self.scaler = torch.amp.GradScaler("cuda", enabled=self.hardware["float16"])
 
         self.register_buffer("global_step", torch.zeros((1,), dtype=int))
@@ -321,7 +321,7 @@ class BaseModel(torch.nn.Module):
         optim["grad_max_norm"] = optim.get("grad_max_norm", None)
 
     def forward(self):
-        return self.modules["backbone"](self.batch[0])
+        return self.module["backbone"](self.batch[0])
 
     def predict(self):
         return self.forward()
@@ -599,7 +599,7 @@ class BaseModel(torch.nn.Module):
         self.save_checkpoint("tmp_checkpoint.ckpt", model_only=False)
         model = type(self)(
             self._data,
-            self._modules,
+            self._module,
             self._objective,
             self._hardware,
             self._optim,
@@ -860,12 +860,12 @@ class JointEmbedding(BaseModel):
         return views, labels
 
     def predict(self):
-        return self.modules["backbone_classifier"](self.forward())
+        return self.module["backbone_classifier"](self.forward())
 
     def compute_loss(self):
         views, labels = self.format_views_labels()
-        embeddings = [self.modules["backbone"](view) for view in views]
-        projections = [self.modules["projector"](embed) for embed in embeddings]
+        embeddings = [self.module["backbone"](view) for view in views]
+        projections = [self.module["projector"](embed) for embed in embeddings]
 
         loss_ssl = self.objective(*projections)
 
@@ -875,10 +875,10 @@ class JointEmbedding(BaseModel):
             loss_proj_classifier = 0
             for embed, proj in zip(embeddings, projections):
                 loss_backbone_classifier += F.cross_entropy(
-                    self.modules["backbone_classifier"](embed.detach()), labels
+                    self.module["backbone_classifier"](embed.detach()), labels
                 )
                 loss_proj_classifier += F.cross_entropy(
-                    self.modules["projector_classifier"](proj.detach()), labels
+                    self.module["projector_classifier"](proj.detach()), labels
                 )
         else:
             loss_backbone_classifier = 0
@@ -897,11 +897,11 @@ class SelfDistillation(JointEmbedding):
         logging.getLogger().setLevel(self._logger["level"])
         logging.info(f"=> SETUP OF {self.__class__.__name__} STARTED")
         self.instanciate()
-        self.modules["backbone_target"] = copy.deepcopy(self.modules["backbone"])
-        self.modules["projector_target"] = copy.deepcopy(self.modules["projector"])
+        self.module["backbone_target"] = copy.deepcopy(self.module["backbone"])
+        self.module["projector_target"] = copy.deepcopy(self.module["projector"])
 
-        self.modules["backbone_target"].requires_grad_(False)
-        self.modules["projector_target"].requires_grad_(False)
+        self.module["backbone_target"].requires_grad_(False)
+        self.module["projector_target"].requires_grad_(False)
         self.load_checkpoint()
         logging.info(f"=> SETUP OF {self.__class__.__name__} COMPLETED")
 
