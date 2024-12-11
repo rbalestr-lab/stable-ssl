@@ -848,33 +848,45 @@ class JointEmbedding(BaseModel):
         return self.modules["backbone_classifier"](self.forward())
 
     def compute_loss(self):
-        if torch.is_tensor(self.batch[0]):
+        if (
+            len(self.batch) == 2
+            and torch.is_tensor(self.batch[1])
+            and not torch.is_tensor(self.batch[0])
+        ):
+            # we assume the second element are the labels
+            views, labels = self.batch
+        elif (
+            len(self.batch) > 1
+            and all([torch.is_tensor(b) for b in self.batch])
+            and len(set([b.ndim for b in self.batch])) == 1
+        ):
+            # we assume all elements are views
+            views = self.batch
+            labels = None
+        else:
             msg = """You are using the JointEmbedding class with only 1 view! 
             Make sure to double check your config and datasets definition. 
             Most methods expect 2 views, some can use more."""
             log_and_raise(ValueError, msg)
-        embeddings = [self.modules["backbone"](view) for view in self.batch[0]]
-        loss_backbone_classifier = sum(
-            [
-                F.cross_entropy(
-                    self.modules["backbone_classifier"](embed.detach()), self.batch[1]
-                )
-                for embed in embeddings
-            ]
-        )
-
+        embeddings = [self.modules["backbone"](view) for view in views]
         projections = [self.modules["projector"](embed) for embed in embeddings]
-        loss_proj_classifier = sum(
-            [
-                F.cross_entropy(
-                    self.modules["projector_classifier"](proj.detach()), self.batch[1]
-                )
-                for proj in projections
-            ]
-        )
 
         loss_ssl = self.objective(*projections)
 
+        # classifiers, but only if given labels
+        if labels is not None:
+            loss_backbone_classifier = 0
+            loss_proj_classifier = 0
+            for embed, proj in zip(embeddings, projections):
+                loss_backbone_classifier += F.cross_entropy(
+                    self.modules["backbone_classifier"](embed.detach()), labels
+                )
+                loss_proj_classifier += F.cross_entropy(
+                    self.modules["projector_classifier"](proj.detach()), labels
+                )
+        else:
+            loss_backbone_classifier = np.nan
+            loss_proj_classifier = np.nan
         return {
             "train/loss_ssl": loss_ssl,
             "train/loss_backbone_classifier": loss_backbone_classifier,
