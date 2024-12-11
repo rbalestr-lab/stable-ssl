@@ -23,7 +23,6 @@ hydra:
 trainer:
   # ===== Base Model =====
   _target_: stable_ssl.JointEmbedding
-  eval_only: False
 
   # ===== Objective Parameters =====
   objective:
@@ -31,11 +30,10 @@ trainer:
     temperature: 0.5
 
   # ===== Data Parameters =====
-  train_on: base
   data:
     _num_classes: 10
     _num_samples: 50000
-    base: # training dataset as indicated by train_on
+    train: # training dataset as indicated by name
       _target_: torch.utils.data.DataLoader
       batch_size: 256
       drop_last: True
@@ -98,7 +96,7 @@ trainer:
               scale: True
 
   # ===== Network Parameters =====
-  network:
+  modules:
     backbone:
       _target_: stable_ssl.utils.load_backbone
       name: resnet18
