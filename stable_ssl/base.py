@@ -172,10 +172,7 @@ class BaseModel(torch.nn.Module):
 
         logging.info(f"=> INIT OF {self.__class__.__name__} COMPLETED")
 
-    def setup(self):
-
-        logging.getLogger().setLevel(self._logger["level"])
-        logging.info(f"=> SETUP OF {self.__class__.__name__} STARTED")
+    def instanciate(self):
         seed_everything(self._hardware.get("seed", None))
 
         self.start_time = time.time()
@@ -296,6 +293,10 @@ class BaseModel(torch.nn.Module):
 
         self._log_buffer = {}
 
+    def setup(self):
+        logging.getLogger().setLevel(self._logger["level"])
+        logging.info(f"=> SETUP OF {self.__class__.__name__} STARTED")
+        self.instanciate()
         self.load_checkpoint()
         logging.info(f"=> SETUP OF {self.__class__.__name__} COMPLETED")
 
@@ -901,13 +902,17 @@ class JointEmbedding(BaseModel):
 class SelfDistillation(JointEmbedding):
     r"""Base class for training a self-distillation SSL model."""
 
-    def initialize_modules(self):
-        super().initialize_modules()
+    def setup(self):
+        logging.getLogger().setLevel(self._logger["level"])
+        logging.info(f"=> SETUP OF {self.__class__.__name__} STARTED")
+        self.instanciate()
         self.modules["backbone_target"] = copy.deepcopy(self.modules["backbone"])
         self.modules["projector_target"] = copy.deepcopy(self.modules["projector"])
 
         self.modules["backbone_target"].requires_grad_(False)
         self.modules["projector_target"].requires_grad_(False)
+        self.load_checkpoint()
+        logging.info(f"=> SETUP OF {self.__class__.__name__} COMPLETED")
 
     def before_fit_step(self):
         """Update the target parameters as EMA of the online model parameters."""
