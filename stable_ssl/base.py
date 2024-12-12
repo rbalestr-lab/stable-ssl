@@ -131,8 +131,8 @@ class BaseModel(torch.nn.Module):
     data: dict
         Data mapper of name->mini-batch. The `train` name is used for training.
         Any other name is used for validation.
-    modules: dict
-        Modules (NNs) configuration.
+    module: dict
+        Module (NNs) configuration.
     objective: dict
         Objective configuration.
     hardware: dict

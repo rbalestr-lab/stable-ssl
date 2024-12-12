@@ -14,7 +14,7 @@ This guide provides instructions for launching runs with ``stable-SSL``.
 
 To make the process streamlined and efficient, we recommend using configuration files to define parameters and utilizing `Hydra <https://hydra.cc/>`_ to manage these configurations.
 
-**General Idea.** ``stable-SSL`` is designed to minimize boilerplate code, providing a highly flexible framework with minimal hardcoded utilities. Most modules in the pipeline are modular and can instantiate objects from various sources, including ``stable-SSL``, ``PyTorch``, ``TorchMetrics``, or even custom objects provided by the user. This allows you to seamlessly integrate your own components into the pipeline while leveraging the capabilities of ``stable-SSL``.
+**General Idea.** ``stable-SSL`` is designed to minimize boilerplate code, providing a highly flexible framework with minimal hardcoded utilities. Modules in the pipeline can instantiate objects from various sources, including ``stable-SSL``, ``PyTorch``, ``TorchMetrics``, or even custom objects provided by the user. This allows you to seamlessly integrate your own components into the pipeline while leveraging the capabilities of ``stable-SSL``.
 
 .. _trainer:
 
@@ -163,7 +163,7 @@ Example:
                   scale: True
 
 
-.. _modules:
+.. _module:
 
 module
 ~~~~~~
@@ -202,7 +202,7 @@ Example:
          in_features: 512
          out_features: ${trainer.data._num_classes}
 
-The various components defined above can be accessed through the dictionary ``self.modules`` in your trainer class. This allows the user to define the forward pass, compute losses, and specify evaluation metrics efficiently.
+The various components defined above can be accessed through the dictionary ``self.module`` in your trainer class. This allows the user to define the forward pass, compute losses, and specify evaluation metrics efficiently.
 
 
 .. _logger:
