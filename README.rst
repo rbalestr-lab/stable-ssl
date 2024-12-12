@@ -66,18 +66,26 @@ At its core, ``stable-SSL`` provides a ``BaseModel`` class that sequentially cal
 
 .. code-block:: text
 
-   1. INITIALIZATION PHASE:
-     - seed_everything()
-     - initialize_modules()
-     - load_checkpoint()
-
-   2. TRAIN/EVAL PHASE:
-     - before_fit_epoch()
-     - for batch in train_loader:
-       - before_fit_step()
-       - fit_step(batch)
-       - after_fit_step()
-     - after_fit_epoch()
+   - self.before_fit (nothing by default)
+   - self.fit (executes all the training/intermitent evaluation by default)
+   - for `self.optim["epochs"]` epochs:
+      - self.fit_epoch (one training epoch by default)
+         - self.before_fit_epoch (setup in train mode)
+         - loop over mini-batches
+         - self.before_fit_step (moves data to device)
+         - self.fit_step
+         - self.after_fit_step (nothing by default)
+         - self.after_fit_epoch
+      - self.evaluate (if asked by user config, looping over all non train datasets)
+         - self.before_eval (setup in eval mode)
+         - loop over mini-batches
+         - self.before_eval_step (moves data to device)
+         - self.eval_step
+         - self.after_eval_step (nothing by default)
+         - self.after_eval
+      - save intermitent checkpoint if asked by user config
+   - save final checkpoint if asked by user config
+   - self.after_fit (evaluates by default)
 
 While the organization is similar to that of ``PyTorch Lightning``, the goal of ``stable-SSL`` is to significantly reduce codebase complexity without sacrificing performance. Think of ``PyTorch Lightning`` as industry-driven (abstracting everything away), whereas ``stable-SSL`` is academia-driven (bringing everything to the forefront for the user).
 
@@ -91,14 +99,12 @@ When using ``stable-SSL``, we recommend relying on configuration files to specif
 
 The parameters are organized into the following groups:
 
-* ``data``: Defines the dataset, loading, and augmentation pipelines. Only the dataset specified by ``train_on`` is used for training.
-* ``networks``: Specifies the neural network modules, with a required ``backbone`` as the model's core.
+* ``data``: Defines the dataset, loading, and augmentation pipelines. Only the dataset called ``train`` is used for training. If there is no dataset named ``train``, the model runs in evaluation mode.
+* ``modules``: Specifies the neural network modules, with a required ``backbone`` as the model's core.
 * ``objective``: Defines the model's loss function.
 * ``optim``: Contains optimization parameters, including ``epochs``, ``max_steps`` (per epoch), and ``optimizer`` / ``scheduler`` settings.
 * ``hardware``: Specifies the hardware used, including the number of GPUs, CPUs, etc.
 * ``logger``: Configures model performance monitoring. APIs like `WandB <https://wandb.ai/home>`_ are supported.
-
-Additionally, the parameter ``eval_only`` specifies whether the model should run in evaluation mode only, without training.
 
 For more details about configurations, we refer to the `User Guide <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/user_guide.html>`_ section of the documentation.
 
