@@ -52,10 +52,6 @@ class HardwareConfig:
     world_size: int = 1
     port: Optional[int] = None
 
-    def __post_init__(self):
-        """Set a random port for distributed training if not provided."""
-        self.port = self.port or get_open_port()
-
 
 @dataclass
 class LogConfig:
@@ -108,9 +104,6 @@ class LogConfig:
             self.folder = Path("./logs")
         else:
             self.folder = Path(self.folder)
-        # TODO: decide if we add another level of folder at this point.
-        # if self.run is None:
-        #     self.run = datetime.now().strftime("%Y%m%d_%H%M%S.%f")
         self.folder.mkdir(parents=True, exist_ok=True)
 
 
