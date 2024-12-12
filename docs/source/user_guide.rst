@@ -165,16 +165,16 @@ Example:
 
 .. _modules:
 
-modules
-~~~~~~~
+module
+~~~~~~
 
-The ``modules`` keyword is used to define the settings of all the neural networks used, including the architecture of the backbone, projectors etc. 
+The ``module`` keyword is used to define the settings of all the neural networks used, including the architecture of the backbone, projectors etc. 
 
 Example:
 
 .. code-block:: yaml
 
-   modules:
+   module:
       backbone:
          _target_: stable_ssl.utils.load_backbone
          name: resnet18
@@ -249,7 +249,7 @@ Example:
 hardware
 ~~~~~~~~
 
-Use the `hardware` keyword to configure hardware-related settings such as device, world_size (number of GPUs) or CPUs per task.
+Use the ``hardware`` keyword to configure hardware-related settings such as device, world_size (number of GPUs) or CPUs per task.
 
 Example:
 
