@@ -334,7 +334,7 @@ class BaseModel(torch.nn.Module):
         self.launch()
 
     def launch(self):
-        """Routine that is launchd after the class is initialized.
+        """Routine that is launched after the class is initialized.
 
         This will commonly consist of training + evaluation.
         Can be customized by the user to fit the use-cases.
@@ -883,6 +883,7 @@ class JointEmbedding(BaseModel):
         else:
             loss_backbone_classifier = 0
             loss_proj_classifier = 0
+        
         return {
             "train/loss_ssl": loss_ssl,
             "train/loss_backbone_classifier": loss_backbone_classifier,
