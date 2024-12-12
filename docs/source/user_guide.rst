@@ -14,7 +14,7 @@ This guide provides instructions for launching runs with ``stable-SSL``.
 
 To make the process streamlined and efficient, we recommend using configuration files to define parameters and utilizing `Hydra <https://hydra.cc/>`_ to manage these configurations.
 
-**General Idea.** ``stable-SSL`` is designed to minimize boilerplate code, providing a highly flexible framework with minimal hardcoded utilities. Most modules in the pipeline are modular and can instantiate objects from various sources, including ``stable-SSL``, ``PyTorch``, ``torchmetrics``, or even custom objects provided by the user. This allows you to seamlessly integrate your own components into the pipeline while leveraging the capabilities of ``stable-SSL``.
+**General Idea.** ``stable-SSL`` is designed to minimize boilerplate code, providing a highly flexible framework with minimal hardcoded utilities. Most modules in the pipeline are modular and can instantiate objects from various sources, including ``stable-SSL``, ``PyTorch``, ``TorchMetrics``, or even custom objects provided by the user. This allows you to seamlessly integrate your own components into the pipeline while leveraging the capabilities of ``stable-SSL``.
 
 
 First step: define your base ``trainer`` module
@@ -31,13 +31,13 @@ In ``stable-SSL``, the main ``trainer`` object must inherit from the ``BaseModel
 
 More specifically, if you want to train a self-supervised learning model, you can inherit from the following classes, depending on the type of model you are interested in:
 
-
 .. autosummary::
    :toctree: gen_modules/
    :template: myclass_template.rst
 
    JointEmbedding
    SelfDistillation
+
 
 Here is what this instantiation looks like in the YAML configuration file:
 
@@ -73,7 +73,6 @@ Optimization Configuration (``optim``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The ``optim`` keyword is used to define the optimization settings for your model. It allows users to specify both the ``optimizer`` object and the ``scheduler``. Below is an example configuration:
-
 
 .. code-block:: yaml
 
@@ -111,60 +110,63 @@ Use the `hardware` keyword to configure hardware-related settings such as device
 Data Configuration (``data``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The ``data`` keyword defines data loading, preprocessing and data augmentation settings. Here is an example of how to define the ``data`` section in your YAML file:
+The ``data`` keyword specifies the settings for data loading, preprocessing, and data augmentation. 
+Multiple datasets can be defined, with the dataset named ``train`` used for training. 
+Other datasets, which can have any name, are used for evaluation purposes.
+
+Here is an example of how to define the ``data`` section in your YAML file:
 
 .. code-block:: yaml
 
-   train_on: base
    data:
       _num_classes: 10
       _num_samples: 50000
-      base:
-      _target_: torch.utils.data.DataLoader
-      batch_size: 256
-      drop_last: True
-      shuffle: True
-      num_workers: ${trainer.hardware.cpus_per_task}
-      dataset:
-         _target_: torchvision.datasets.CIFAR10
-         root: ~/data
-         train: True
-         transform:
-            _target_: stable_ssl.data.MultiViewSampler
-            transforms:
-            - _target_: torchvision.transforms.v2.Compose
+      train: # name 'train' indicates that this dataset should be used for training
+         _target_: torch.utils.data.DataLoader
+         batch_size: 256
+         drop_last: True
+         shuffle: True
+         num_workers: ${trainer.hardware.cpus_per_task}
+         dataset:
+            _target_: torchvision.datasets.CIFAR10
+            root: ~/data
+            train: True
+            transform:
+               _target_: stable_ssl.data.MultiViewSampler
                transforms:
-                  - _target_: torchvision.transforms.v2.RandomResizedCrop
-                  size: 32
-                  scale:
-                     - 0.2
-                     - 1.0
-                  - _target_: torchvision.transforms.v2.RandomHorizontalFlip
-                  p: 0.5
-                  - _target_: torchvision.transforms.v2.ToImage
-                  - _target_: torchvision.transforms.v2.ToDtype
+               - _target_: torchvision.transforms.v2.Compose
+                  transforms:
+                     - _target_: torchvision.transforms.v2.RandomResizedCrop
+                     size: 32
+                     scale:
+                        - 0.2
+                        - 1.0
+                     - _target_: torchvision.transforms.v2.RandomHorizontalFlip
+                     p: 0.5
+                     - _target_: torchvision.transforms.v2.ToImage
+                     - _target_: torchvision.transforms.v2.ToDtype
+                     dtype: 
+                        _target_: stable_ssl.utils.str_to_dtype
+                        _args_: [float32]
+                     scale: True
+               - ${trainer.data.base.dataset.transform.transforms.0}
+      test_out:
+         _target_: torch.utils.data.DataLoader
+         batch_size: 256
+         num_workers: ${trainer.hardware.cpus_per_task}
+         dataset:
+            _target_: torchvision.datasets.CIFAR10
+            train: False
+            root: ~/data
+            transform:
+               _target_: torchvision.transforms.v2.Compose
+               transforms:
+               - _target_: torchvision.transforms.v2.ToImage
+               - _target_: torchvision.transforms.v2.ToDtype
                   dtype: 
                      _target_: stable_ssl.utils.str_to_dtype
                      _args_: [float32]
                   scale: True
-            - ${trainer.data.base.dataset.transform.transforms.0}
-      test_out:
-      _target_: torch.utils.data.DataLoader
-      batch_size: 256
-      num_workers: ${trainer.hardware.cpus_per_task}
-      dataset:
-         _target_: torchvision.datasets.CIFAR10
-         train: False
-         root: ~/data
-         transform:
-            _target_: torchvision.transforms.v2.Compose
-            transforms:
-            - _target_: torchvision.transforms.v2.ToImage
-            - _target_: torchvision.transforms.v2.ToDtype
-               dtype: 
-                  _target_: stable_ssl.utils.str_to_dtype
-                  _args_: [float32]
-               scale: True
 
 .. note::
 
@@ -207,14 +209,14 @@ One important section is ``metrics``, which lets you define the evaluation metri
             top_k: 5
 
 
-Network Configuration (``network``)
+Network Configuration (``modules``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The ``network`` keyword is used to define the settings of all the neural networks used, including the architecture of the backbone, projectors etc. Below is an example:
+The ``modules`` keyword is used to define the settings of all the neural networks used, including the architecture of the backbone, projectors etc. Below is an example:
 
 .. code-block:: yaml
 
-   network:
+   modules:
       backbone:
          _target_: stable_ssl.utils.load_backbone
          name: resnet18
@@ -242,4 +244,4 @@ The ``network`` keyword is used to define the settings of all the neural network
          in_features: 512
          out_features: ${trainer.data._num_classes}
 
-The various components defined above can be accessed through the dictionary ``self.network`` in your trainer class. This allows you to define the forward pass, compute losses, and specify evaluation metrics efficiently.
+The various components defined above can be accessed through the dictionary ``self.modules`` in your trainer class. This allows you to define the forward pass, compute losses, and specify evaluation metrics efficiently.
