@@ -116,7 +116,7 @@ Then, create a Python script that will load the configuration and launch the run
    import hydra
    from omegaconf import OmegaConf
 
-   OmegaConf.register_new_resolver("eval", eval)
+   OmegaConf.register_new_resolver("eval", eval) # to evaluate expressions in the config file
 
    @hydra.main(version_base="1.2")
    def main(cfg):
