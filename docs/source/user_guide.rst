@@ -18,8 +18,8 @@ To make the process streamlined and efficient, we recommend using configuration 
 
 .. _trainer:
 
-``trainer``
-~~~~~~~~~~~
+trainer
+~~~~~~~
 
 In ``stable-SSL``, the main ``trainer`` object must inherit from the ``BaseModel`` class. This class serves as the primary entry point for the training loop and provides all the essential methods required to train and evaluate your model effectively.
 
@@ -49,8 +49,8 @@ Here is what this instantiation looks like in the YAML configuration file:
 
 .. _objective:
 
-``objective``
-~~~~~~~~~~~~~
+objective
+~~~~~~~~~
 
 The ``objective`` keyword is used to define the loss function for your model. ``stable-SSL`` offers a variety of loss functions to suit different training needs. Below is a list of the available loss functions:
 
@@ -74,8 +74,8 @@ Here's an example of how to define the `objective` section in your YAML file:
 
 .. _optim:
 
-``optim``
-~~~~~~~~~
+optim
+~~~~~
 
 The ``optim`` keyword is used to define the optimization settings for your model. It allows users to specify both the ``optimizer`` object and the ``scheduler``. 
 
@@ -101,8 +101,8 @@ Example:
 
 .. _data:
 
-``data``
-~~~~~~~~
+data
+~~~~
 
 The ``data`` keyword specifies the settings for data loading, preprocessing, and data augmentation. 
 Multiple datasets can be defined, with the dataset named ``train`` used for training. 
@@ -165,8 +165,8 @@ Example:
 
 .. _modules:
 
-``modules``
-~~~~~~~~~~~
+modules
+~~~~~~~
 
 The ``modules`` keyword is used to define the settings of all the neural networks used, including the architecture of the backbone, projectors etc. 
 
@@ -207,8 +207,8 @@ The various components defined above can be accessed through the dictionary ``se
 
 .. _logger:
 
-``logger``
-~~~~~~~~~~
+logger
+~~~~~~
 
 The ``logger`` keyword is used to configure the logging settings for your run. 
 
@@ -246,8 +246,8 @@ Example:
 
 .. _hardware:
 
-``hardware``
-~~~~~~~~~~~~
+hardware
+~~~~~~~~
 
 Use the `hardware` keyword to configure hardware-related settings such as device, world_size (number of GPUs) or CPUs per task.
 
