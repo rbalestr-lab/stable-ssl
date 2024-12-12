@@ -17,8 +17,8 @@ To make the process streamlined and efficient, we recommend using configuration 
 **General Idea.** ``stable-SSL`` is designed to minimize boilerplate code, providing a highly flexible framework with minimal hardcoded utilities. Most modules in the pipeline are modular and can instantiate objects from various sources, including ``stable-SSL``, ``PyTorch``, ``TorchMetrics``, or even custom objects provided by the user. This allows you to seamlessly integrate your own components into the pipeline while leveraging the capabilities of ``stable-SSL``.
 
 
-First step: define your base ``trainer`` module
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+``trainer``
+~~~~~~~~~~~
 
 In ``stable-SSL``, the main ``trainer`` object must inherit from the ``BaseModel`` class. This class serves as the primary entry point for the training loop and provides all the essential methods required to train and evaluate your model effectively.
 
@@ -46,8 +46,8 @@ Here is what this instantiation looks like in the YAML configuration file:
    _target_: stable_ssl.JointEmbedding
 
 
-The objective to minimize (``objective``)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+``objective``
+~~~~~~~~~~~~~
 
 The ``objective`` keyword is used to define the loss function for your model. ``stable-SSL`` offers a variety of loss functions to suit different training needs. Below is a list of the available loss functions:
 
@@ -69,10 +69,12 @@ Here's an example of how to define the `objective` section in your YAML file:
       temperature: 0.5
 
 
-Optimization Configuration (``optim``)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+``optim``
+~~~~~~~~~
 
-The ``optim`` keyword is used to define the optimization settings for your model. It allows users to specify both the ``optimizer`` object and the ``scheduler``. Below is an example configuration:
+The ``optim`` keyword is used to define the optimization settings for your model. It allows users to specify both the ``optimizer`` object and the ``scheduler``. 
+
+Example:
 
 .. code-block:: yaml
 
@@ -92,29 +94,14 @@ The ``optim`` keyword is used to define the optimization settings for your model
          steps_per_epoch: ${eval:'${trainer.data._num_samples} // ${trainer.data.${trainer.train_on}.batch_size}'}
 
 
-Hardware (``hardware``)
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-Use the `hardware` keyword to configure hardware-related settings such as device, world_size (number of GPUs) or CPUs per task. An example is available below:
-
-.. code-block:: yaml
-
-   hardware:
-      seed: 0
-      float16: true
-      device: "cuda:0"
-      world_size: 1
-      cpus_per_task: 8
-
-
-Data Configuration (``data``)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+``data``
+~~~~~~~~
 
 The ``data`` keyword specifies the settings for data loading, preprocessing, and data augmentation. 
 Multiple datasets can be defined, with the dataset named ``train`` used for training. 
 Other datasets, which can have any name, are used for evaluation purposes.
 
-Here is an example of how to define the ``data`` section in your YAML file:
+Example:
 
 .. code-block:: yaml
 
@@ -168,51 +155,13 @@ Here is an example of how to define the ``data`` section in your YAML file:
                      _args_: [float32]
                   scale: True
 
-.. note::
 
-   The ``train_on`` parameter specifies the dataset to train on. The ``data`` section can contain multiple datasets, each with its own configuration, but only one is used for training. The others can be used for evaluation.
+``modules``
+~~~~~~~~~~~
 
+The ``modules`` keyword is used to define the settings of all the neural networks used, including the architecture of the backbone, projectors etc. 
 
-Log Configuration (``logger``)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The ``logger`` keyword is used to configure the logging settings for your run. 
-
-One important section is ``metrics``, which lets you define the evaluation metrics to track during training. Metrics can be specified for each dataset, as shown below:
-
-
-.. code-block:: yaml
-
-   logger:
-      base_dir: "./"
-      level: 20
-      checkpoint_frequency: 1
-      every_step: 1
-      metrics:
-         base:
-            acc1:
-            _target_: torchmetrics.classification.MulticlassAccuracy
-            num_classes: ${trainer.data._num_classes}
-            top_k: 1
-            acc5:
-            _target_: torchmetrics.classification.MulticlassAccuracy
-            num_classes: ${trainer.data._num_classes}
-            top_k: 5
-         test_out:
-            acc1:
-            _target_: torchmetrics.classification.MulticlassAccuracy
-            num_classes: ${trainer.data._num_classes}
-            top_k: 1
-            acc5:
-            _target_: torchmetrics.classification.MulticlassAccuracy
-            num_classes: ${trainer.data._num_classes}
-            top_k: 5
-
-
-Network Configuration (``modules``)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The ``modules`` keyword is used to define the settings of all the neural networks used, including the architecture of the backbone, projectors etc. Below is an example:
+Example:
 
 .. code-block:: yaml
 
@@ -244,4 +193,58 @@ The ``modules`` keyword is used to define the settings of all the neural network
          in_features: 512
          out_features: ${trainer.data._num_classes}
 
-The various components defined above can be accessed through the dictionary ``self.modules`` in your trainer class. This allows you to define the forward pass, compute losses, and specify evaluation metrics efficiently.
+The various components defined above can be accessed through the dictionary ``self.modules`` in your trainer class. This allows the user to define the forward pass, compute losses, and specify evaluation metrics efficiently.
+
+
+``logger``
+~~~~~~~~~~
+
+The ``logger`` keyword is used to configure the logging settings for your run. 
+
+One important section is ``metrics``, which lets you define the evaluation metrics to track during training. Metrics can be specified for each dataset.
+
+Example:
+
+.. code-block:: yaml
+
+   logger:
+      base_dir: "./"
+      level: 20
+      checkpoint_frequency: 1
+      every_step: 1
+      metrics:
+         train:
+            acc1:
+            _target_: torchmetrics.classification.MulticlassAccuracy
+            num_classes: ${trainer.data._num_classes}
+            top_k: 1
+            acc5:
+            _target_: torchmetrics.classification.MulticlassAccuracy
+            num_classes: ${trainer.data._num_classes}
+            top_k: 5
+         test_out:
+            acc1:
+            _target_: torchmetrics.classification.MulticlassAccuracy
+            num_classes: ${trainer.data._num_classes}
+            top_k: 1
+            acc5:
+            _target_: torchmetrics.classification.MulticlassAccuracy
+            num_classes: ${trainer.data._num_classes}
+            top_k: 5
+
+
+``hardware``
+~~~~~~~~~~~~
+
+Use the `hardware` keyword to configure hardware-related settings such as device, world_size (number of GPUs) or CPUs per task.
+
+Example:
+
+.. code-block:: yaml
+
+   hardware:
+      seed: 0
+      float16: true
+      device: "cuda:0"
+      world_size: 1
+      cpus_per_task: 8
