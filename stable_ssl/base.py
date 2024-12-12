@@ -112,16 +112,16 @@ class BaseModel(torch.nn.Module):
           - self.before_fit_epoch (setup in train mode)
           - loop over mini-batches
             - self.before_fit_step (moves data to device)
-            - self.fit_step
+            - self.fit_step (computes loss and performs optimization step)
             - self.after_fit_step (nothing by default)
-          - self.after_fit_epoch
+          - self.after_fit_epoch (nothing by default)
         - self.evaluate (if asked by user config, looping over all non train datasets)
           - self.before_eval (setup in eval mode)
           - loop over mini-batches
             - self.before_eval_step (moves data to device)
-            - self.eval_step
+            - self.eval_step (computes eval metrics)
             - self.after_eval_step (nothing by default)
-          - self.after_eval
+          - self.after_eval (nothing by default)
         - save intermitent checkpoint if asked by user config
       - save final checkpoint if asked by user config
     - self.after_fit (evaluates by default)
