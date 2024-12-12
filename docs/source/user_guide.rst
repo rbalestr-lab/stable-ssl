@@ -16,6 +16,7 @@ To make the process streamlined and efficient, we recommend using configuration 
 
 **General Idea.** ``stable-SSL`` is designed to minimize boilerplate code, providing a highly flexible framework with minimal hardcoded utilities. Most modules in the pipeline are modular and can instantiate objects from various sources, including ``stable-SSL``, ``PyTorch``, ``TorchMetrics``, or even custom objects provided by the user. This allows you to seamlessly integrate your own components into the pipeline while leveraging the capabilities of ``stable-SSL``.
 
+.. _trainer:
 
 ``trainer``
 ~~~~~~~~~~~
@@ -46,6 +47,8 @@ Here is what this instantiation looks like in the YAML configuration file:
    _target_: stable_ssl.JointEmbedding
 
 
+.. _objective:
+
 ``objective``
 ~~~~~~~~~~~~~
 
@@ -68,6 +71,8 @@ Here's an example of how to define the `objective` section in your YAML file:
       _target_: stable_ssl.NTXEntLoss
       temperature: 0.5
 
+
+.. _optim:
 
 ``optim``
 ~~~~~~~~~
@@ -93,6 +98,8 @@ Example:
          epochs: ${trainer.optim.epochs}
          steps_per_epoch: ${eval:'${trainer.data._num_samples} // ${trainer.data.${trainer.train_on}.batch_size}'}
 
+
+.. _data:
 
 ``data``
 ~~~~~~~~
@@ -156,6 +163,8 @@ Example:
                   scale: True
 
 
+.. _modules:
+
 ``modules``
 ~~~~~~~~~~~
 
@@ -196,6 +205,8 @@ Example:
 The various components defined above can be accessed through the dictionary ``self.modules`` in your trainer class. This allows the user to define the forward pass, compute losses, and specify evaluation metrics efficiently.
 
 
+.. _logger:
+
 ``logger``
 ~~~~~~~~~~
 
@@ -232,6 +243,8 @@ Example:
             num_classes: ${trainer.data._num_classes}
             top_k: 5
 
+
+.. _hardware:
 
 ``hardware``
 ~~~~~~~~~~~~

@@ -87,7 +87,7 @@ At its core, ``stable-SSL`` provides a ``BaseModel`` class that sequentially cal
       - save final checkpoint if asked by user config
    - self.after_fit (evaluates by default)
 
-While the organization is similar to that of ``PyTorch Lightning``, the goal of ``stable-SSL`` is to significantly reduce codebase complexity without sacrificing performance. Think of ``PyTorch Lightning`` as industry-driven (abstracting everything away), whereas ``stable-SSL`` is academia-driven (bringing everything to the forefront for the user).
+While the organization is similar to that of ``PyTorch Lightning``, the goal of ``stable-SSL`` is to significantly reduce codebase complexity without sacrificing performance. Think of ``PyTorch Lightning`` as industry-driven (abstracting everything away), whereas ``stable-SSL`` is academia-driven (providing users with complete visibility into every aspect).
 
 
 How to launch runs
@@ -99,7 +99,7 @@ When using ``stable-SSL``, we recommend relying on configuration files to specif
 
 The parameters are organized into the following groups:
 
-* ``data``: Defines the dataset, loading, and augmentation pipelines. Only the dataset called ``train`` is used for training. If there is no dataset named ``train``, the model runs in evaluation mode.
+* ``data``: Defines the dataset, loading, and augmentation pipelines. Only the dataset called ``train`` is used for training. If there is no dataset named ``train``, the model runs in evaluation mode. Example :ref:`here <data>`.
 * ``modules``: Specifies the neural network modules, with a required ``backbone`` as the model's core.
 * ``objective``: Defines the model's loss function.
 * ``optim``: Contains optimization parameters, including ``epochs``, ``max_steps`` (per epoch), and ``optimizer`` / ``scheduler`` settings.
