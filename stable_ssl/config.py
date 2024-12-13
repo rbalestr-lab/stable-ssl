@@ -7,6 +7,7 @@
 # # This source code is licensed under the license found in the
 # # LICENSE file in the root directory of this source tree.
 
+from typing import Optional, Union
 from dataclasses import dataclass, field
 import logging
 
@@ -54,7 +55,7 @@ class HardwareConfig:
 
 
 @dataclass
-class LogConfig:
+class LoggerConfig:
     """
     Configuration for logging and checkpointing during training or evaluation.
 
@@ -99,33 +100,23 @@ class LogConfig:
     wandb: Union[bool, dict, None] = None
 
 
-# @dataclass
-# class WandbConfig(LogConfig):
-#     """Configuration for the Weights & Biases logging.
+@dataclass
+class WandbConfig(LogConfig):
+    """Configuration for the Weights & Biases logging.
 
-#     Parameters
-#     ----------
-#     entity : str, optional
-#         Name of the (Weights & Biases) entity. Default is None.
-#     project : str, optional
-#         Name of the (Weights & Biases) project. Default is None.
-#     run : str, optional
-#         Name of the Weights & Biases run. Default is None.
-#     rank_to_log: int, optional
-#         Specifies the rank of the GPU/process to log for WandB tracking.
-#         - Set to an integer value (e.g., 0, 1, 2) to log a specific GPU/process.
-#         - Set to a negative value (e.g., -1) to log all processes.
-#         Default is 0, which logs only the primary process.
-#     """
+    Parameters
+    ----------
+    entity : str, optional
+        Name of the (Weights & Biases) entity. Default is None.
+    project : str, optional
+        Name of the (Weights & Biases) project. Default is None.
+    run : str, optional
+        Name of the Weights & Biases run. Default is None.
+    id : str, optional
+        ID of the Weights & Biases run. Default is None.
+    """
 
-#     entity: Optional[str] = None
-#     project: Optional[str] = None
-#     run: Optional[str] = None
-#     rank_to_log: int = 0
-
-#     def __post_init__(self):
-#         """Check the rank to log for Weights & Biases."""
-#         super().__post_init__()
-
-#         if self.rank_to_log < 0:
-#             raise ValueError("Cannot (yet) log all processes to Weights & Biases.")
+    entity: Optional[str] = None
+    project: Optional[str] = None
+    run: Optional[str] = None
+    id: Optional[str] = None

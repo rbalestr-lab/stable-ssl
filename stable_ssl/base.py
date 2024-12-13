@@ -28,7 +28,7 @@ import torch.nn.functional as F
 from .data import DistributedSamplerWrapper
 from . import reader
 from .utils import update_momentum
-from .config import LogConfig
+from .config import LoggerConfig, WandbConfig
 
 try:
     import wandb
@@ -251,14 +251,11 @@ class BaseModel(torch.nn.Module):
         logging.info(f"=> SETUP OF {self.__class__.__name__} COMPLETED")
 
     def set_logger_defaults(self, logger):
-        logger = {**asdict(LogConfig()), **logger}
+        logger = asdict(LoggerConfig(**logger))
         if type(logger["wandb"]) is bool and logger["wandb"] is True:
             logger["wandb"] = {}
-        if logger["wandb"] is not None and self.rank == 0:
-            logger["wandb"]["entity"] = logger["wandb"].get("entity", None)
-            logger["wandb"]["project"] = logger["wandb"].get("project", None)
-            logger["wandb"]["name"] = logger["wandb"].get("name", None)
-            logger["wandb"]["id"] = logger["wandb"].get("id", None)
+        if isinstance(logger.get("wandb"), dict) and self.rank == 0:
+            logger["wandb"] = asdict(WandbConfig(**logger["wandb"]))
 
     @staticmethod
     def set_optim_defaults(optim):
