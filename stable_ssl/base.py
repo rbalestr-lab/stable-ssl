@@ -127,7 +127,7 @@ class BaseModel(torch.nn.Module):
 
         logging.info(f"=> INIT OF {self.__class__.__name__} COMPLETED")
 
-    def instanciate(self):
+    def _instanciate(self):
         seed_everything(self._hardware.get("seed", None))
 
         self.start_time = time.time()
@@ -251,8 +251,8 @@ class BaseModel(torch.nn.Module):
     def setup(self):
         logging.getLogger().setLevel(self._logger["level"])
         logging.info(f"=> SETUP OF {self.__class__.__name__} STARTED")
-        self.instanciate()
-        self.load_checkpoint()
+        self._instanciate()
+        self._load_checkpoint()
         logging.info(f"=> SETUP OF {self.__class__.__name__} COMPLETED")
 
     @staticmethod
@@ -282,23 +282,23 @@ class BaseModel(torch.nn.Module):
         """
         if "train" not in self.data:
             self.evaluate()
-            self.cleanup()
+            self._cleanup()
             return
         try:
             self.before_fit()
-            self.fit()
+            self._fit()
             self.after_fit()
         except BreakAllEpochs:
             logging.exception("Training stopped by user.")
             raise
         if self.logger["wandb"]:
             wandb.finish()
-        self.cleanup()
+        self._cleanup()
 
-    def fit(self):
+    def _fit(self):
         while self.epoch < self.optim["epochs"]:
             try:
-                self.fit_epoch()
+                self._fit_epoch()
             except BreakEpoch:
                 logging.info(
                     "Train epoch interrupted by user. Proceeding to the next one."
@@ -311,25 +311,25 @@ class BaseModel(torch.nn.Module):
                 raise
 
             if self.epoch % self.logger["eval_every_epoch"] == 0:
-                self.evaluate()
+                self._evaluate()
             self.epoch = self.epoch + 1
 
             if self.epoch % self.logger["checkpoint_frequency"] == 0:
-                self.save_checkpoint(
+                self._save_checkpoint(
                     f"checkpoint_{self.epoch}.ckpt",
                     model_only=self.logger["checkpoint_model_only"],
                 )
 
         # At the end of training, we (optionally) save the final model.
         if self.logger["save_final_model"]:
-            self.save_checkpoint(
+            self._save_checkpoint(
                 f"{self.logger['save_final_model']}.ckpt", model_only=True
             )
 
         logging.info("Cleaning up any temporary checkpoint.")
         (self.logger["dump_path"] / "tmp_checkpoint.ckpt").unlink(missing_ok=True)
 
-    def fit_epoch(self):
+    def _fit_epoch(self):
         assert "train" in self.data
         self.before_fit_epoch()
         # We do not ensure that the model is still in train mode to not
@@ -355,7 +355,7 @@ class BaseModel(torch.nn.Module):
             tqdm(loader, total=max_steps, desc=f"Training: {self.epoch}")
         ):
             self.before_fit_step()
-            self.fit_step()
+            self._fit_step()
             self.after_fit_step()
 
             self.global_step.add_(1)
@@ -401,7 +401,7 @@ class BaseModel(torch.nn.Module):
                         with torch.amp.autocast(
                             "cuda", enabled=self.hardware["float16"]
                         ):
-                            self.eval_step(name_loader=name_loader)
+                            self._eval_step(name_loader=name_loader)
 
                         # Call any user specified post-step function.
                         self.after_eval_step()
@@ -417,11 +417,11 @@ class BaseModel(torch.nn.Module):
             if name_loader in self.logger["metrics"]:
                 for name, metric in self.logger["metrics"][name_loader].items():
                     packet[f"{name_loader}/{name}"] = metric.compute()
-        self.log(packet, commit=True)
+        self._log(packet, commit=True)
         # Call any user specified post-epoch function.
         self.after_eval()
 
-    def fit_step(self):
+    def _fit_step(self):
 
         with torch.amp.autocast("cuda", enabled=self.hardware["float16"]):
             returned_loss = self.compute_loss()
@@ -472,9 +472,9 @@ class BaseModel(torch.nn.Module):
             bucket["train/lr"] = self.optim["scheduler"].get_last_lr()[0]
             bucket["step"] = self.batch_idx
             bucket["epoch"] = self.epoch
-            self.log(bucket, commit=True)
+            self._log(bucket, commit=True)
 
-    def eval_step(self, name_loader):
+    def _eval_step(self, name_loader):
         output = self.predict()
         if name_loader in self.logger["metrics"]:
             for metric in self.logger["metrics"][name_loader].values():
@@ -536,7 +536,7 @@ class BaseModel(torch.nn.Module):
         # "self" is your callable, at its current state.
         # "self" therefore holds the current version of the model:
         logging.info("Requeuing the task...")
-        self.save_checkpoint("tmp_checkpoint.ckpt", model_only=False)
+        self._save_checkpoint("tmp_checkpoint.ckpt", model_only=False)
         model = type(self)(
             self._data,
             self._module,
@@ -546,10 +546,10 @@ class BaseModel(torch.nn.Module):
             self._logger,
         )
         logging.info("Cleaning up the current task before submitting a new one.")
-        self.cleanup()
+        self._cleanup()
         return submitit.helpers.DelayedSubmission(model)
 
-    def log(self, packet=None, commit=True):
+    def _log(self, packet=None, commit=True):
         # Update the log buffer with the new packet.
         packet = packet or {}
         assert "_global_step" not in packet, logging.error(
@@ -582,7 +582,7 @@ class BaseModel(torch.nn.Module):
 
         # Log in jsonl.
         else:
-            self._log_buffer.update(self.generate_logging_default_bucket())
+            self._log_buffer.update(self._generate_logging_default_bucket())
             with jsonlines.open(
                 self.logger["dump_path"] / f"logs_rank_{self.rank}.jsonl", mode="a"
             ) as writer:
@@ -591,7 +591,7 @@ class BaseModel(torch.nn.Module):
         # Clear the log buffer.
         self._log_buffer = {}
 
-    def load_checkpoint(self):
+    def _load_checkpoint(self):
         logging.info("load_checkpoint:")
         target = self.logger["dump_path"] / "tmp_checkpoint.ckpt"
         if not target.is_file():
@@ -625,7 +625,7 @@ class BaseModel(torch.nn.Module):
         else:
             self.epoch = 0
 
-    def save_checkpoint(self, name, model_only):
+    def _save_checkpoint(self, name, model_only):
         if self.world_size > 1:
             curr_rank = torch.distributed.get_rank()
             if curr_rank != 0:
@@ -652,7 +652,7 @@ class BaseModel(torch.nn.Module):
             mess = "(model, optimizer, scheduler, epoch)"
         logging.info(f"Checkpoint {mess} saved at {saving_name}.")
 
-    def generate_logging_default_bucket(self):
+    def _generate_logging_default_bucket(self):
         cur_time = time.time()
         rel_time = cur_time - self.start_time
         bucket = {
@@ -665,7 +665,7 @@ class BaseModel(torch.nn.Module):
         }
         return bucket
 
-    def cleanup(self):
+    def _cleanup(self):
         logging.info("Cleaning up process, device status before cleaning:")
         get_gpu_info()
 
@@ -837,13 +837,13 @@ class SelfDistillation(JointEmbedding):
     def setup(self):
         logging.getLogger().setLevel(self._logger["level"])
         logging.info(f"=> SETUP OF {self.__class__.__name__} STARTED")
-        self.instanciate()
+        self._instanciate()
         self.module["backbone_target"] = copy.deepcopy(self.module["backbone"])
         self.module["projector_target"] = copy.deepcopy(self.module["projector"])
 
         self.module["backbone_target"].requires_grad_(False)
         self.module["projector_target"].requires_grad_(False)
-        self.load_checkpoint()
+        self._load_checkpoint()
         logging.info(f"=> SETUP OF {self.__class__.__name__} COMPLETED")
 
     def before_fit_step(self):
