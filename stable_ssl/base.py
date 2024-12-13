@@ -151,7 +151,7 @@ class BaseModel(torch.nn.Module):
                 self.logger["wandb"]["entity"] = wandb.run.entity
                 self.logger["wandb"]["project"] = wandb.run.project
                 self.logger["wandb"]["name"] = wandb.run.name
-                self.logger["wandb"]["id"] = wandb.run.id
+                self.logger["wandb"]["ID"] = wandb.run.id
                 logging.info(f"\t\t- entity: {wandb.run.entity}")
                 logging.info(f"\t\t- project: {wandb.run.project}")
                 logging.info(f"\t\t- name: {wandb.run.name}")
@@ -687,7 +687,7 @@ class BaseModel(torch.nn.Module):
             return reader.wandb(
                 self.logger["wandb"]["entity"],
                 self.logger["wandb"]["project"],
-                self.logger["wandb"]["id"],
+                self.logger["wandb"]["ID"],
                 keys=keys,
             )
 

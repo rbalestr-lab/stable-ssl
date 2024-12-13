@@ -112,11 +112,11 @@ class WandbConfig(LogConfig):
         Name of the (Weights & Biases) project. Default is None.
     run : str, optional
         Name of the Weights & Biases run. Default is None.
-    id : str, optional
+    ID : str, optional
         ID of the Weights & Biases run. Default is None.
     """
 
     entity: Optional[str] = None
     project: Optional[str] = None
     run: Optional[str] = None
-    id: Optional[str] = None
+    ID: Optional[str] = None
