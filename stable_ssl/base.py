@@ -108,7 +108,14 @@ class BaseModel(torch.nn.Module):
         self._hardware = hardware
         self._optim = optim
         self._logger = logger
-        self.set_logger_defaults(self._logger)
+
+        # Set the logger defaults.
+        self._logger = asdict(LoggerConfig(**self._logger))
+        if type(self._logger["wandb"]) is bool and self._logger["wandb"] is True:
+            self._logger["wandb"] = {}
+        if isinstance(self._logger.get("wandb"), dict) and self.rank == 0:
+            self._logger["wandb"] = asdict(WandbConfig(**self._logger["wandb"]))
+
         self.set_optim_defaults(self._optim)
         c = self.get_config()
         c["trainer"]["logger"] = self._logger
@@ -247,13 +254,6 @@ class BaseModel(torch.nn.Module):
         self.instanciate()
         self.load_checkpoint()
         logging.info(f"=> SETUP OF {self.__class__.__name__} COMPLETED")
-
-    def set_logger_defaults(self, logger):
-        logger = asdict(LoggerConfig(**logger))
-        if type(logger["wandb"]) is bool and logger["wandb"] is True:
-            logger["wandb"] = {}
-        if isinstance(logger.get("wandb"), dict) and self.rank == 0:
-            logger["wandb"] = asdict(WandbConfig(**logger["wandb"]))
 
     @staticmethod
     def set_optim_defaults(optim):
