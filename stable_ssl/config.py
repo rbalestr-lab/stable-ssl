@@ -9,7 +9,6 @@
 
 from typing import Optional, Union
 from dataclasses import dataclass, field
-import logging
 
 # from omegaconf import OmegaConf
 from pathlib import Path
@@ -65,25 +64,27 @@ class LoggerConfig:
     metrics : dict, optional
         A dictionary to store and log various metrics. Default is an empty dict.
     save_final_model : str, optional
-        Specifies whether to save the final trained model and the name it should be saved as.
-        If a name is provided, the final model will be saved with that name. Default is "final".
+        Specifies whether to save the final trained model.
+        If a name is provided, the final model will be saved with that name.
+        Default is "final".
     eval_every_epoch : int, optional
-        The frequency (in epochs) at which the model will be evaluated. For example, if set
-        to 1, evaluation occurs every epoch. Default is 1.
+        The frequency (in epochs) at which the model will be evaluated.
+        For example, if set to 1, evaluation occurs every epoch. Default is 1.
     every_step : int, optional
-        The frequency (in training steps) at which to log intermediate metrics. For example,
-        if set to 1, logs occur every step. Default is 1.
+        The frequency (in training steps) at which to log intermediate metrics.
+        For example, if set to 1, logs occur every step. Default is 1.
     checkpoint_frequency : int, optional
-        The frequency (in epochs) at which model checkpoints are saved. For example, if set
-        to 10, a checkpoint is saved every 10 epochs. Default is 10.
+        The frequency (in epochs) at which model checkpoints are saved.
+        For example, if set to 10, a checkpoint is saved every 10 epochs. Default is 10.
     checkpoint_model_only : bool, optional
         Whether to save only the model weights (True) or save additional training state
         (False) during checkpointing. Default is True.
     dump_path : pathlib.Path, optional
         The path where output is dumped. Defaults to Hydra's runtime output directory.
     wandb : bool or dict or None, optional
-        Configuration for Weights & Biases logging. If `True`, it will be converted to an empty
-        dictionary and default keys will be filled in if `rank == 0`. Default is None.
+        Configuration for Weights & Biases logging.
+        If `True`, it will be converted to an empty dictionary and default keys will be
+        filled in if `rank == 0`. Default is None.
     """
 
     level: int = 20
