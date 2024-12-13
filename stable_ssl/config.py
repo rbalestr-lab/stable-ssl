@@ -7,7 +7,7 @@
 # # This source code is licensed under the license found in the
 # # LICENSE file in the root directory of this source tree.
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import logging
 
 # from omegaconf import OmegaConf
@@ -55,56 +55,48 @@ class HardwareConfig:
 
 @dataclass
 class LogConfig:
-    """Configuration for the 'log' parameters.
+    """
+    Configuration for logging and checkpointing during training or evaluation.
 
     Parameters
     ----------
-    api: str, optional
-        Which logging API to use.
-        - Set to "wandb" to use Weights & Biases.
-        - Set to "None" to use jsonlines.
-        Default is None.
-    folder : str, optional
-        Path to the folder where logs and checkpoints will be saved.
-        If None is provided, a default path is created under `./logs`.
-        Default is None.
-    load_from : str, optional
-        Path to a checkpoint from which to load the model, optimizer, and scheduler.
-        Default is "ckpt".
     level : int, optional
-        Logging level (e.g., logging.INFO). Default is logging.INFO.
-    checkpoint_frequency : int, optional
-        Frequency of saving checkpoints (in terms of epochs). Default is 10.
-    save_final_model : bool, optional
-        Whether to save the final trained model. Default is True.
-    final_model_name : str, optional
-        Name for the final saved model. Default is "final_model".
-    eval_only : bool, optional
-        Whether to only evaluate the model without training. Default is False.
+        The logging level. Determines the threshold for what gets logged. Default is 20.
+    metrics : dict, optional
+        A dictionary to store and log various metrics. Default is an empty dict.
+    save_final_model : str, optional
+        Specifies whether to save the final trained model and the name it should be saved as.
+        If a name is provided, the final model will be saved with that name. Default is "final".
     eval_every_epoch : int, optional
-        Frequency of evaluation (in terms of epochs). Default is 1.
-    log_every_step : int, optional
-        Frequency of logging (in terms of steps). Default is 1.
+        The frequency (in epochs) at which the model will be evaluated. For example, if set
+        to 1, evaluation occurs every epoch. Default is 1.
+    every_step : int, optional
+        The frequency (in training steps) at which to log intermediate metrics. For example,
+        if set to 1, logs occur every step. Default is 1.
+    checkpoint_frequency : int, optional
+        The frequency (in epochs) at which model checkpoints are saved. For example, if set
+        to 10, a checkpoint is saved every 10 epochs. Default is 10.
+    checkpoint_model_only : bool, optional
+        Whether to save only the model weights (True) or save additional training state
+        (False) during checkpointing. Default is True.
+    dump_path : pathlib.Path, optional
+        The path where output is dumped. Defaults to Hydra's runtime output directory.
+    wandb : bool or dict or None, optional
+        Configuration for Weights & Biases logging. If `True`, it will be converted to an empty
+        dictionary and default keys will be filled in if `rank == 0`. Default is None.
     """
 
-    level: int = logging.INFO
-    save_final_model: bool = True
-    metrics: dict = None
+    level: int = 20
+    metrics: dict = field(default_factory=dict)
+    save_final_model: str = "final"
     eval_every_epoch: int = 1
-    log_every_step: int = 1
-    wandb = False
-
-    def __post_init__(self):
-        """Initialize logging folder and run settings.
-
-        If the folder path is not specified, creates a default path under `./logs`.
-        The run identifier is set using the current timestamp if not provided.
-        """
-        if self.folder is None:
-            self.folder = Path("./logs")
-        else:
-            self.folder = Path(self.folder)
-        self.folder.mkdir(parents=True, exist_ok=True)
+    every_step: int = 1
+    checkpoint_frequency: int = 10
+    checkpoint_model_only: bool = True
+    dump_path: Path = field(
+        default_factory=lambda: Path(HydraConfig.get().runtime.output_dir)
+    )
+    wandb: Union[bool, dict, None] = None
 
 
 # @dataclass
