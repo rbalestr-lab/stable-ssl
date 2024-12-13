@@ -1,5 +1,5 @@
 # # -*- coding: utf-8 -*-
-# """Configuration for stable-ssl runs."""
+# """Configuration classes specifying default parameters for stable-SSL."""
 # #
 # # Author: Hugues Van Assel <vanasselhugues@gmail.com>
 # #         Randall Balestriero <randallbalestriero@gmail.com>
@@ -9,8 +9,6 @@
 
 from typing import Optional, Union
 from dataclasses import dataclass, field
-
-# from omegaconf import OmegaConf
 from pathlib import Path
 import pickle
 import lzma
@@ -31,7 +29,7 @@ def instanciate_config(cfg=None, debug_hash=None) -> object:
 
 @dataclass
 class HardwareConfig:
-    """Configuration for the 'hardware' parameters.
+    """Configuration for the hardware parameters.
 
     Parameters
     ----------
@@ -39,19 +37,16 @@ class HardwareConfig:
         Random seed for reproducibility. Default is None.
     float16 : bool, optional
         Whether to use mixed precision (float16) for training. Default is False.
-    gpu_id : int, optional
-        GPU device ID to use for training. Default is 0.
     world_size : int, optional
         Number of processes participating in distributed training. Default is 1.
-    port : int, optional
-        Local proc's port number for distributed training. Default is None.
+    device : str, optional
+        The device to use for training. Default is "cuda" if available, else "cpu".
     """
 
     seed: Optional[int] = None
     float16: bool = False
-    gpu_id: int = 0
     world_size: int = 1
-    port: Optional[int] = None
+    device: str = "cuda"
 
 
 @dataclass
@@ -121,3 +116,33 @@ class WandbConfig(LoggerConfig):
     project: Optional[str] = None
     name: Optional[str] = None
     ID: Optional[str] = None
+
+
+@dataclass
+class OptimConfig:
+    """Configuration for the optimization parameters.
+
+    Parameters
+    ----------
+    optimizer : dict
+        Configuration for the optimizer.
+    scheduler : dict
+        Configuration for the learning rate scheduler.
+    epochs : int, optional
+        Number of epochs to train the model. Default is 1000.
+    max_steps : int, optional
+        Maximum number of steps to train the model. Default is None.
+    accumulation_steps : int, optional
+        Number of steps to accumulate gradients before updating the model.
+        Default is 1.
+    grad_max_norm : float, optional
+        Maximum norm of the gradients. If None, no clipping is applied.
+        Default is None.
+    """
+
+    optimizer: dict
+    scheduler: dict
+    epochs: int = 1000
+    max_steps: Optional[int] = None
+    accumulation_steps: int = 1
+    grad_max_norm: Optional[float] = None

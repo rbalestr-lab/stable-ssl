@@ -27,7 +27,7 @@ import torch.nn.functional as F
 from .data import DistributedSamplerWrapper
 from . import reader
 from .utils import update_momentum
-from .config import LoggerConfig, WandbConfig
+from .config import LoggerConfig, WandbConfig, HardwareConfig, OptimConfig
 
 try:
     import wandb
@@ -116,12 +116,17 @@ class BaseModel(torch.nn.Module):
         if isinstance(self._logger.get("wandb"), dict) and self.rank == 0:
             self._logger["wandb"] = asdict(WandbConfig(**self._logger["wandb"]))
 
-        self.set_optim_defaults(self._optim)
+        # Set the hardware defaults.
+        self._hardware = asdict(HardwareConfig(**self._hardware))
+
+        # Set the optimizer defaults.
+        self._optim = asdict(OptimConfig(**self._optim))
+
+        # Save the full config with defaults.
         c = self.get_config()
         c["trainer"]["logger"] = self._logger
+        c["trainer"]["hardware"] = self._hardware
         c["trainer"]["optim"] = self._optim
-
-        # dumps to file with defaults:
         with open(self._logger["dump_path"] / ".hydra" / "config.yaml", "w") as f:
             omegaconf.OmegaConf.save(c, f)
 
@@ -254,11 +259,6 @@ class BaseModel(torch.nn.Module):
         self._instanciate()
         self._load_checkpoint()
         logging.info(f"=> SETUP OF {self.__class__.__name__} COMPLETED")
-
-    @staticmethod
-    def set_optim_defaults(optim):
-        optim["accumulation_steps"] = optim.get("accumulation_steps", 1)
-        optim["grad_max_norm"] = optim.get("grad_max_norm", None)
 
     def forward(self):
         return self.module["backbone"](self.batch[0])

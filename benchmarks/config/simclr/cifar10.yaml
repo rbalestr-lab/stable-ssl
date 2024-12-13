@@ -11,7 +11,7 @@ hydra:
     gpus_per_node: ${trainer.hardware.world_size}
     tasks_per_node: ${trainer.hardware.world_size}
     partition: gpu
-    cpus_per_task: ${trainer.hardware.cpus_per_task}
+    cpus_per_task: ${trainer.data.train.num_workers}
     timeout_min: 1000
     max_num_timeout: 5
 
@@ -33,7 +33,7 @@ trainer:
       batch_size: 256
       drop_last: True
       shuffle: True
-      num_workers: ${trainer.hardware.cpus_per_task}
+      num_workers: 4
       dataset:
         _target_: torchvision.datasets.CIFAR10
         root: ~/data
@@ -75,7 +75,7 @@ trainer:
     test: # can be any name
       _target_: torch.utils.data.DataLoader
       batch_size: 256
-      num_workers: ${trainer.hardware.cpus_per_task}
+      num_workers: ${trainer.data.train.num_workers}
       dataset:
         _target_: torchvision.datasets.CIFAR10
         train: False
@@ -142,7 +142,6 @@ trainer:
     float16: true
     device: "cuda:0"
     world_size: 1
-    cpus_per_task: 6
 
   # ===== Logging Parameters =====
   logger:
