@@ -36,7 +36,6 @@ except ModuleNotFoundError:
         "Wandb module is not installed, make sure not to use wandb for logging "
         "or an error will be thrown."
     )
-from hydra.core.hydra_config import HydraConfig
 from .utils import (
     BreakAllEpochs,
     BreakEpoch,

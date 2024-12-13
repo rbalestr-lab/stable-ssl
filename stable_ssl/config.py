@@ -15,6 +15,7 @@ from pathlib import Path
 import pickle
 import lzma
 import hydra
+from hydra.core.hydra_config import HydraConfig
 
 
 def instanciate_config(cfg=None, debug_hash=None) -> object:
@@ -101,7 +102,7 @@ class LoggerConfig:
 
 
 @dataclass
-class WandbConfig(LogConfig):
+class WandbConfig(LoggerConfig):
     """Configuration for the Weights & Biases logging.
 
     Parameters
