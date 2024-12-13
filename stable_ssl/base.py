@@ -281,7 +281,7 @@ class BaseModel(torch.nn.Module):
         This is just a boilerplate version that provides minimal things.
         """
         if "train" not in self.data:
-            self.evaluate()
+            self._evaluate()
             self._cleanup()
             return
         try:
@@ -365,8 +365,7 @@ class BaseModel(torch.nn.Module):
         self.after_fit_epoch()
         self.batch = None
 
-    def evaluate(self) -> dict:
-
+    def _evaluate(self) -> dict:
         self.before_eval()
         # We do not ensure that the model is still in eval mode to not
         # override any user desired behavior.
@@ -743,7 +742,7 @@ class BaseModel(torch.nn.Module):
         self.epoch = 0
 
     def after_fit(self):
-        self.evaluate()
+        self._evaluate()
 
     def before_fit_epoch(self):
         self.train()
@@ -776,7 +775,7 @@ class BaseModel(torch.nn.Module):
 class JointEmbedding(BaseModel):
     r"""Base class for training a joint-embedding SSL model."""
 
-    def format_views_labels(self):
+    def _format_views_labels(self):
         if (
             len(self.batch) == 2
             and torch.is_tensor(self.batch[1])
@@ -803,7 +802,7 @@ class JointEmbedding(BaseModel):
         return self.module["backbone_classifier"](self.forward())
 
     def compute_loss(self):
-        views, labels = self.format_views_labels()
+        views, labels = self._format_views_labels()
         embeddings = [self.module["backbone"](view) for view in views]
         projections = [self.module["projector"](embed) for embed in embeddings]
 
