@@ -56,8 +56,7 @@ class HardwareConfig:
 
 @dataclass
 class LoggerConfig:
-    """
-    Configuration for logging and checkpointing during training or evaluation.
+    """Configuration for logging and checkpointing during training or evaluation.
 
     Parameters
     ----------
