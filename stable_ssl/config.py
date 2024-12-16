@@ -132,7 +132,7 @@ class OptimConfig:
     epochs : int, optional
         Number of epochs to train the model. Default is 1000.
     max_steps : int, optional
-        Maximum number of steps to train the model. Default is None.
+        Maximum number of steps to train the model. Default is -1.
     accumulation_steps : int, optional
         Number of steps to accumulate gradients before updating the model.
         Default is 1.
@@ -144,6 +144,6 @@ class OptimConfig:
     optimizer: dict
     scheduler: dict
     epochs: int = 1000
-    max_steps: Optional[int] = None
+    max_steps: int = -1
     accumulation_steps: int = 1
     grad_max_norm: Optional[float] = None

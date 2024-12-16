@@ -1,0 +1,21 @@
+# @package _global_
+defaults:
+  - override /hydra/launcher: submitit_slurm
+
+hydra:
+  job:
+    chdir: False
+  launcher:
+    gpus_per_node: ${trainer.hardware.world_size}
+    tasks_per_node: ${trainer.hardware.world_size}
+    partition: gpu
+    cpus_per_task: ${trainer.data.train.num_workers}
+    timeout_min: 1000
+    max_num_timeout: 5
+
+trainer:
+  hardware:
+    seed: 0
+    float16: true
+    device: "cuda:0"
+    world_size: 1

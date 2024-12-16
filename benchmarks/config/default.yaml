@@ -1,0 +1,6 @@
+# @package _global_
+defaults:
+  - _self_
+  - mode: one_gpu
+  - metric: multiclass_accuracy
+  - experiment: null

@@ -1,20 +1,5 @@
 # @package _global_
 
-defaults:
-  - override hydra/launcher: submitit_slurm
-  - _self_
-
-hydra:
-  job:
-    chdir: False
-  launcher:
-    gpus_per_node: ${trainer.hardware.world_size}
-    tasks_per_node: ${trainer.hardware.world_size}
-    partition: gpu
-    cpus_per_task: ${trainer.data.train.num_workers}
-    timeout_min: 1000
-    max_num_timeout: 5
-
 trainer:
   # ===== Base Model =====
   _target_: stable_ssl.JointEmbedding
@@ -125,7 +110,6 @@ trainer:
   # ===== Optim Parameters =====
   optim:
     epochs: 1000
-    max_steps: 1000
     optimizer: 
       _target_: stable_ssl.utils.LARS
       _partial_: True
@@ -135,26 +119,3 @@ trainer:
       _target_: stable_ssl.utils.scheduler.LinearWarmupCosineAnnealing
       _partial_: True
       total_steps: ${eval:'${trainer.optim.epochs} * ${trainer.data._num_samples} // ${trainer.data.train.batch_size}'}
-
-  # ===== Hardware Parameters =====
-  hardware:
-    seed: 0
-    float16: true
-    device: "cuda:0"
-    world_size: 1
-
-  # ===== Logging Parameters =====
-  logger:
-    level: 20
-    checkpoint_frequency: 10
-    every_step: 1
-    metrics:
-      test:
-        acc1:
-          _target_: torchmetrics.classification.MulticlassAccuracy
-          num_classes: ${trainer.data._num_classes}
-          top_k: 1
-        acc5:
-          _target_: torchmetrics.classification.MulticlassAccuracy
-          num_classes: ${trainer.data._num_classes}
-          top_k: 5
