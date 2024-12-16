@@ -149,16 +149,7 @@ trainer:
     checkpoint_frequency: 10
     every_step: 1
     metrics:
-      base:
-        acc1:
-          _target_: torchmetrics.classification.MulticlassAccuracy
-          num_classes: ${trainer.data._num_classes}
-          top_k: 1
-        acc5:
-          _target_: torchmetrics.classification.MulticlassAccuracy
-          num_classes: ${trainer.data._num_classes}
-          top_k: 5
-      test_out:
+      test:
         acc1:
           _target_: torchmetrics.classification.MulticlassAccuracy
           num_classes: ${trainer.data._num_classes}

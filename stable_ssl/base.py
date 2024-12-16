@@ -99,7 +99,7 @@ class BaseModel(torch.nn.Module):
 
     def __init__(self, data, module, objective, hardware, optim, logger, **kwargs):
         super().__init__()
-        logging.info(f"=> INIT OF {self.__class__.__name__} STARTED")
+        logging.info(f"=> INIT OF {self.__class__.__name__} STARTED.")
         for key, value in kwargs.items():
             setattr(self, key, value)
         self._data = data
@@ -130,7 +130,7 @@ class BaseModel(torch.nn.Module):
         with open(self._logger["dump_path"] / ".hydra" / "config.yaml", "w") as f:
             omegaconf.OmegaConf.save(c, f)
 
-        logging.info(f"=> INIT OF {self.__class__.__name__} COMPLETED")
+        logging.info(f"=> INIT OF {self.__class__.__name__} COMPLETED.")
 
     def _instanciate(self):
         seed_everything(self._hardware.get("seed", None))
@@ -191,10 +191,19 @@ class BaseModel(torch.nn.Module):
                 logging.info(f"\t- `{name}` ignored (starts with `_`).")
                 continue
             logging.info(f"\t\t- length: {len(loader)}.")
+
             if name in self.logger["metrics"]:
                 logging.info("\t\t- metrics:")
                 for mname in self.logger["metrics"][name]:
                     logging.info(f"\t\t\t- {mname}.")
+            else:
+                if name != "train":
+                    log_and_raise(
+                        ValueError,
+                        f"Metrics for dataset {name} are not defined in the config. "
+                        "All datasets which are not `train` must have metrics defined.",
+                    )
+
             if not len(loader):
                 log_and_raise(ValueError, f"Length of dataset {name} is 0.")
             if self.world_size > 1:
@@ -205,10 +214,11 @@ class BaseModel(torch.nn.Module):
                         torch.utils.data.RandomSampler,
                     ),
                 ):
-                    logging.warn(
-                        "Custom sampler with distributed version is not supported"
+                    log_and_raise(
+                        ValueError,
+                        "Custom sampler with distributed version is not supported.",
                     )
-                    raise ValueError("ERROR")
+
                 self.data[name] = DistributedSamplerWrapper(
                     loader, self.world_size, self.rank
                 )
@@ -255,10 +265,10 @@ class BaseModel(torch.nn.Module):
 
     def setup(self):
         logging.getLogger().setLevel(self._logger["level"])
-        logging.info(f"=> SETUP OF {self.__class__.__name__} STARTED")
+        logging.info(f"=> SETUP OF {self.__class__.__name__} STARTED.")
         self._instanciate()
         self._load_checkpoint()
-        logging.info(f"=> SETUP OF {self.__class__.__name__} COMPLETED")
+        logging.info(f"=> SETUP OF {self.__class__.__name__} COMPLETED.")
 
     def forward(self):
         return self.module["backbone"](self.batch[0])
