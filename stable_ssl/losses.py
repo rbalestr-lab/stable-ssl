@@ -112,6 +112,21 @@ class BYOLLoss(torch.nn.Module):
 class VICRegLoss(torch.nn.Module):
     """SSL objective used in VICReg [BPL21]_.
 
+    Parameters
+    ----------
+    sim_coeff : float, optional
+        The weight of the similarity loss (attractive term).
+        Default is 25.
+    std_coeff : float, optional
+        The weight of the standard deviation loss.
+        Default is 25.
+    cov_coeff : float, optional
+        The weight of the covariance loss.
+        Default is 1.
+    epsilon : float, optional
+        Small value to avoid division by zero.
+        Default is 1e-4.
+
     Reference
     ---------
     .. [BPL21] Bardes, A., Ponce, J., & LeCun, Y. (2021).
@@ -120,7 +135,13 @@ class VICRegLoss(torch.nn.Module):
             International Conference on Learning Representations (ICLR).
     """
 
-    def __init__(self, sim_coeff, std_coeff, cov_coeff, epsilon):
+    def __init__(
+        self,
+        sim_coeff: float = 25,
+        std_coeff: float = 25,
+        cov_coeff: float = 1,
+        epsilon: float = 1e-4,
+    ):
         super().__init__()
         self.sim_coeff = sim_coeff
         self.std_coeff = std_coeff
