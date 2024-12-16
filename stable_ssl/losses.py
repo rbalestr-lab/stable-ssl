@@ -61,10 +61,10 @@ class NTXEntLoss(torch.nn.Module):
         sim_i_j = torch.diag(sim, N // 2)
         sim_j_i = torch.diag(sim, -N // 2)
 
-        positive_samples = torch.cat((sim_i_j, sim_j_i), dim=0)  # shape (N)
+        positive_samples = torch.cat((sim_i_j, sim_j_i), dim=0)
 
         mask = torch.eye(N, dtype=bool).to(z_i.device)
-        negative_samples = sim[~mask].reshape(N, -1)  # shape (N, N-1)
+        negative_samples = sim[~mask].reshape(N, -1)
 
         attraction = -positive_samples.mean()
         repulsion = torch.logsumexp(negative_samples, dim=1).mean()

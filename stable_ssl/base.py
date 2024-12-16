@@ -788,7 +788,7 @@ class BaseModel(torch.nn.Module):
 class JointEmbedding(BaseModel):
     r"""Base class for training a joint-embedding SSL model."""
 
-    def _format_views_labels(self):
+    def format_views_labels(self):
         if (
             len(self.batch) == 2
             and torch.is_tensor(self.batch[1])
@@ -815,29 +815,34 @@ class JointEmbedding(BaseModel):
         return self.module["backbone_classifier"](self.forward())
 
     def compute_loss(self):
-        views, labels = self._format_views_labels()
+        views, labels = self.format_views_labels()
         embeddings = [self.module["backbone"](view) for view in views]
         projections = [self.module["projector"](embed) for embed in embeddings]
 
         loss_ssl = self.objective(*projections)
 
-        loss_backbone_classifier = 0
-        loss_proj_classifier = 0
+        classifier_losses = self.compute_classifier_losses(
+            embeddings, projections, labels
+        )
 
-        # Add classifier losses only if labels are given
+        return {"train/loss_ssl": loss_ssl, **classifier_losses}
+
+    def compute_classifier_losses(self, embeddings, projections, labels):
+        loss_backbone_classifier = 0
+        loss_projector_classifier = 0
+
         if labels is not None:
             for embed, proj in zip(embeddings, projections):
                 loss_backbone_classifier += F.cross_entropy(
                     self.module["backbone_classifier"](embed.detach()), labels
                 )
-                loss_proj_classifier += F.cross_entropy(
+                loss_projector_classifier += F.cross_entropy(
                     self.module["projector_classifier"](proj.detach()), labels
                 )
 
         return {
-            "train/loss_ssl": loss_ssl,
             "train/loss_backbone_classifier": loss_backbone_classifier,
-            "train/loss_projector_classifier": loss_proj_classifier,
+            "train/loss_projector_classifier": loss_projector_classifier,
         }
 
 
@@ -864,3 +869,16 @@ class SelfDistillation(JointEmbedding):
         update_momentum(
             self.projector, self.projector_target, m=self.config.model.momentum
         )
+
+    def compute_loss(self):
+        views, labels = self.format_views_labels()
+        embeddings = [self.module["backbone"](view) for view in views]
+        projections = [self.module["projector"](embed) for embed in embeddings]
+
+        loss_ssl = self.objective(*projections)
+
+        classifier_losses = self.compute_classifier_losses(
+            embeddings, projections, labels
+        )
+
+        return {"train/loss_ssl": loss_ssl, **classifier_losses}
