@@ -808,10 +808,11 @@ class JointEmbedding(BaseModel):
 
         loss_ssl = self.objective(*projections)
 
-        # classifiers, but only if given labels
+        loss_backbone_classifier = 0
+        loss_proj_classifier = 0
+
+        # Add classifier losses only if labels are given
         if labels is not None:
-            loss_backbone_classifier = 0
-            loss_proj_classifier = 0
             for embed, proj in zip(embeddings, projections):
                 loss_backbone_classifier += F.cross_entropy(
                     self.module["backbone_classifier"](embed.detach()), labels
@@ -819,9 +820,6 @@ class JointEmbedding(BaseModel):
                 loss_proj_classifier += F.cross_entropy(
                     self.module["projector_classifier"](proj.detach()), labels
                 )
-        else:
-            loss_backbone_classifier = 0
-            loss_proj_classifier = 0
 
         return {
             "train/loss_ssl": loss_ssl,
