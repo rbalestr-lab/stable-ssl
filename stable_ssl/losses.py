@@ -10,7 +10,6 @@
 import logging
 import torch
 import torch.nn.functional as F
-import torch.distributed as dist
 
 from stable_ssl.utils import gather, off_diagonal, all_reduce
 
