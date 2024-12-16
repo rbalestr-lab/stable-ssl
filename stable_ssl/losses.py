@@ -225,7 +225,6 @@ class BarlowTwinsLoss(torch.nn.Module):
         float
             The computed loss.
         """
-
         c = self.bn(z_i).T @ self.bn(z_j)  # normalize along the batch dimension
         c = c / z_i.size(0)
         all_reduce(c)
