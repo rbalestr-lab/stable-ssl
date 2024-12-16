@@ -202,12 +202,6 @@ def get_gpu_info():
         logging.info("nvidia-smi failed.", exc_info=e)
 
 
-def deactivate_requires_grad(model: torch.nn.Module):
-    """Deactivates the requires_grad flag for all parameters of a model."""
-    for param in model.parameters():
-        param.requires_grad = False
-
-
 @torch.no_grad()
 def update_momentum(model: torch.nn.Module, model_ema: torch.nn.Module, m: float):
     """Update parameters of `model_ema` with Exponential Moving Average of `model`."""

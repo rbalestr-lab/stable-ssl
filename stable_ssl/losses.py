@@ -10,6 +10,7 @@
 import logging
 import torch
 import torch.nn.functional as F
+import torch.distributed as dist
 
 from stable_ssl.utils import gather, off_diagonal
 
@@ -170,6 +171,12 @@ class VICRegLoss(torch.nn.Module):
 class BarlowTwinsLoss(torch.nn.Module):
     """SSL objective used in [ZJM+21]_.
 
+    Parameters
+    ----------
+    lambd : float, optional
+        The weight of the off-diagonal terms in the loss.
+        Default is 5e-3.
+
     Reference
     ---------
     .. [ZJM+21] Zbontar, J., Jing, L., Misra, I., LeCun, Y., & Deny, S. (2021).
@@ -177,11 +184,12 @@ class BarlowTwinsLoss(torch.nn.Module):
             In International conference on machine learning (pp. 12310-12320). PMLR.
     """
 
-    def __init__(self, lamb: 0.1):
-        self.lamb = lamb
+    def __init__(self, lambd: float = 5e-3):
+        super().__init__()
+        self.lambd = lambd
         self.bn = torch.nn.LazyBatchNorm1d()
 
-    def compute_ssl_loss(self, z_i, z_j):
+    def forward(self, z_i, z_j):
         """Compute the loss of the Barlow Twins model.
 
         Parameters
@@ -200,10 +208,11 @@ class BarlowTwinsLoss(torch.nn.Module):
         c = self.bn(z_i).T @ self.bn(z_j)
 
         # Sum the cross-correlation matrix between all gpus.
-        c.div_(self.config.data.train_dataset.batch_size)
+        batch_size = z_i.size(0)
+        c.div_(batch_size)
         torch.distributed.all_reduce(c)
 
         on_diag = torch.diagonal(c).add_(-1).pow_(2).sum()
         off_diag = off_diagonal(c).pow_(2).sum()
-        loss = on_diag + self.config.model.lambd * off_diag
+        loss = on_diag + self.lambd * off_diag
         return loss
