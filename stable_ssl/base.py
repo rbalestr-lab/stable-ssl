@@ -324,7 +324,10 @@ class BaseModel(torch.nn.Module):
                 self._evaluate()
             self.epoch = self.epoch + 1
 
-            if self.epoch % self.logger["checkpoint_frequency"] == 0:
+            if (
+                self.logger["checkpoint_frequency"]
+                and self.epoch % self.logger["checkpoint_frequency"] == 0
+            ):
                 self._save_checkpoint(
                     f"checkpoint_{self.epoch}.ckpt",
                     model_only=self.logger["checkpoint_model_only"],
@@ -843,7 +846,7 @@ class SelfDistillation(JointEmbedding):
 
     def setup(self):
         logging.getLogger().setLevel(self._logger["level"])
-        logging.info(f"=> SETUP OF {self.__class__.__name__} STARTED")
+        logging.info(f"=> SETUP OF {self.__class__.__name__} STARTED.")
         self._instanciate()
         self.module["backbone_target"] = copy.deepcopy(self.module["backbone"])
         self.module["projector_target"] = copy.deepcopy(self.module["projector"])
@@ -851,7 +854,7 @@ class SelfDistillation(JointEmbedding):
         self.module["backbone_target"].requires_grad_(False)
         self.module["projector_target"].requires_grad_(False)
         self._load_checkpoint()
-        logging.info(f"=> SETUP OF {self.__class__.__name__} COMPLETED")
+        logging.info(f"=> SETUP OF {self.__class__.__name__} COMPLETED.")
 
     def before_fit_step(self):
         """Update the target parameters as EMA of the online model parameters."""

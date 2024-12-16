@@ -17,6 +17,7 @@ from .utils import (
     update_momentum,
     log_and_raise,
     str_to_dtype,
+    all_reduce,
 )
 from .optim import LARS
 from .exceptions import BreakEpoch, BreakStep, NanError, BreakAllEpochs
@@ -41,4 +42,5 @@ __all__ = [
     "get_gpu_info",
     "update_momentum",
     "log_and_raise",
+    "all_reduce",
 ]
