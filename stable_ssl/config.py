@@ -71,7 +71,8 @@ class LoggerConfig:
         For example, if set to 1, logs occur every step. Default is 1.
     checkpoint_frequency : int, optional
         The frequency (in epochs) at which model checkpoints are saved.
-        For example, if set to 10, a checkpoint is saved every 10 epochs. Default is None.
+        For example, if set to 10, a checkpoint is saved every 10 epochs.
+        Default is None.
     checkpoint_model_only : bool, optional
         Whether to save only the model weights (True) or save additional training state
         (False) during checkpointing. Default is True.
