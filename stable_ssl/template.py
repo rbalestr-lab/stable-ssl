@@ -14,7 +14,7 @@ import torch
 import torch.nn.functional as F
 
 from .base import BaseModel
-from .utils import update_momentum
+from .utils import update_momentum, log_and_raise
 
 
 class JointEmbedding(BaseModel):
@@ -53,7 +53,7 @@ class JointEmbedding(BaseModel):
 
         if "predictor" in self.module:
 
-            if len(projections_target) > 2:
+            if len(projections) > 2:
                 logging.warning(
                     "Only the first two views are used when there is a predictor."
                 )
