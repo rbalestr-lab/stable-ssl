@@ -149,16 +149,14 @@ Examples of Methods
 +------------------------+-------------+-------------------+----------------------------+
 | MoCo                   | ❌          | ✅                | NTXEntLoss                 |
 +------------------------+-------------+-------------------+----------------------------+
-| SimCLR (EXsimclr_)       | ❌          | ❌                | NTXEntLoss                 |
+| SimCLR (`config example <exsimclr_>`_) | ❌          | ❌                | NTXEntLoss                 |
 +------------------------+-------------+-------------------+----------------------------+
 | SimSiam                | ✅          | ❌                | NegativeCosineSimilarity   |
 +------------------------+-------------+-------------------+----------------------------+
 | VICReg                 | ✅          | ✅                | VICRegLoss                 |
 +------------------------+-------------+-------------------+----------------------------+
 
-.. _EXsimclr: https://github.com/rbalestr-lab/stable-SSL/blob/main/examples/simclr_cifar10_full.yaml
-
-
+.. _exsimclr: https://github.com/rbalestr-lab/stable-SSL/blob/main/examples/simclr_cifar10_full.yaml
 
 
 
