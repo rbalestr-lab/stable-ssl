@@ -115,6 +115,6 @@ trainer:
       lr: 5
       weight_decay: 1e-6
     scheduler:
-      _target_: stable_ssl.utils.scheduler.LinearWarmupCosineAnnealing
+      _target_: stable_ssl.utils.schedulers.LinearWarmupCosineAnnealing
       _partial_: True
       total_steps: ${eval:'${trainer.optim.epochs} * ${trainer.data._num_samples} // ${trainer.data.train.batch_size}'}
