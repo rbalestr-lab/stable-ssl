@@ -48,6 +48,7 @@ doc = [
     "sphinx",
     "sphinx-gallery",
     "sphinx-book-theme",
+    "sphinxcontrib-bibtex",
     "matplotlib",
     "numpydoc",
     "memory_profiler",
