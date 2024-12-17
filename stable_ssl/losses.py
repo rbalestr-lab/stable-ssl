@@ -105,9 +105,7 @@ class NegativeCosineSimilarity(torch.nn.Module):
 
 
 class VICRegLoss(torch.nn.Module):
-    """SSL objective used in VICReg.
-
-    Introduced in [BPL21]_.
+    """SSL objective used in VICReg [BPL21]_.
 
     Parameters
     ----------
@@ -187,9 +185,7 @@ class VICRegLoss(torch.nn.Module):
 
 
 class BarlowTwinsLoss(torch.nn.Module):
-    """SSL objective used in Barlow Twins.
-
-    Introduced in [ZJM+21]_.
+    """SSL objective used in Barlow Twins [ZJM+21]_.
 
     Parameters
     ----------
