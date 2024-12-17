@@ -16,16 +16,9 @@ from stable_ssl.utils import gather, off_diagonal, all_reduce
 class NTXEntLoss(torch.nn.Module):
     """Normalized temperature-scaled cross entropy loss.
 
-    Introduced in the SimCLR paper [CKNH20]_. Also used in MoCo [HFW+20]_.
+    Introduced in the SimCLR paper :cite:`chen2020simple`.
+    Also used in MoCo :cite:`he2020momentum`.
 
-    Reference
-    ---------
-    .. [CKNH20] Chen, T., Kornblith, S., Norouzi, M., & Hinton, G. (2020).
-            A Simple Framework for Contrastive Learning of Visual Representations.
-            In International Conference on Machine Learning (pp. 1597-1607). PMLR.
-    .. [HFW+20] He, K., Fan, H., Wu, Y., Xie, S., & Girshick, R. (2020).
-            Momentum Contrast for Unsupervised Visual Representation Learning.
-            IEEE/CVF Conference on Computer Vision and Pattern Recognition.
     """
 
     def __init__(self, temperature: float = 0.5):
@@ -73,16 +66,9 @@ class NTXEntLoss(torch.nn.Module):
 class NegativeCosineSimilarity(torch.nn.Module):
     """Negative cosine similarity objective.
 
-    This objective is used for instance in BYOL [GSA+20]_ or SimSiam [CH21]_.
+    This objective is used for instance in BYOL :cite:`grill2020bootstrap`
+    or SimSiam :cite:`chen2021exploring`.
 
-    Reference
-    ---------
-    .. [GSA+20] Grill, J. B., Strub, F., Altché, ... & Valko, M. (2020).
-            Bootstrap Your Own Latent-A New Approach To Self-Supervised Learning.
-            Advances in neural information processing systems, 33, 21271-21284.
-    .. [CH21] Chen, X., & He, K. (2021).
-            Exploring simple siamese representation learning.
-            IEEE/CVF conference on Computer Vision and Pattern Recognition.
     """
 
     def forward(self, z_i, z_j):
@@ -105,7 +91,7 @@ class NegativeCosineSimilarity(torch.nn.Module):
 
 
 class VICRegLoss(torch.nn.Module):
-    """SSL objective used in VICReg [BPL21]_.
+    """SSL objective used in VICReg :cite:`bardes2021vicreg`.
 
     Parameters
     ----------
@@ -122,12 +108,6 @@ class VICRegLoss(torch.nn.Module):
         Small value to avoid division by zero.
         Default is 1e-4.
 
-    Reference
-    ---------
-    .. [BPL21] Bardes, A., Ponce, J., & LeCun, Y. (2021).
-            VICReg: Variance-Invariance-Covariance Regularization
-            For Self-Supervised Learning.
-            International Conference on Learning Representations (ICLR).
     """
 
     def __init__(
@@ -185,7 +165,7 @@ class VICRegLoss(torch.nn.Module):
 
 
 class BarlowTwinsLoss(torch.nn.Module):
-    """SSL objective used in Barlow Twins [ZJM+21]_.
+    """SSL objective used in Barlow Twins :cite:`zbontar2021barlow`.
 
     Parameters
     ----------
@@ -193,11 +173,6 @@ class BarlowTwinsLoss(torch.nn.Module):
         The weight of the off-diagonal terms in the loss.
         Default is 5e-3.
 
-    Reference
-    ---------
-    .. [ZJM+21] Zbontar, J., Jing, L., Misra, I., LeCun, Y., & Deny, S. (2021).
-            Barlow Twins: Self-Supervised Learning via Redundancy Reduction.
-            In International conference on machine learning (pp. 12310-12320). PMLR.
     """
 
     def __init__(self, lambd: float = 5e-3):

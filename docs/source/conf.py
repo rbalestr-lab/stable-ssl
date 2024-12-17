@@ -35,6 +35,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.doctest",
     "sphinx_gallery.gen_gallery",
+    "sphinxcontrib.bibtex",
 ]
 
 autosummary_generate = True
@@ -75,6 +76,11 @@ sphinx_gallery_conf = {
 mathjax3_config = {
     "tex": {"equationNumbers": {"autoNumber": "AMS", "useLabelIds": True}}
 }
+
+# bibliography
+bibtex_bibfiles = ["references.bib"]
+bibtex_reference_style = "author_year"
+bibtex_default_style = "alpha"
 
 math_numfig = True
 numfig = True
