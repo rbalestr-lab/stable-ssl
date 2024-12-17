@@ -71,41 +71,38 @@ class NTXEntLoss(torch.nn.Module):
         return attraction + repulsion
 
 
-class BYOLLoss(torch.nn.Module):
-    """SSL objective used in BYOL [GSA+20]_.
+class NegativeCosineSimilarity(torch.nn.Module):
+    """Negative cosine similarity objective.
+
+    This objective is used for instance in BYOL [GSA+20]_ or SimSiam [CH21]_.
 
     Reference
     ---------
     .. [GSA+20] Grill, J. B., Strub, F., Altché, ... & Valko, M. (2020).
             Bootstrap Your Own Latent-A New Approach To Self-Supervised Learning.
             Advances in neural information processing systems, 33, 21271-21284.
+    .. [CH21] Chen, X., & He, K. (2021).
+            Exploring simple siamese representation learning.
+            IEEE/CVF conference on Computer Vision and Pattern Recognition.
     """
 
-    def forward(self, predictions, projections_target):
+    def forward(self, z_i, z_j):
         """Compute the loss of the BYOL model.
 
         Parameters
         ----------
-        predictions : list of torch.Tensor
-            Predictions of the different augmented views from the online network.
-        projections_target : list of torch.Tensor
-            Projections of the corresponding augmented views from the target network.
+        z_i : torch.Tensor
+            Latent representation of the first augmented view of the batch.
+        z_j : torch.Tensor
+            Latent representation of the second augmented view of the batch.
 
         Returns
         -------
         float
             The computed loss.
         """
-        if len(predictions) > 2 or len(projections_target) > 2:
-            logging.warning(
-                "BYOL only supports two views. Only the first two views will be used."
-            )
-
         sim = torch.nn.CosineSimilarity(dim=1)
-        return -0.5 * (
-            sim(predictions[0], projections_target[1]).mean()
-            + sim(predictions[1], projections_target[0]).mean()
-        )
+        return -sim(z_i, z_j).mean()
 
 
 class VICRegLoss(torch.nn.Module):

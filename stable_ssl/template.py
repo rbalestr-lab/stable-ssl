@@ -48,8 +48,19 @@ class JointEmbedding(BaseModel):
         projections = [self.module["projector"](embed) for embed in embeddings]
 
         if "predictor" in self.module:
-            predictions = [self.module["predictor"](proj) for proj in projections]
-            loss_ssl = self.objective(predictions, projections)
+
+            if len(projections_target) > 2:
+                logging.warning(
+                    "BYOL only supports two views. Only the first two views will be used."
+                )
+
+                predictions = [self.module["predictor"](proj) for proj in projections]
+                detached_projections = [proj.detach() for proj in projections]
+
+                loss_ssl = 0.5 * (
+                    self.objective(predictions[0], detached_projections[1])
+                    + self.objective(predictions[1], detached_projections[0])
+                )
         else:
             loss_ssl = self.objective(*projections)
 
@@ -116,7 +127,10 @@ class SelfDistillation(JointEmbedding):
             for view in views
         ]
 
-        loss_ssl = self.objective(projections, projections_target)
+        loss_ssl = 0.5 * (
+            self.objective(projections[0], projections_target[1])
+            + self.objective(projections[1], projections_target[0])
+        )
 
         classifier_losses = self.compute_loss_classifiers(
             embeddings, projections, labels
