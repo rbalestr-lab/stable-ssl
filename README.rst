@@ -140,16 +140,14 @@ In this example, to launch the run using the configuration file ``default_config
 Examples of Methods
 ~~~~~~~~~~~~~~~~~~
 
-
-| Methods | Predictor | Self-distillation | Loss |
-|---------|-----------|-------------------|------|
-| Barlow Twins | ❌ | ❌ |  |
-| BYOL | ✅ | ✅ |  |
-| MoCo | ❌ | ✅ |  |
-| SimCLR | ❌ | ❌ |  |
-| SimSiam | ✅ | ❌ |  |
-| VICReg | ✅ | ✅ | ✅ |
-
+| Methods       | Predictor | Self-distillation | Loss                     |
+|---------------|-----------|-------------------|--------------------------|
+| Barlow Twins  | ❌        | ❌                | BarlowTwinsLoss          |
+| BYOL          | ✅        | ✅                | NegativeCosineSimilarity |
+| MoCo          | ❌        | ✅                | NTXEntLoss               |
+| SimCLR        | ❌        | ❌                | NTXEntLoss               |
+| SimSiam       | ✅        | ❌                | NegativeCosineSimilarity |
+| VICReg        | ✅        | ✅                | VICRegLoss               |
 
 
 .. |Documentation| image:: https://img.shields.io/badge/Documentation-blue.svg
