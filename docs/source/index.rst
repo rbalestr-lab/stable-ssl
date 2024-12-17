@@ -16,3 +16,9 @@
     :caption: API
 
     losses
+
+.. toctree::
+    :maxdepth: 1
+    :caption: References
+
+    bibliography
