@@ -15,7 +15,7 @@ from .__about__ import (
 
 from .base import BaseModel
 from .template import JointEmbedding, SelfDistillation
-from .losses import NTXEntLoss, BYOLLoss, VICRegLoss, BarlowTwinsLoss
+from .losses import NTXEntLoss, VICRegLoss, BarlowTwinsLoss, NegativeCosineSimilarity
 from .config import instanciate_config
 
 __all__ = [
