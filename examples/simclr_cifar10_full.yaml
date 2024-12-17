@@ -126,12 +126,12 @@ trainer:
   optim:
     epochs: 1000
     optimizer: 
-      _target_: stable_ssl.utils.LARS
+      _target_: stable_ssl.optimizers.LARS
       _partial_: True
       lr: 5
       weight_decay: 1e-6
     scheduler:
-      _target_: stable_ssl.utils.scheduler.LinearWarmupCosineAnnealing
+      _target_: stable_ssl.scheduler.LinearWarmupCosineAnnealing
       _partial_: True
       total_steps: ${eval:'${trainer.optim.epochs} * ${trainer.data._num_samples} // ${trainer.data.train.batch_size}'}
 

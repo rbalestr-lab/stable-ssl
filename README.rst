@@ -138,7 +138,7 @@ In this example, to launch the run using the configuration file ``default_config
 
 
 Examples of Methods
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 
 +---------------+-----------+-------------------+--------------------------+
 | Methods       | Predictor | Self-distillation | Loss                     |

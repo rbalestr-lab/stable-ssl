@@ -19,7 +19,6 @@ from .utils import (
     str_to_dtype,
     all_reduce,
 )
-from .optim import LARS
 from .exceptions import BreakEpoch, BreakStep, NanError, BreakAllEpochs
 from .nn import load_backbone, MLP
 
@@ -29,7 +28,6 @@ __all__ = [
     "GatherLayer",
     "gather",
     "seed_everything",
-    "LARS",
     "BreakEpoch",
     "BreakStep",
     "NanError",

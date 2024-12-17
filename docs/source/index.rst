@@ -16,6 +16,8 @@
     :caption: API
 
     losses
+    optimizers
+    schedulers
 
 .. toctree::
     :maxdepth: 1

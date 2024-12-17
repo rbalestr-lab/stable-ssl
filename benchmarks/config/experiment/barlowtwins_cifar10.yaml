@@ -110,7 +110,7 @@ trainer:
   optim:
     epochs: 1000
     optimizer: 
-      _target_: stable_ssl.utils.LARS
+      _target_: stable_ssl.optimizers.LARS
       _partial_: True
       lr: 5
       weight_decay: 1e-6
