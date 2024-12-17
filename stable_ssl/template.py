@@ -7,10 +7,14 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
+import copy
+import logging
+
 import torch
 import torch.nn.functional as F
 
 from .base import BaseModel
+from .utils import update_momentum
 
 
 class JointEmbedding(BaseModel):
@@ -51,7 +55,7 @@ class JointEmbedding(BaseModel):
 
             if len(projections_target) > 2:
                 logging.warning(
-                    "BYOL only supports two views. Only the first two views will be used."
+                    "Only the first two views are used when there is a predictor."
                 )
 
                 predictions = [self.module["predictor"](proj) for proj in projections]

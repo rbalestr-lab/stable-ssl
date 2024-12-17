@@ -18,15 +18,13 @@ from tqdm import tqdm
 import subprocess
 import os
 import omegaconf
-import copy
+
 from dataclasses import asdict
 
 import torch
-import torch.nn.functional as F
 
 from .data import DistributedSamplerWrapper
 from . import reader
-from .utils import update_momentum
 from .config import LoggerConfig, WandbConfig, HardwareConfig, OptimConfig
 
 try:

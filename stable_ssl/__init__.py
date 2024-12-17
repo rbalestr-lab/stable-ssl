@@ -29,8 +29,8 @@ __all__ = [
     "JointEmbedding",
     "SelfDistillation",
     "NTXEntLoss",
-    "BYOLLoss",
     "VICRegLoss",
     "BarlowTwinsLoss",
+    "NegativeCosineSimilarity",
     "instanciate_config",
 ]
