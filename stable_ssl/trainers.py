@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Template classes to easily instanciate Supervised or SSL models."""
+"""Template classes to easily instanciate Supervised or SSL trainers."""
 #
 # Author: Hugues Van Assel <vanasselhugues@gmail.com>
 #         Randall Balestriero <randallbalestriero@gmail.com>
@@ -13,11 +13,11 @@ import logging
 import torch
 import torch.nn.functional as F
 
-from .base import BaseModel
+from .base import BaseTrainer
 from .utils import update_momentum, log_and_raise
 
 
-class SupervisedTrainer(BaseModel):
+class SupervisedTrainer(BaseTrainer):
     r"""Base class for training a supervised SSL model."""
 
     def format_views_labels(self):
@@ -35,6 +35,12 @@ class SupervisedTrainer(BaseModel):
             log_and_raise(ValueError, msg)
         return views, labels
 
+    def predict(self):
+        return self.module["backbone_classifier"](self.forward())
+
+    def predict(self):
+        return self.forward()
+
     def compute_loss(self):
         views, labels = self.format_views_labels()
         predictions = [self.module["backbone"](view) for view in views]
@@ -46,7 +52,7 @@ class SupervisedTrainer(BaseModel):
         return {"train/loss": loss}
 
 
-class JointEmbeddingTrainer(BaseModel):
+class JointEmbeddingTrainer(BaseTrainer):
     r"""Base class for training a joint-embedding SSL model."""
 
     def format_views_labels(self):
