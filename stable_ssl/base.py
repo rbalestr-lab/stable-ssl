@@ -87,7 +87,7 @@ class BaseTrainer(torch.nn.Module):
     module: dict
         Module (NNs) configuration.
     loss: dict
-        loss configuration.
+        Loss configuration.
     hardware: dict
         Hardware configuration.
     optim: dict

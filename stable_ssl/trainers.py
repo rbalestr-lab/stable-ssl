@@ -18,30 +18,13 @@ from .utils import update_momentum, log_and_raise
 
 
 class SupervisedTrainer(BaseTrainer):
-    r"""Base class for training a supervised SSL model."""
-
-    def format_views_labels(self):
-        if (
-            len(self.batch) == 2
-            and torch.is_tensor(self.batch[1])
-            and not torch.is_tensor(self.batch[0])
-        ):
-            # we assume the second element are the labels
-            views, labels = self.batch
-        else:
-            msg = """You are using the SupervisedTrainer class without labels!
-            Please ensure that your dataset returns a tuple with 2 elements, 
-            the first one being the views and the second one the labels."""
-            log_and_raise(ValueError, msg)
-        return views, labels
+    r"""Base class for training a supervised model."""
 
     def predict(self):
         return self.forward()
 
     def compute_loss(self):
-        views, labels = self.format_views_labels()
         loss = self.loss(self.predict(), self.batch[1])
-
         return {"train/loss": loss}
 
 
@@ -79,22 +62,7 @@ class JointEmbeddingTrainer(BaseTrainer):
         embeddings = [self.module["backbone"](view) for view in views]
         projections = [self.module["projector"](embed) for embed in embeddings]
 
-        if "predictor" in self.module:
-
-            if len(projections) > 2:
-                logging.warning(
-                    "Only the first two views are used when there is a predictor."
-                )
-
-                predictions = [self.module["predictor"](proj) for proj in projections]
-                detached_projections = [proj.detach() for proj in projections]
-
-                loss_ssl = 0.5 * (
-                    self.loss(predictions[0], detached_projections[1])
-                    + self.loss(predictions[1], detached_projections[0])
-                )
-        else:
-            loss_ssl = self.loss(*projections)
+        loss_ssl = self.loss(*projections)
 
         classifier_losses = self.compute_loss_classifiers(
             embeddings, projections, labels
@@ -162,6 +130,35 @@ class SelfDistillationTrainer(JointEmbeddingTrainer):
         loss_ssl = 0.5 * (
             self.loss(projections[0], projections_target[1])
             + self.loss(projections[1], projections_target[0])
+        )
+
+        classifier_losses = self.compute_loss_classifiers(
+            embeddings, projections, labels
+        )
+
+        return {"train/loss_ssl": loss_ssl, **classifier_losses}
+
+
+class SimSiamTrainer(JointEmbeddingTrainer):
+    r"""Base class for training a SimSiam SSL model."""
+
+    def compute_loss(self):
+        views, labels = self.format_views_labels()
+        embeddings = [self.module["backbone"](view) for view in views]
+        projections = [self.module["projector"](embed) for embed in embeddings]
+
+        if len(projections) > 2:
+            logging.warning("Only the first two views are used when using SimSiam.")
+
+        if not hasattr(self.module, "predictor"):
+            log_and_raise(ValueError, "SimSiam requires a predictor module.")
+
+        predictions = [self.module["predictor"](proj) for proj in projections]
+        detached_projections = [proj.detach() for proj in projections]
+
+        loss_ssl = 0.5 * (
+            self.loss(predictions[0], detached_projections[1])
+            + self.loss(predictions[1], detached_projections[0])
         )
 
         classifier_losses = self.compute_loss_classifiers(
