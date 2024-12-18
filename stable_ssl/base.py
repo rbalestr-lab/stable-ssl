@@ -85,8 +85,8 @@ class BaseModel(torch.nn.Module):
         Any other dataset is used for validation.
     module: dict
         Module (NNs) configuration.
-    objective: dict
-        Objective configuration.
+    loss: dict
+        loss configuration.
     hardware: dict
         Hardware configuration.
     optim: dict
@@ -95,14 +95,14 @@ class BaseModel(torch.nn.Module):
         Logger configuration.
     """
 
-    def __init__(self, data, module, objective, hardware, optim, logger, **kwargs):
+    def __init__(self, data, module, loss, hardware, optim, logger, **kwargs):
         super().__init__()
         logging.info(f"=> INIT OF {self.__class__.__name__} STARTED.")
         for key, value in kwargs.items():
             setattr(self, key, value)
         self._data = data
         self._module = module
-        self._objective = objective
+        self._loss = loss
         self._hardware = hardware
         self._optim = optim
         self._logger = logger
@@ -137,13 +137,13 @@ class BaseModel(torch.nn.Module):
         # we skip optim as we may not need it (see below)
         self.data = hydra.utils.instantiate(self._data, _convert_="object")
         self.module = hydra.utils.instantiate(self._module, _convert_="object")
-        self.objective = hydra.utils.instantiate(self._objective, _convert_="object")
+        self.loss = hydra.utils.instantiate(self._loss, _convert_="object")
         self.hardware = hydra.utils.instantiate(self._hardware, _convert_="object")
         self.logger = hydra.utils.instantiate(self._logger, _convert_="object")
 
         self._set_device(self.hardware)
 
-        self.objective = self.objective.to(self._device)
+        self.loss = self.loss.to(self._device)
 
         logging.info("Logger:")
         logging.info(f"\t- Dump path: `{self.logger['dump_path']}`")
@@ -275,7 +275,7 @@ class BaseModel(torch.nn.Module):
         return self.forward()
 
     def compute_loss(self):
-        return self.objective(self.predict(), self.batch[1])
+        return self.loss(self.predict(), self.batch[1])
 
     def __call__(self):
         self.setup()
@@ -550,7 +550,7 @@ class BaseModel(torch.nn.Module):
         model = type(self)(
             self._data,
             self._module,
-            self._objective,
+            self._loss,
             self._hardware,
             self._optim,
             self._logger,

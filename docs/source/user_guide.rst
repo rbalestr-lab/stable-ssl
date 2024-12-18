@@ -47,12 +47,12 @@ Here is what this instantiation looks like in the YAML configuration file:
    _target_: stable_ssl.JointEmbedding
 
 
-.. _objective:
+.. _loss:
 
-objective
-~~~~~~~~~
+loss
+~~~~
 
-The ``objective`` keyword is used to define the loss function for your model. ``stable-SSL`` offers a variety of loss functions to suit different training needs. Below is a list of the available loss functions:
+The ``loss`` keyword is used to define the loss function for your model. ``stable-SSL`` offers a variety of loss functions to suit different training needs. Below is a list of the available loss functions:
 
 .. autosummary::
    :toctree: gen_modules/
@@ -63,11 +63,11 @@ The ``objective`` keyword is used to define the loss function for your model. ``
    VICRegLoss
    BarlowTwinsLoss
 
-Here's an example of how to define the `objective` section in your YAML file:
+Here's an example of how to define the `loss` section in your YAML file:
 
 .. code-block:: yaml
 
-   objective:
+   loss:
       _target_: stable_ssl.NTXEntLoss
       temperature: 0.5
 
