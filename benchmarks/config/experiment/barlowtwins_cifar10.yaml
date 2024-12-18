@@ -4,8 +4,8 @@ trainer:
   # ===== Base Model =====
   _target_: stable_ssl.JointEmbedding
 
-  # ===== Objective Parameters =====
-  objective:
+  # ===== loss Parameters =====
+  loss:
     _target_: stable_ssl.BarlowTwinsLoss
 
   # ===== Data Parameters =====
