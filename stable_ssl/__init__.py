@@ -1,4 +1,5 @@
 # Author: Hugues Van Assel <vanasselhugues@gmail.com>
+#         Randall Balestriero <randallbalestriero@gmail.com>
 #
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
@@ -13,8 +14,8 @@ from .__about__ import (
     __license__,
 )
 
-from .base import BaseModel
-from .templates import JointEmbedding, SelfDistillation
+from .base import BaseTrainer
+from .trainers import SupervisedTrainer, JointEmbeddingTrainer, SelfDistillationTrainer
 from .losses import NTXEntLoss, VICRegLoss, BarlowTwinsLoss, NegativeCosineSimilarity
 from .config import instanciate_config
 
@@ -25,9 +26,10 @@ __all__ = [
     "__url__",
     "__author__",
     "__license__",
-    "BaseModel",
-    "JointEmbedding",
-    "SelfDistillation",
+    "BaseTrainer",
+    "SupervisedTrainer",
+    "JointEmbeddingTrainer",
+    "SelfDistillationTrainer",
     "NTXEntLoss",
     "VICRegLoss",
     "BarlowTwinsLoss",

@@ -14,10 +14,10 @@ The Self-Supervised Learning Library by Researchers for Researchers
 
 *Have a research idea? With stable-SSL, you can go from concept to execution in under 10 minutes. Start from scratch and quickly set up your pipeline, all while being able to generate high-quality figures and tables from your results. That's the goal of stable-SSL.*
 
-We achieve that by taking the best--and only the best--from the most eponymous AI libraries: PytorchLightning, VISSL, WandB, Hydra, Submitit.
+We achieve that by taking the best--and only the best--from the most eponymous AI libraries: ``PytorchLightning``, ``VISSL``, ``WandB``, ``Hydra``, ``Submitit``.
 
 ``stable-SSL`` implements all the basic boilerplate code, including data loading, logging, checkpointing and optimization. It offers users full flexibility to customize each part of the pipeline through a configuration file, enabling easy selection of network architectures, loss functions, evaluation metrics, data augmentations and more.
-These components can be sourced from stable-SSL itself, popular libraries like PyTorch, or custom modules created by the user.
+These components can be sourced from ``stable-SSL`` itself, popular libraries like ``PyTorch``, or custom modules created by the user.
 
 
 Why stable-SSL?
@@ -62,7 +62,7 @@ Library Design
 .. _design:
 
 ``stable-SSL`` provides all the boilerplate to quickly get started with AI research, focusing on Self-Supervised Learning (SSL), albeit other applications can certainly build upon ``stable-SSL``.
-At its core, ``stable-SSL`` provides a ``BaseModel`` class that sequentially calls the following methods:
+At its core, ``stable-SSL`` provides a ``BaseTrainer`` class that sequentially calls the following methods:
 
 .. code-block:: text
 
@@ -153,7 +153,7 @@ Examples of Methods
 +--------------------------------------------------+-------------+---------------------+------------------------------------------+
 | SimSiam                                          | ✅          | ❌                  | NegativeCosineSimilarity                 |
 +--------------------------------------------------+-------------+---------------------+------------------------------------------+
-| VICReg                                           | ✅          | ✅                  | VICRegLoss                               |
+| VICReg                                           | ❌          | ❌                  | VICRegLoss                               |
 +--------------------------------------------------+-------------+---------------------+------------------------------------------+
 
 .. _exsimclr: https://github.com/rbalestr-lab/stable-SSL/blob/main/examples/simclr_cifar10_full.yaml

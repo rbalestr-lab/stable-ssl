@@ -18,6 +18,7 @@ from tqdm import tqdm
 import subprocess
 import os
 import omegaconf
+from abc import abstractmethod
 
 from dataclasses import asdict
 
@@ -45,7 +46,7 @@ from .utils import (
 )
 
 
-class BaseModel(torch.nn.Module):
+class BaseTrainer(torch.nn.Module):
     r"""Base class for training a model.
 
     That method provides a general boilerplate for all the internal operations
@@ -274,8 +275,9 @@ class BaseModel(torch.nn.Module):
     def predict(self):
         return self.forward()
 
+    @abstractmethod
     def compute_loss(self):
-        return self.loss(self.predict(), self.batch[1])
+        pass
 
     def __call__(self):
         self.setup()

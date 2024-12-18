@@ -93,39 +93,3 @@ def LinearWarmupThreeStepsAnnealing(
         milestones=[peak_step],
     )
     return scheduler
-
-
-if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-    import torch
-
-    warmup = []
-    cosine_annealing = []
-    threestep_annealing = []
-    cyclic = []
-
-    W = torch.nn.Parameter(torch.tensor([0.0]))
-    for data, option in zip(
-        [warmup, cosine_annealing, threestep_annealing, cyclic],
-        [
-            LinearWarmup,
-            LinearWarmupCosineAnnealing,
-            LinearWarmupThreeStepsAnnealing,
-            LinearWarmupCyclicAnnealing,
-        ],
-    ):
-        optim = torch.optim.SGD([W], lr=1)
-        sched = option(optim, 100)
-        data.append(sched.get_last_lr())
-        for i in range(100):
-            loss = W.sum()
-            optim.step()
-            sched.step()
-            data.append(sched.get_last_lr())
-        print("-------------")
-
-    plt.plot(warmup)
-    plt.plot(cosine_annealing)
-    plt.plot(threestep_annealing)
-    plt.plot(cyclic)
-    plt.show()

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Template classes to easily instanciate SSL models."""
+"""Template classes to easily instanciate Supervised or SSL models."""
 #
 # Author: Hugues Van Assel <vanasselhugues@gmail.com>
 #         Randall Balestriero <randallbalestriero@gmail.com>
@@ -17,7 +17,36 @@ from .base import BaseModel
 from .utils import update_momentum, log_and_raise
 
 
-class JointEmbedding(BaseModel):
+class SupervisedTrainer(BaseModel):
+    r"""Base class for training a supervised SSL model."""
+
+    def format_views_labels(self):
+        if (
+            len(self.batch) == 2
+            and torch.is_tensor(self.batch[1])
+            and not torch.is_tensor(self.batch[0])
+        ):
+            # we assume the second element are the labels
+            views, labels = self.batch
+        else:
+            msg = """You are using the SupervisedTrainer class without labels!
+            Please ensure that your dataset returns a tuple with 2 elements, 
+            the first one being the views and the second one the labels."""
+            log_and_raise(ValueError, msg)
+        return views, labels
+
+    def compute_loss(self):
+        views, labels = self.format_views_labels()
+        predictions = [self.module["backbone"](view) for view in views]
+
+        loss = F.cross_entropy(
+            self.module["backbone_classifier"](embeddings[0]), labels
+        )
+
+        return {"train/loss": loss}
+
+
+class JointEmbeddingTrainer(BaseModel):
     r"""Base class for training a joint-embedding SSL model."""
 
     def format_views_labels(self):
@@ -93,7 +122,7 @@ class JointEmbedding(BaseModel):
         }
 
 
-class SelfDistillation(JointEmbedding):
+class SelfDistillationTrainer(JointEmbeddingTrainer):
     r"""Base class for training a self-distillation SSL model."""
 
     def setup(self):
