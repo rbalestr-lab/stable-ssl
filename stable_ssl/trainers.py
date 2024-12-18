@@ -36,18 +36,11 @@ class SupervisedTrainer(BaseTrainer):
         return views, labels
 
     def predict(self):
-        return self.module["backbone_classifier"](self.forward())
-
-    def predict(self):
         return self.forward()
 
     def compute_loss(self):
         views, labels = self.format_views_labels()
-        predictions = [self.module["backbone"](view) for view in views]
-
-        loss = F.cross_entropy(
-            self.module["backbone_classifier"](embeddings[0]), labels
-        )
+        loss = self.loss(self.predict(), self.batch[1])
 
         return {"train/loss": loss}
 
@@ -97,11 +90,11 @@ class JointEmbeddingTrainer(BaseTrainer):
                 detached_projections = [proj.detach() for proj in projections]
 
                 loss_ssl = 0.5 * (
-                    self.objective(predictions[0], detached_projections[1])
-                    + self.objective(predictions[1], detached_projections[0])
+                    self.loss(predictions[0], detached_projections[1])
+                    + self.loss(predictions[1], detached_projections[0])
                 )
         else:
-            loss_ssl = self.objective(*projections)
+            loss_ssl = self.loss(*projections)
 
         classifier_losses = self.compute_loss_classifiers(
             embeddings, projections, labels
@@ -167,8 +160,8 @@ class SelfDistillationTrainer(JointEmbeddingTrainer):
         ]
 
         loss_ssl = 0.5 * (
-            self.objective(projections[0], projections_target[1])
-            + self.objective(projections[1], projections_target[0])
+            self.loss(projections[0], projections_target[1])
+            + self.loss(projections[1], projections_target[0])
         )
 
         classifier_losses = self.compute_loss_classifiers(

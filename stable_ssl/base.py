@@ -528,7 +528,6 @@ class BaseTrainer(torch.nn.Module):
         self.after_eval()
 
     def _fit_step(self):
-
         with torch.amp.autocast("cuda", enabled=self.hardware["float16"]):
             returned_loss = self.compute_loss()
 

@@ -1,8 +1,8 @@
 # @package _global_
 
 trainer:
-  # ===== Base Model =====
-  _target_: stable_ssl.JointEmbedding
+  # ===== Base Trainer =====
+  _target_: stable_ssl.JointEmbeddingTrainer
 
   # ===== loss Parameters =====
   loss:

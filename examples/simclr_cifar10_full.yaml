@@ -16,7 +16,7 @@ hydra:
     max_num_timeout: 5
 
 trainer:
-  # ===== Base Model =====
+  # ===== Base Trainer =====
   _target_: stable_ssl.JointEmbedding
 
   # ===== loss Parameters =====
