@@ -20,8 +20,11 @@ from .utils import update_momentum, log_and_raise
 class SupervisedTrainer(BaseTrainer):
     r"""Base class for training a supervised model."""
 
+    def forward(self, x):
+        return self.module["backbone"](x)
+
     def predict(self):
-        return self.forward()
+        return self.forward(self.batch[0])
 
     def compute_loss(self):
         loss = self.loss(self.predict(), self.batch[1])
@@ -54,8 +57,11 @@ class JointEmbeddingTrainer(BaseTrainer):
             log_and_raise(ValueError, msg)
         return views, labels
 
+    def forward(self, x):
+        return self.module["backbone"](x)
+
     def predict(self):
-        return self.module["backbone_classifier"](self.forward())
+        return self.module["backbone_classifier"](self.forward(self.batch[0]))
 
     def compute_loss(self):
         views, labels = self.format_views_labels()

@@ -14,37 +14,28 @@ This guide provides instructions for launching runs with ``stable-SSL``.
 
 To make the process streamlined and efficient, we recommend using configuration files to define parameters and utilizing `Hydra <https://hydra.cc/>`_ to manage these configurations.
 
-**General Idea.** ``stable-SSL`` is designed to minimize boilerplate code, providing a highly flexible framework with minimal hardcoded utilities. Modules in the pipeline can instantiate objects from various sources, including ``stable-SSL``, ``PyTorch``, ``TorchMetrics``, or even custom objects provided by the user. This allows you to seamlessly integrate your own components into the pipeline while leveraging the capabilities of ``stable-SSL``.
+**General Idea.** ``stable-SSL`` provides a highly flexible framework with minimal hardcoded utilities. Modules in the pipeline can instantiate objects from various sources, including ``stable-SSL``, ``PyTorch``, ``TorchMetrics``, or even custom objects provided by the user. This allows you to seamlessly integrate your own components into the pipeline while leveraging the capabilities of ``stable-SSL``.
 
 .. _trainer:
 
 trainer
 ~~~~~~~
 
-In ``stable-SSL``, the main ``trainer`` object must inherit from the ``BaseModel`` class. This class serves as the primary entry point for the training loop and provides all the essential methods required to train and evaluate your model effectively.
+In ``stable-SSL``, the main ``trainer`` object must inherit from the ``BaseTrainer`` class. This class serves as the primary entry point for the training loop and provides all the essential methods required to train and evaluate your model effectively.
 
 .. autosummary::
    :toctree: gen_modules/
    :template: myclass_template.rst
 
-   BaseModel
+   BaseTrainer
 
+:mod:`stable_ssl.trainers` provides default trainer classes for various self-supervised learning approaches. 
 
-More specifically, if you want to train a self-supervised learning model, you can inherit from the following classes, depending on the type of model you are interested in:
-
-.. autosummary::
-   :toctree: gen_modules/
-   :template: myclass_template.rst
-
-   JointEmbedding
-   SelfDistillation
-
-
-Here is what this instantiation looks like in the YAML configuration file:
+Here is what instantiating an SSL trainer class from ``stable_ssl.trainers`` looks like in the YAML configuration file:
 
 .. code-block:: yaml
 
-   _target_: stable_ssl.JointEmbedding
+   _target_: stable_ssl.trainers.JointEmbedding
 
 
 .. _loss:
@@ -52,23 +43,16 @@ Here is what this instantiation looks like in the YAML configuration file:
 loss
 ~~~~
 
-The ``loss`` keyword is used to define the loss function for your model. ``stable-SSL`` offers a variety of loss functions to suit different training needs. Below is a list of the available loss functions:
+The ``loss`` keyword is used to define the loss function for your model.
 
-.. autosummary::
-   :toctree: gen_modules/
-   :template: myclass_template.rst
-
-   NTXEntLoss
-   BYOLLoss
-   VICRegLoss
-   BarlowTwinsLoss
+:mod:`stable_ssl.losses` offers a variety of loss functions for SSL.
 
 Here's an example of how to define the `loss` section in your YAML file:
 
 .. code-block:: yaml
 
    loss:
-      _target_: stable_ssl.NTXEntLoss
+      _target_: stable_ssl.losses.NTXEntLoss
       temperature: 0.5
 
 
@@ -77,7 +61,16 @@ Here's an example of how to define the `loss` section in your YAML file:
 optim
 ~~~~~
 
-The ``optim`` keyword is used to define the optimization settings for your model. It allows users to specify both the ``optimizer`` object and the ``scheduler``. 
+The ``optim`` keyword is used to define the optimization settings for your model. It allows users to specify both the ``optimizer`` object and the ``scheduler``.
+
+:mod:`stable_ssl.optimizers` and :mod:`stable_ssl.schedulers` provide additional modules that are not available in ``PyTorch``.
+
+.. autosummary::
+   :toctree: gen_modules/
+   :template: myclass_template.rst
+
+   config.OptimConfig
+
 
 Example:
 
@@ -170,6 +163,8 @@ module
 
 The ``module`` keyword is used to define the settings of all the neural networks used, including the architecture of the backbone, projectors etc. 
 
+:mod:`stable_ssl.modules` provides a variety of utility functions that can be used to load specific architectures and pre-trained models.
+
 Example:
 
 .. code-block:: yaml
@@ -214,6 +209,13 @@ The ``logger`` keyword is used to configure the logging settings for your run.
 
 One important section is ``metrics``, which lets you define the evaluation metrics to track during training. Metrics can be specified for each dataset.
 
+.. autosummary::
+   :toctree: gen_modules/
+   :template: myclass_template.rst
+
+   config.LoggerConfig
+
+
 Example:
 
 .. code-block:: yaml
@@ -250,6 +252,13 @@ hardware
 ~~~~~~~~
 
 Use the ``hardware`` keyword to configure hardware-related settings such as device, world_size (number of GPUs) or CPUs per task.
+
+.. autosummary::
+   :toctree: gen_modules/
+   :template: myclass_template.rst
+
+   config.HardwareConfig
+
 
 Example:
 

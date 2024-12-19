@@ -164,8 +164,9 @@ class BaseTrainer(torch.nn.Module):
             wandb.finish()
         self._cleanup()
 
+    @abstractmethod
     def forward(self):
-        return self.module["backbone"](self.batch[0])
+        pass
 
     @abstractmethod
     def predict(self):
