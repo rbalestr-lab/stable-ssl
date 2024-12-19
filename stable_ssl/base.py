@@ -146,6 +146,7 @@ class BaseTrainer(torch.nn.Module):
         self.launch()
 
     def setup(self):
+        """Instantiate components and load the checkpoint (if applicable)."""
         logging.getLogger().setLevel(self._logger["level"])
         logging.info(f"=> SETUP OF {self.__class__.__name__} STARTED.")
         self._instanciate()
@@ -153,11 +154,33 @@ class BaseTrainer(torch.nn.Module):
         logging.info(f"=> SETUP OF {self.__class__.__name__} COMPLETED.")
 
     def launch(self):
-        """Routine that is launched after the class is initialized.
+        """Main routine for training and evaluation, triggered after class initialization.
 
-        This will commonly consist of training + evaluation.
-        Can be customized by the user to fit the use-cases.
-        This is just a boilerplate version that provides minimal things.
+        This method is responsible for executing the core training and evaluation process.
+        It is designed as a general boilerplate, providing minimal functionality, but can
+        be customized by the user to suit specific use cases.
+
+        The default execution flow is:
+        - If no "train" dataset is found in `self.data`, the method will run evaluation and cleanup.
+        - Otherwise, it proceeds with the following steps:
+            1. Calls `before_fit()` to execute any pre-training setup.
+            2. Runs the `_fit()` method to carry out the training process.
+            3. Calls `after_fit()` for any post-training tasks.
+
+        If the training is interrupted by the user (via `BreakAllEpochs`),
+        the process is stopped and an exception is logged.
+
+        If using the `wandb` logger, the method will finalize
+        the wandb session before cleanup.
+
+        Finally, the method ensures that the cleanup process is always performed,
+        whether training was completed or interrupted.
+
+        Exceptions
+        ----------
+        BreakAllEpochs
+            Raised if the training is interrupted by the user.
+
         """
         if "train" not in self.data:
             self._evaluate()
