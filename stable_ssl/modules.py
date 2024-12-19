@@ -150,6 +150,7 @@ class MLP(nn.Module):
         self.layers = nn.Sequential(layers)
 
     def forward(self, x):
+        """Forward pass."""
         return self.layers(x)
 
 
@@ -186,6 +187,7 @@ class Resnet9(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, xb):
+        """Forward pass."""
         out = self.conv1(xb)
         out = self.conv2(out)
         out = self.res1(out) + out
@@ -240,6 +242,7 @@ class ConvMixer(nn.Module):
         self.fc = nn.Linear(dim, num_classes)
 
     def forward(self, xb):
+        """Forward pass."""
         out = self.conv1(xb)
         for a, b in zip(self.blocks_a, self.blocks_b):
             out = out + a(out)
