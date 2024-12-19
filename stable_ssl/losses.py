@@ -19,6 +19,12 @@ class NTXEntLoss(torch.nn.Module):
     Introduced in the SimCLR paper :cite:`chen2020simple`.
     Also used in MoCo :cite:`he2020momentum`.
 
+    Parameters
+    ----------
+    temperature : float, optional
+        The temperature scaling factor.
+        Default is 0.5.
+
     """
 
     def __init__(self, temperature: float = 0.5):

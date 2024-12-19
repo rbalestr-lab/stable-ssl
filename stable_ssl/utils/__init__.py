@@ -20,7 +20,6 @@ from .utils import (
     all_reduce,
 )
 from .exceptions import BreakEpoch, BreakStep, NanError, BreakAllEpochs
-from .nn import load_backbone, MLP
 
 __all__ = [
     "str_to_dtype",
@@ -32,8 +31,6 @@ __all__ = [
     "BreakStep",
     "NanError",
     "BreakAllEpochs",
-    "load_backbone",
-    "MLP",
     "to_device",
     "off_diagonal",
     "get_open_port",
