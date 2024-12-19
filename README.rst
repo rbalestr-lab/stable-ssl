@@ -143,24 +143,26 @@ Examples of Methods
 +--------------------------------------------------+-------------+---------------------+------------------------------------------+
 | Methods                                          | Predictor   | Self-distillation   | Loss                                     |
 +--------------------------------------------------+-------------+---------------------+------------------------------------------+
-| Barlow Twins                                     | ❌          | ❌                  | BarlowTwinsLoss                          |
+| Barlow Twins                                     | ❌          | ❌                  | `BarlowTwinsLoss <barlow_>`_             |
 +--------------------------------------------------+-------------+---------------------+------------------------------------------+
-| BYOL                                             | ✅          | ✅                  | NegativeCosineSimilarity                 |
+| BYOL                                             | ✅          | ✅                  | `NegativeCosineSimilarity <negcosine_>`_ |
 +--------------------------------------------------+-------------+---------------------+------------------------------------------+
 | MoCo                                             | ❌          | ✅                  | `NTXEntLoss <ntxent_>`_                  |
 +--------------------------------------------------+-------------+---------------------+------------------------------------------+
 | SimCLR (`config example <exsimclr_>`_)           | ❌          | ❌                  | `NTXEntLoss <ntxent_>`_                  |
 +--------------------------------------------------+-------------+---------------------+------------------------------------------+
-| SimSiam                                          | ✅          | ❌                  | NegativeCosineSimilarity                 |
+| SimSiam                                          | ✅          | ❌                  | `NegativeCosineSimilarity <negcosine_>`_ |
 +--------------------------------------------------+-------------+---------------------+------------------------------------------+
-| VICReg                                           | ❌          | ❌                  | VICRegLoss                               |
+| VICReg                                           | ❌          | ❌                  | `VICRegLoss <vicreg_>`_                  |
 +--------------------------------------------------+-------------+---------------------+------------------------------------------+
 
 
 .. _exsimclr: _github_url/blob/main/examples/simclr_cifar10_full.yaml
 
 .. _ntxent: https://rbalestr-lab.github.io/stable-SSL.github.io/dev/gen_modules/stable_ssl.losses.NTXEntLoss.html#stable_ssl.losses.NTXEntLoss
-
+.. _barlow: https://rbalestr-lab.github.io/stable-SSL.github.io/dev/gen_modules/stable_ssl.losses.BarlowTwinsLoss.html#stable_ssl.losses.BarlowTwinsLoss
+.. _negcosine: https://rbalestr-lab.github.io/stable-SSL.github.io/dev/gen_modules/stable_ssl.losses.NegativeCosineSimilarity.html
+.. _vicreg: https://rbalestr-lab.github.io/stable-SSL.github.io/dev/gen_modules/stable_ssl.losses.VICRegLoss.html
 
 
 .. |Documentation| image:: https://img.shields.io/badge/Documentation-blue.svg
