@@ -63,13 +63,16 @@ optim
 
 The ``optim`` keyword is used to define the optimization settings for your model. It allows users to specify both the ``optimizer`` object and the ``scheduler``.
 
-:mod:`stable_ssl.optimizers` and :mod:`stable_ssl.schedulers` provide additional modules that are not available in ``PyTorch``.
+The default parameters associated with the ``optim`` keyword are defined in the following:
 
 .. autosummary::
    :toctree: gen_modules/
    :template: myclass_template.rst
 
    config.OptimConfig
+
+
+:mod:`stable_ssl.optimizers` and :mod:`stable_ssl.schedulers` provide additional modules that are not available in ``PyTorch``.
 
 
 Example:
@@ -209,6 +212,8 @@ The ``logger`` keyword is used to configure the logging settings for your run.
 
 One important section is ``metrics``, which lets you define the evaluation metrics to track during training. Metrics can be specified for each dataset.
 
+The default parameters associated with ``logger`` are defined in the following:
+
 .. autosummary::
    :toctree: gen_modules/
    :template: myclass_template.rst
@@ -252,6 +257,8 @@ hardware
 ~~~~~~~~
 
 Use the ``hardware`` keyword to configure hardware-related settings such as device, world_size (number of GPUs) or CPUs per task.
+
+The default parameters associated with ``hardware`` are defined in the following:
 
 .. autosummary::
    :toctree: gen_modules/
