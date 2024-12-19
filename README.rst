@@ -147,16 +147,19 @@ Examples of Methods
 +--------------------------------------------------+-------------+---------------------+------------------------------------------+
 | BYOL                                             | ✅          | ✅                  | NegativeCosineSimilarity                 |
 +--------------------------------------------------+-------------+---------------------+------------------------------------------+
-| MoCo                                             | ❌          | ✅                  | NTXEntLoss                               |
+| MoCo                                             | ❌          | ✅                  | `NTXEntLoss <ntxent_>`_                  |
 +--------------------------------------------------+-------------+---------------------+------------------------------------------+
-| SimCLR (`config example <exsimclr_>`_)           | ❌          | ❌                  | NTXEntLoss                               |
+| SimCLR (`config example <exsimclr_>`_)           | ❌          | ❌                  | `NTXEntLoss <ntxent_>`_                  |
 +--------------------------------------------------+-------------+---------------------+------------------------------------------+
 | SimSiam                                          | ✅          | ❌                  | NegativeCosineSimilarity                 |
 +--------------------------------------------------+-------------+---------------------+------------------------------------------+
 | VICReg                                           | ❌          | ❌                  | VICRegLoss                               |
 +--------------------------------------------------+-------------+---------------------+------------------------------------------+
 
-.. _exsimclr: https://github.com/rbalestr-lab/stable-SSL/blob/main/examples/simclr_cifar10_full.yaml
+
+.. _exsimclr: _github_url/blob/main/examples/simclr_cifar10_full.yaml
+
+.. _ntxent: https://rbalestr-lab.github.io/stable-SSL.github.io/dev/gen_modules/stable_ssl.losses.NTXEntLoss.html#stable_ssl.losses.NTXEntLoss
 
 
 
