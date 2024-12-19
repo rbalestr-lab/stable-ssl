@@ -64,22 +64,23 @@ class BaseTrainer(torch.nn.Module):
 
             - `self.before_fit` (nothing by default)
             - `self._fit` (executes all the training/intermittent evaluation by default)
-            - for `self.optim["epochs"]` epochs:
-                - `self._fit_epoch` (one training epoch by default) - `self.before_fit_epoch` (setup in train mode)
-                - loop over mini-batches
-                    - `self.before_fit_step` (moves data to device)
-                    - `self._fit_step` (computes loss and performs optimization step)
-                    - `self.after_fit_step` (nothing by default)
-                - `self.after_fit_epoch` (nothing by default)
-                - `self._evaluate` (if asked by user config, looping over all non-train datasets)
-                - `self.before_eval` (setup in eval mode)
-                - loop over mini-batches
-                    - `self.before_eval_step` (moves data to device)
-                    - `self._eval_step` (computes eval metrics)
-                    - `self.after_eval_step` (nothing by default)
-                - `self.after_eval` (nothing by default)
-                - Save intermittent checkpoint if asked by user config
-            - Save final checkpoint if asked by user config
+                - for `self.optim["epochs"]` epochs:
+                    - `self.before_fit_epoch` (setup in train mode)
+                    - `self._fit_epoch` (one training epoch by default)
+                        - loop over mini-batches
+                            - `self.before_fit_step` (moves data to device)
+                            - `self._fit_step` (computes loss and performs optimization step)
+                            - `self.after_fit_step` (nothing by default)
+                    - `self.after_fit_epoch` (nothing by default)
+                    - `self._evaluate` (if asked by user config, looping over all non-train datasets)
+                        - `self.before_eval` (setup in eval mode)
+                            - loop over mini-batches
+                                - `self.before_eval_step` (moves data to device)
+                                - `self._eval_step` (computes eval metrics)
+                                - `self.after_eval_step` (nothing by default)
+                        - `self.after_eval` (nothing by default)
+                    - Save intermittent checkpoint if asked by user config
+                - Save final checkpoint if asked by user config
             - `self.after_fit` (evaluates by default)
 
 
