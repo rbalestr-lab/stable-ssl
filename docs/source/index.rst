@@ -17,6 +17,7 @@
 
     trainers
     losses
+    modules
     optimizers
     schedulers
 

@@ -62,7 +62,7 @@ def load_backbone(name, num_classes, weights=None, low_resolution=False, **kwarg
     ----------
     name : str
         Name of the backbone model. Supported models are:
-        - Any model from torchvision.models.
+        - Any model from torchvision.models
         - "resnet9"
         - "ConvMixer"
     num_classes : int
@@ -148,7 +148,7 @@ class MLP(nn.Module):
         return self.layers(x)
 
 
-class resnet9(nn.Module):
+class Resnet9(nn.Module):
     """ResNet-9 model."""
 
     def __init__(self, in_channels=3, num_classes=10):
