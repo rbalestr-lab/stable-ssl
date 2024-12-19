@@ -10,11 +10,13 @@
 import torchvision
 import torch.nn as nn
 
+import logging
+
 
 def get_backbone_dim(
     name,
 ):
-    """Load a neural network model with a given backbone.
+    """Get the number of features in the last layer of a backbone model.
 
     Parameters
     ----------
@@ -28,7 +30,7 @@ def get_backbone_dim(
     """
     # Load the name.
     if name == "resnet9":
-        model = resnet9()
+        model = Resnet9()
     elif name == "ConvMixer":
         model = ConvMixer()
     else:
@@ -56,7 +58,10 @@ def get_backbone_dim(
 
 
 def load_backbone(name, num_classes, weights=None, low_resolution=False, **kwargs):
-    """Load a neural network backbone from template models.
+    """Load a backbone model.
+
+    If num_classes is provided, the last layer is replaced by a linear layer of
+    output size num_classes. Otherwise, the last layer is replaced by an identity layer.
 
     Parameters
     ----------
@@ -83,7 +88,7 @@ def load_backbone(name, num_classes, weights=None, low_resolution=False, **kwarg
     """
     # Load the name.
     if name == "resnet9":
-        model = resnet9(**kwargs)
+        model = Resnet9(**kwargs)
     elif name == "ConvMixer":
         model = ConvMixer(**kwargs)
     else:
