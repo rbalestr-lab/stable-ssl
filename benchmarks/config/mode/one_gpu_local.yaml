@@ -1,0 +1,10 @@
+# @package _global_
+defaults:
+  - override /hydra/launcher: submitit_local
+
+trainer:
+  hardware:
+    seed: 0
+    float16: true
+    device: "cuda:0"
+    world_size: 1

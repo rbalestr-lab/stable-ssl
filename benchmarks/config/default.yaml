@@ -1,6 +1,14 @@
 # @package _global_
 defaults:
   - _self_
-  - mode: one_gpu
+  - mode: one_gpu_slurm
   - metric: multiclass_accuracy
   - experiment: null
+
+hydra:
+  job:
+    chdir: False
+  launcher:
+    gpus_per_node: ${trainer.hardware.world_size}
+    tasks_per_node: ${trainer.hardware.world_size}
+    cpus_per_task: ${trainer.data.train.num_workers}
