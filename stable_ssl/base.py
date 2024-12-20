@@ -264,15 +264,15 @@ class BaseTrainer(torch.nn.Module):
         pass
 
     def checkpoint(self) -> submitit.helpers.DelayedSubmission:
-        """
-        Creates a checkpoint of the current state of the model.
+        """Create a checkpoint of the current state of the model.
 
         This method is called asynchronously when the SLURM manager sends a
         preemption signal. It is invoked with the same arguments as the `__call__`
         method. At this point, `self` represents the current state of the model.
 
-        Returns:
-            submitit.helpers.DelayedSubmission: A delayed submission object
+        Returns
+        -------
+        submitit.helpers.DelayedSubmission: A delayed submission object
             representing the requeued task with the current model state.
         """
         logging.info("Requeuing the task...")
