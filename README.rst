@@ -55,37 +55,15 @@ Or you can also run:
 Minimal Documentation
 ---------------------
 
-
 Library Design
 ~~~~~~~~~~~~~~
 
 .. _design:
 
 ``stable-SSL`` provides all the boilerplate to quickly get started with AI research, focusing on Self-Supervised Learning (SSL), albeit other applications can certainly build upon ``stable-SSL``.
-At its core, ``stable-SSL`` provides a ``BaseTrainer`` class that sequentially calls the following methods:
+At its core, ``stable-SSL`` provides a ``BaseTrainer`` class
 
-.. code-block:: text
-
-   - self.before_fit (nothing by default)
-   - self.fit (executes all the training/intermitent evaluation by default)
-      - for `self.optim["epochs"]` epochs:
-         - self.fit_epoch (one training epoch by default)
-            - self.before_fit_epoch (setup in train mode)
-            - loop over mini-batches
-               - self.before_fit_step (moves data to device)
-               - self.fit_step (computes loss and performs optimization step)
-               - self.after_fit_step (nothing by default)
-            - self.after_fit_epoch (nothing by default)
-         - self.evaluate (if asked by user config, looping over all non train datasets)
-            - self.before_eval (setup in eval mode)
-            - loop over mini-batches
-               - self.before_eval_step (moves data to device)
-               - self.eval_step (computes eval metrics)
-               - self.after_eval_step (nothing by default)
-            - self.after_eval (nothing by default)
-         - save intermitent checkpoint if asked by user config
-      - save final checkpoint if asked by user config
-   - self.after_fit (evaluates by default)
+:mod:`stable_ssl.BaseTrainer`
 
 While the organization is similar to that of ``PyTorch Lightning``, the goal of ``stable-SSL`` is to significantly reduce codebase complexity without sacrificing performance. Think of ``PyTorch Lightning`` as industry-driven (abstracting everything away), whereas ``stable-SSL`` is academia-driven (providing users with complete visibility into every aspect).
 
