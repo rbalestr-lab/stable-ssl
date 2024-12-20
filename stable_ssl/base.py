@@ -164,10 +164,7 @@ class BaseTrainer(torch.nn.Module):
 
         The default flow includes:
         - Running evaluation and cleanup if no "train" dataset is found in `self.data`.
-        - Otherwise:
-        1. Executes `before_fit()` for pre-training setup.
-        2. Calls `_fit()` to perform training.
-        3. Executes `after_fit()` for post-training tasks.
+        - Otherwise performing pre-training, training, and post-training tasks.
 
         Exceptions
         ----------
@@ -265,6 +262,32 @@ class BaseTrainer(torch.nn.Module):
     def after_eval_step(self):
         """Handle post-step tasks after an evaluation step (currently does nothing)."""
         pass
+
+    def checkpoint(self) -> submitit.helpers.DelayedSubmission:
+        """
+        Creates a checkpoint of the current state of the model.
+
+        This method is called asynchronously when the SLURM manager sends a
+        preemption signal. It is invoked with the same arguments as the `__call__`
+        method. At this point, `self` represents the current state of the model.
+
+        Returns:
+            submitit.helpers.DelayedSubmission: A delayed submission object
+            representing the requeued task with the current model state.
+        """
+        logging.info("Requeuing the task...")
+        self._save_checkpoint("tmp_checkpoint.ckpt", model_only=False)
+        model = type(self)(
+            self._data,
+            self._module,
+            self._loss,
+            self._hardware,
+            self._optim,
+            self._logger,
+        )
+        logging.info("Cleaning up the current task before submitting a new one.")
+        self._cleanup()
+        return submitit.helpers.DelayedSubmission(model)
 
     @property
     def rank(self):
@@ -804,22 +827,3 @@ class BaseTrainer(torch.nn.Module):
 
         logging.info("Device status after cleaning.")
         get_gpu_info()
-
-    def checkpoint(self) -> submitit.helpers.DelayedSubmission:
-        # the checkpoint method is called asynchroneously when the slurm manager
-        # sends a preemption signal, with the same arguments as the __call__ method
-        # "self" is your callable, at its current state.
-        # "self" therefore holds the current version of the model:
-        logging.info("Requeuing the task...")
-        self._save_checkpoint("tmp_checkpoint.ckpt", model_only=False)
-        model = type(self)(
-            self._data,
-            self._module,
-            self._loss,
-            self._hardware,
-            self._optim,
-            self._logger,
-        )
-        logging.info("Cleaning up the current task before submitting a new one.")
-        self._cleanup()
-        return submitit.helpers.DelayedSubmission(model)

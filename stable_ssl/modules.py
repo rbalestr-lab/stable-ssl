@@ -68,7 +68,7 @@ def load_backbone(name, num_classes, weights=None, low_resolution=False, **kwarg
     name : str
         Name of the backbone model. Supported models are:
         - Any model from torchvision.models
-        - "resnet9"
+        - "Resnet9"
         - "ConvMixer"
     num_classes : int
         Number of classes in the dataset.
