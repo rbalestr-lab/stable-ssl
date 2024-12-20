@@ -69,10 +69,10 @@ class BaseTrainer(torch.nn.Module):
                     - `self._fit_epoch` (one training epoch by default)
                         - loop over mini-batches
                             - `self.before_fit_step` (moves data to device)
-                            - `self._fit_step` (computes loss and performs optimization step)
+                            - `self._fit_step` (optimization step)
                             - `self.after_fit_step` (nothing by default)
                     - `self.after_fit_epoch` (nothing by default)
-                    - `self._evaluate` (if asked by user config, looping over all non-train datasets)
+                    - `self._evaluate` (if asked, looping over all non-train datasets)
                         - `self.before_eval` (setup in eval mode)
                         - loop over mini-batches
                             - `self.before_eval_step` (moves data to device)
@@ -157,7 +157,7 @@ class BaseTrainer(torch.nn.Module):
         logging.info(f"=> SETUP OF {self.__class__.__name__} COMPLETED.")
 
     def launch(self):
-        """Executes the core training and evaluation routine.
+        """Execute the core training and evaluation routine.
 
         This method runs the training and evaluation process,
         with a customizable boilerplate structure.
