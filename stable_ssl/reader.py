@@ -25,8 +25,6 @@ import omegaconf
 import logging
 from tqdm.contrib.logging import logging_redirect_tqdm
 
-# yaml.add_constructor("tag:yaml.org,2002:python/object/apply:pathlib.PosixPath", Path)
-
 
 def jsonl_project(folder, num_workers=8):
     """Load configs and values from runs in a folder."""
@@ -105,7 +103,6 @@ def wandb_project(
 
 
 def _wandb_run_packed(args):
-    """Help function to unpack arguments for wandb_run."""
     return wandb(*args)
 
 

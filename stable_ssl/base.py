@@ -74,10 +74,10 @@ class BaseTrainer(torch.nn.Module):
                     - `self.after_fit_epoch` (nothing by default)
                     - `self._evaluate` (if asked by user config, looping over all non-train datasets)
                         - `self.before_eval` (setup in eval mode)
-                            - loop over mini-batches
-                                - `self.before_eval_step` (moves data to device)
-                                - `self._eval_step` (computes eval metrics)
-                                - `self.after_eval_step` (nothing by default)
+                        - loop over mini-batches
+                            - `self.before_eval_step` (moves data to device)
+                            - `self._eval_step` (computes eval metrics)
+                            - `self.after_eval_step` (nothing by default)
                         - `self.after_eval` (nothing by default)
                     - Save intermittent checkpoint if asked by user config
                 - Save final checkpoint if asked by user config
@@ -94,7 +94,8 @@ class BaseTrainer(torch.nn.Module):
         Names and definition of the modules (neural networks).
         See :mod:`stable_ssl.modules` for examples of available modules.
     loss: dict
-        Loss function to be minimized. See :mod:`stable_ssl.losses` for examples.
+        Loss function used in the final criterion to be minimized.
+        See :mod:`stable_ssl.losses` for examples.
     hardware: dict
         Hardware parameters. See :mod:`stable_ssl.config.HardwareConfig`
         for the full list of parameters and their defaults.
@@ -102,7 +103,8 @@ class BaseTrainer(torch.nn.Module):
         Optimization parameters. See :mod:`stable_ssl.config.OptimConfig`
         for the full list of parameters and their defaults.
     logger: dict
-        Logging and checkpointing parameters. See :mod:`stable_ssl.config.LoggerConfig`
+        Logging and checkpointing parameters.
+        See :mod:`stable_ssl.config.LoggerConfig`
         for the full list of parameters and their defaults.
     """
 
@@ -142,6 +144,7 @@ class BaseTrainer(torch.nn.Module):
         logging.info(f"=> INIT OF {self.__class__.__name__} COMPLETED.")
 
     def __call__(self):
+        """Call the setup and launch methods."""
         self.setup()
         self.launch()
 
@@ -167,14 +170,6 @@ class BaseTrainer(torch.nn.Module):
             2. Runs the `_fit()` method to carry out the training process.
             3. Calls `after_fit()` for any post-training tasks.
 
-        If the training is interrupted by the user (via `BreakAllEpochs`),
-        the process is stopped and an exception is logged.
-
-        If using the `wandb` logger, the method will finalize
-        the wandb session before cleanup.
-
-        Finally, the method ensures that the cleanup process is always performed,
-        whether training was completed or interrupted.
 
         Exceptions
         ----------
@@ -199,17 +194,21 @@ class BaseTrainer(torch.nn.Module):
 
     @abstractmethod
     def forward(self):
+        """Forward pass of the model."""
         pass
 
     @abstractmethod
     def predict(self):
+        """Prediction of the model used for evaluation."""
         pass
 
     @abstractmethod
     def compute_loss(self):
+        """Compute the global loss to be minimized."""
         pass
 
     def get_logs(self, keys=None):
+        """Retrieve the logs from the logger."""
         if self.logger["wandb"] is None:
             return reader.jsonl(self.logger["dump_path"])
         else:
@@ -221,11 +220,54 @@ class BaseTrainer(torch.nn.Module):
             )
 
     def get_config(self):
-        # Load the config file.
+        """Retrieve the configuration file of the trainer."""
         config = omegaconf.OmegaConf.load(
             self._logger["dump_path"] / ".hydra" / "config.yaml"
         )
         return config
+
+    def before_fit(self):
+        """Initialize training by setting the starting epoch."""
+        self.epoch = 0
+
+    def after_fit(self):
+        """Evaluate the model after completing the training process."""
+        self._evaluate()
+
+    def before_fit_epoch(self):
+        """Prepare the training state and set the epoch for distributed training."""
+        self.train()
+        if self.world_size > 1:
+            self.data["train"].set_epoch(self.epoch)
+
+    def after_fit_epoch(self):
+        """Handle post-epoch tasks after training (currently does nothing)."""
+        pass
+
+    def before_fit_step(self):
+        """Prepare the batch data for a training step by moving it to the appropriate device."""
+        # set up the data to have easy access throughout the methods
+        self.batch = to_device(self.batch, self.device)
+
+    def after_fit_step(self):
+        """Handle post-step tasks after a training step (currently does nothing)."""
+        pass
+
+    def before_eval(self):
+        """Set the model to evaluation mode before validation/testing."""
+        self.eval()
+
+    def after_eval(self):
+        """Handle tasks after completing evaluation (currently does nothing)."""
+        pass
+
+    def before_eval_step(self):
+        """Prepare the batch data for an evaluation step by moving it to the appropriate device."""
+        self.batch = to_device(self.batch, self.device)
+
+    def after_eval_step(self):
+        """Handle post-step tasks after an evaluation step (currently does nothing)."""
+        pass
 
     @property
     def rank(self):
@@ -268,39 +310,6 @@ class BaseTrainer(torch.nn.Module):
     @step.setter
     def step(self, value):
         self._step = value
-
-    def before_fit(self):
-        self.epoch = 0
-
-    def after_fit(self):
-        self._evaluate()
-
-    def before_fit_epoch(self):
-        self.train()
-        if self.world_size > 1:
-            self.data["train"].set_epoch(self.epoch)
-
-    def after_fit_epoch(self):
-        pass
-
-    def before_fit_step(self):
-        # set up the data to have easy access throughout the methods
-        self.batch = to_device(self.batch, self.device)
-
-    def after_fit_step(self):
-        pass
-
-    def before_eval(self):
-        self.eval()
-
-    def after_eval(self):
-        pass
-
-    def before_eval_step(self):
-        self.batch = to_device(self.batch, self.device)
-
-    def after_eval_step(self):
-        pass
 
     def _instanciate(self):
         seed_everything(self._hardware.get("seed", None))
