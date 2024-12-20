@@ -157,19 +157,17 @@ class BaseTrainer(torch.nn.Module):
         logging.info(f"=> SETUP OF {self.__class__.__name__} COMPLETED.")
 
     def launch(self):
-        """Main routine for training and evaluation, triggered after class initialization.
+        """Executes the core training and evaluation routine.
 
-        This method is responsible for executing the core training and evaluation process.
-        It is designed as a general boilerplate, providing minimal functionality, but can
-        be customized by the user to suit specific use cases.
+        This method runs the training and evaluation process,
+        with a customizable boilerplate structure.
 
-        The default execution flow is:
-        - If no "train" dataset is found in `self.data`, the method will run evaluation and cleanup.
-        - Otherwise, it proceeds with the following steps:
-            1. Calls `before_fit()` to execute any pre-training setup.
-            2. Runs the `_fit()` method to carry out the training process.
-            3. Calls `after_fit()` for any post-training tasks.
-
+        The default flow includes:
+        - Running evaluation and cleanup if no "train" dataset is found in `self.data`.
+        - Otherwise:
+        1. Executes `before_fit()` for pre-training setup.
+        2. Calls `_fit()` to perform training.
+        3. Executes `after_fit()` for post-training tasks.
 
         Exceptions
         ----------
@@ -245,8 +243,7 @@ class BaseTrainer(torch.nn.Module):
         pass
 
     def before_fit_step(self):
-        """Prepare the batch data for a training step by moving it to the appropriate device."""
-        # set up the data to have easy access throughout the methods
+        """Prepare batch for training step by moving it to the appropriate device."""
         self.batch = to_device(self.batch, self.device)
 
     def after_fit_step(self):
@@ -262,7 +259,7 @@ class BaseTrainer(torch.nn.Module):
         pass
 
     def before_eval_step(self):
-        """Prepare the batch data for an evaluation step by moving it to the appropriate device."""
+        """Prepare batch for evaluation step by moving it to the appropriate device."""
         self.batch = to_device(self.batch, self.device)
 
     def after_eval_step(self):
