@@ -50,11 +50,11 @@ class BaseTrainer(torch.nn.Module):
     r"""Base class for training a model.
 
     This class provides a general boilerplate for common operations that
-    occur during the training lifecycle, which can be customized via configuration.
+    occur during the training lifecycle.
     These operations include training, evaluation, checkpointing, and training restart.
 
-    The internals of these operations can be modified through configuration
-    settings, allowing flexibility for different projects and use cases.
+    The class is highly configurable, enabling customization of its internal workflows
+    to suit diverse project requirements and use cases.
 
     This class is intended to be subclassed for specific training methods
     (see examples for more details). For each subclass, the following methods must

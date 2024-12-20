@@ -61,9 +61,7 @@ Library Design
 .. _design:
 
 ``stable-SSL`` provides all the boilerplate to quickly get started with AI research, focusing on Self-Supervised Learning (SSL), albeit other applications can certainly build upon ``stable-SSL``.
-At its core, ``stable-SSL`` provides a ``BaseTrainer`` class
-
-:mod:`stable_ssl.BaseTrainer`
+At its core, ``stable-SSL`` provides a `BaseTrainer <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/gen_modules/stable_ssl.BaseTrainer.html#stable_ssl.BaseTrainer>`_ class that provides all the essential methods required to train and evaluate your model effectively. See the `User Guide <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/user_guide.html>`_ for guidance on configuring parameters to suit your use case.
 
 While the organization is similar to that of ``PyTorch Lightning``, the goal of ``stable-SSL`` is to significantly reduce codebase complexity without sacrificing performance. Think of ``PyTorch Lightning`` as industry-driven (abstracting everything away), whereas ``stable-SSL`` is academia-driven (providing users with complete visibility into every aspect).
 
@@ -112,7 +110,7 @@ In this example, to launch the run using the configuration file ``default_config
 
 .. code-block:: bash
 
-   python run.py --config-name default_config --config-path configs/
+   python run.py -m --config-name default_config --config-path configs/
 
 
 Examples of Methods
