@@ -14,6 +14,7 @@ import pickle
 import lzma
 import hydra
 from hydra.core.hydra_config import HydraConfig
+import logging
 
 
 def instanciate_config(cfg=None, debug_hash=None) -> object:
@@ -24,7 +25,17 @@ def instanciate_config(cfg=None, debug_hash=None) -> object:
     else:
         print("Using debugging hash")
         cfg = pickle.loads(lzma.decompress(debug_hash))
-    return hydra.utils.instantiate(cfg.trainer, _convert_="object", _recursive_=False)
+    trainer = hydra.utils.instantiate(
+        cfg.trainer, _convert_="object", _recursive_=False
+    )
+    for key, value in cfg.items():
+        if key == "trainer":
+            continue
+        logging.info(f"\t=> Adding user arg {key} to Trainer")
+        if hasattr(trainer, key):
+            raise ValueError(f"User arg {key} already exists in the Trainer {trainer}")
+        setattr(trainer, key, value)
+    return trainer
 
 
 @dataclass
