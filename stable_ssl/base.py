@@ -354,7 +354,7 @@ class BaseTrainer(torch.nn.Module):
         self.module = hydra.utils.instantiate(self._module, _convert_="object")
         self.loss = hydra.utils.instantiate(self._loss, _convert_="object")
         self.hardware = hydra.utils.instantiate(self._hardware, _convert_="object")
-        self.logger = hydra.utils.instantiate(self._logger, _convert_="object")
+        self.logger = hydra.utils.instantiate(self._logger, _convert_="partial")
 
         self._set_device(self.hardware)
 
@@ -365,17 +365,11 @@ class BaseTrainer(torch.nn.Module):
         if self.logger["wandb"]:
             logging.info("\t- Wandb:")
             try:
-                wandb.init(
-                    entity=self.logger["wandb"]["entity"],
-                    project=self.logger["wandb"]["project"],
-                    name=self.logger["wandb"]["name"],
-                    dir=str(self.logger["dump_path"]),
-                    resume="allow",
-                )
+                wandb.init(**self.logger["wandb"], resume="allow")
                 self.logger["wandb"]["entity"] = wandb.run.entity
                 self.logger["wandb"]["project"] = wandb.run.project
                 self.logger["wandb"]["name"] = wandb.run.name
-                self.logger["wandb"]["ID"] = wandb.run.id
+                self.logger["wandb"]["id"] = wandb.run.id
                 logging.info(f"\t\t- entity: {wandb.run.entity}")
                 logging.info(f"\t\t- project: {wandb.run.project}")
                 logging.info(f"\t\t- name: {wandb.run.name}")

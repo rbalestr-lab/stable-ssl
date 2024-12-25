@@ -113,7 +113,7 @@ class LoggerConfig:
 
 
 @dataclass
-class WandbConfig(LoggerConfig):
+class WandbConfig:
     """Configuration for the Weights & Biases logging.
 
     Parameters
@@ -128,10 +128,15 @@ class WandbConfig(LoggerConfig):
         ID of the Weights & Biases run. Default is None.
     """
 
+    dir: Path = field(
+        default_factory=lambda: Path(HydraConfig.get().runtime.output_dir)
+    )
     entity: Optional[str] = None
     project: Optional[str] = None
     name: Optional[str] = None
-    ID: Optional[str] = None
+    id: Optional[str] = None
+    tags: Optional[list] = None
+    group: Optional[str] = None
 
 
 @dataclass
