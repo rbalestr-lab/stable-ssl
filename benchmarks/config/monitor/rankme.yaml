@@ -1,0 +1,10 @@
+# @package _global_
+
+trainer:
+  logger:
+    monitor:
+      train:
+        rankme:
+          _target_: stable_ssl.monitors.RankMe
+          limit: 12
+          epsilon: 1e-7

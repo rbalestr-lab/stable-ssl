@@ -15,6 +15,7 @@ import logging
 from contextlib import closing
 import socket
 import numpy as np
+from functools import cache
 
 import torch
 import torch.distributed as dist
@@ -42,6 +43,22 @@ def gather(x: torch.Tensor):
         return x
     else:
         return torch.cat(GatherLayer.apply(x), dim=0)
+
+
+def gather_to_rank0(x: torch.Tensor):
+    """Gather tensors from all processes in the distributed environment to rank 0."""
+    if (
+        not (dist.is_available() and dist.is_initialized())
+        or (world_size := dist.get_world_size()) == 1
+    ):
+        return x
+
+    if dist.get_rank() == 0:
+        output = [torch.zeros_like(x) for _ in range(world_size)]
+        dist.gather(x, output, dst=0)
+        return torch.cat(output, dim=0)
+    else:
+        return x
 
 
 def all_reduce(x: torch.Tensor):
@@ -223,3 +240,9 @@ def log_and_raise(exception_class, message):
     """Log an error message and raise an exception."""
     logging.error(message)
     raise exception_class(message)
+
+
+@cache
+def warn_once(warning: str):
+    """Cache the warning message to avoid spamming the logs."""
+    logging.warning(warning)

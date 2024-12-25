@@ -1,6 +1,6 @@
 # # -*- coding: utf-8 -*-
-# """Configuration classes specifying default parameters for stable-SSL."""
-# #
+"""Configuration classes specifying default parameters for stable-SSL."""
+
 # # Author: Hugues Van Assel <vanasselhugues@gmail.com>
 # #         Randall Balestriero <randallbalestriero@gmail.com>
 # #
@@ -14,6 +14,7 @@ import pickle
 import lzma
 import hydra
 from hydra.core.hydra_config import HydraConfig
+import logging
 
 
 def instanciate_config(cfg=None, debug_hash=None) -> object:
@@ -24,7 +25,17 @@ def instanciate_config(cfg=None, debug_hash=None) -> object:
     else:
         print("Using debugging hash")
         cfg = pickle.loads(lzma.decompress(debug_hash))
-    return hydra.utils.instantiate(cfg.trainer, _convert_="object", _recursive_=False)
+    trainer = hydra.utils.instantiate(
+        cfg.trainer, _convert_="object", _recursive_=False
+    )
+    for key, value in cfg.items():
+        if key == "trainer":
+            continue
+        logging.info(f"\t=> Adding user arg {key} to Trainer")
+        if hasattr(trainer, key):
+            raise ValueError(f"User arg {key} already exists in the Trainer {trainer}")
+        setattr(trainer, key, value)
+    return trainer
 
 
 @dataclass
@@ -57,8 +68,11 @@ class LoggerConfig:
     ----------
     level : int, optional
         The logging level. Determines the threshold for what gets logged. Default is 20.
-    metrics : dict, optional
+    metric : dict, optional
         A dictionary to store and log various metrics. Default is an empty dict.
+    monitor : dict, optional
+        A dictionary to store and log various monitoring statistics.
+        Default is an empty dict
     save_final_model : str or bool, optional
         Specifies whether to save the final trained model.
         If a name is provided, the final model will be saved with that name.
@@ -66,7 +80,7 @@ class LoggerConfig:
     eval_every_epoch : int, optional
         The frequency (in epochs) at which the model will be evaluated.
         For example, if set to 1, evaluation occurs every epoch. Default is 1.
-    every_step : int, optional
+    log_every_step : int, optional
         The frequency (in training steps) at which to log intermediate metrics.
         For example, if set to 1, logs occur every step. Default is 1.
     checkpoint_frequency : int, optional
@@ -87,10 +101,11 @@ class LoggerConfig:
     """
 
     level: int = 20
-    metrics: dict = field(default_factory=dict)
+    metric: dict = field(default_factory=dict)
+    monitor: dict = field(default_factory=dict)
     save_final_model: Union[str, bool] = False
     eval_every_epoch: int = 1
-    every_step: int = 1
+    log_every_step: int = 1
     checkpoint_frequency: Optional[int] = None
     checkpoint_model_only: bool = True
     dump_path: Path = field(
@@ -100,25 +115,36 @@ class LoggerConfig:
 
 
 @dataclass
-class WandbConfig(LoggerConfig):
+class WandbConfig:
     """Configuration for the Weights & Biases logging.
 
     Parameters
     ----------
+    dir : pathlib.Path, optional
+        The path where output is dumped. Defaults to Hydra's runtime output directory.
     entity : str, optional
         Name of the (Weights & Biases) entity. Default is None.
     project : str, optional
         Name of the (Weights & Biases) project. Default is None.
     name : str, optional
         Name of the Weights & Biases run. Default is None.
-    ID : str, optional
+    id : str, optional
         ID of the Weights & Biases run. Default is None.
+    tags : list, optional
+        List of tags for the Weights & Biases run. Default is None.
+    group : str, optional
+        Group for the Weights & Biases run. Default is None.
     """
 
+    dir: str = field(
+        default_factory=lambda: str(Path(HydraConfig.get().runtime.output_dir))
+    )
     entity: Optional[str] = None
     project: Optional[str] = None
     name: Optional[str] = None
-    ID: Optional[str] = None
+    id: Optional[str] = None
+    tags: Optional[list] = None
+    group: Optional[str] = None
 
 
 @dataclass

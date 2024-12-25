@@ -28,7 +28,7 @@ class SupervisedTrainer(BaseTrainer):
 
     def compute_loss(self):
         loss = self.loss(self.predict(), self.batch[1])
-        return {"train/loss": loss}
+        return {"loss": loss}
 
 
 class JointEmbeddingTrainer(BaseTrainer):
@@ -66,6 +66,7 @@ class JointEmbeddingTrainer(BaseTrainer):
     def compute_loss(self):
         views, labels = self.format_views_labels()
         embeddings = [self.module["backbone"](view) for view in views]
+        self.latest_forward = embeddings
         projections = [self.module["projector"](embed) for embed in embeddings]
 
         loss_ssl = self.loss(*projections)
@@ -74,7 +75,7 @@ class JointEmbeddingTrainer(BaseTrainer):
             embeddings, projections, labels
         )
 
-        return {"train/loss_ssl": loss_ssl, **classifier_losses}
+        return {"loss_ssl": loss_ssl, **classifier_losses}
 
     def compute_loss_classifiers(self, embeddings, projections, labels):
         loss_backbone_classifier = 0
@@ -90,8 +91,8 @@ class JointEmbeddingTrainer(BaseTrainer):
                 )
 
         return {
-            "train/loss_backbone_classifier": loss_backbone_classifier,
-            "train/loss_projector_classifier": loss_projector_classifier,
+            "loss_backbone_classifier": loss_backbone_classifier,
+            "loss_projector_classifier": loss_projector_classifier,
         }
 
 

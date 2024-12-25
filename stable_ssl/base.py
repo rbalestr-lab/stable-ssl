@@ -27,6 +27,7 @@ import torch
 from .data import DistributedSamplerWrapper
 from . import reader
 from .config import LoggerConfig, WandbConfig, HardwareConfig, OptimConfig
+from .monitors import Monitor
 
 try:
     import wandb
@@ -61,7 +62,6 @@ class BaseTrainer(torch.nn.Module):
     be implemented: `forward`, `predict`, and `compute_loss`.
 
     Execution flow when calling `launch`:
-
             - `self.before_fit` (nothing by default)
             - `self._fit` (executes all the training/intermittent evaluation by default)
                 - for `self.optim["epochs"]` epochs:
@@ -70,19 +70,18 @@ class BaseTrainer(torch.nn.Module):
                         - loop over mini-batches
                             - `self.before_fit_step` (moves data to device)
                             - `self._fit_step` (optimization step)
-                            - `self.after_fit_step` (nothing by default)
+                            - `self.after_fit_step` (computes per-step monitoring)
                     - `self.after_fit_epoch` (nothing by default)
                     - `self._evaluate` (if asked, looping over all non-train datasets)
                         - `self.before_eval` (setup in eval mode)
                         - loop over mini-batches
                             - `self.before_eval_step` (moves data to device)
-                            - `self._eval_step` (computes eval metrics)
+                            - `self._eval_step` (computes eval metric)
                             - `self.after_eval_step` (nothing by default)
                         - `self.after_eval` (nothing by default)
                     - Save intermittent checkpoint if asked by user config
                 - Save final checkpoint if asked by user config
             - `self.after_fit` (evaluates by default)
-
 
     Parameters
     ----------
@@ -244,8 +243,13 @@ class BaseTrainer(torch.nn.Module):
         self.batch = to_device(self.batch, self.device)
 
     def after_fit_step(self):
-        """Handle post-step tasks after a training step (currently does nothing)."""
-        pass
+        """Handle per-step monitoring. See eg :mod:`stable_ssl.monitors`."""
+        if "train" in self.logger["monitor"]:
+            for metric in self.logger["monitor"]["train"].values():
+                metric: Monitor
+                score = metric.compute(self._latest_forward)
+                if self.global_step % self.logger["log_every_step"] == 0:
+                    self._log({f"train/{metric.name}": score})
 
     def before_eval(self):
         """Set the model to evaluation mode before validation/testing."""
@@ -302,6 +306,16 @@ class BaseTrainer(torch.nn.Module):
         return 1
 
     @property
+    def batch_idx(self):
+        if not hasattr(self, "_batch_idx"):
+            return None
+        return self._batch_idx
+
+    @property
+    def device(self):
+        return self._device
+
+    @property
     def epoch(self):
         if not hasattr(self, "_epoch"):
             return None
@@ -314,14 +328,10 @@ class BaseTrainer(torch.nn.Module):
         return self._step
 
     @property
-    def batch_idx(self):
-        if not hasattr(self, "_batch_idx"):
+    def latest_forward(self):
+        if not hasattr(self, "_latest_forward"):
             return None
-        return self._batch_idx
-
-    @property
-    def device(self):
-        return self._device
+        return self._latest_forward
 
     @epoch.setter
     def epoch(self, value):
@@ -330,6 +340,10 @@ class BaseTrainer(torch.nn.Module):
     @step.setter
     def step(self, value):
         self._step = value
+
+    @latest_forward.setter
+    def latest_forward(self, value):
+        self._latest_forward = value
 
     def _instanciate(self):
         seed_everything(self._hardware.get("seed", None))
@@ -340,7 +354,7 @@ class BaseTrainer(torch.nn.Module):
         self.module = hydra.utils.instantiate(self._module, _convert_="object")
         self.loss = hydra.utils.instantiate(self._loss, _convert_="object")
         self.hardware = hydra.utils.instantiate(self._hardware, _convert_="object")
-        self.logger = hydra.utils.instantiate(self._logger, _convert_="object")
+        self.logger = hydra.utils.instantiate(self._logger, _convert_="partial")
 
         self._set_device(self.hardware)
 
@@ -351,17 +365,11 @@ class BaseTrainer(torch.nn.Module):
         if self.logger["wandb"]:
             logging.info("\t- Wandb:")
             try:
-                wandb.init(
-                    entity=self.logger["wandb"]["entity"],
-                    project=self.logger["wandb"]["project"],
-                    name=self.logger["wandb"]["name"],
-                    dir=str(self.logger["dump_path"]),
-                    resume="allow",
-                )
+                wandb.init(**self.logger["wandb"], resume="allow")
                 self.logger["wandb"]["entity"] = wandb.run.entity
                 self.logger["wandb"]["project"] = wandb.run.project
                 self.logger["wandb"]["name"] = wandb.run.name
-                self.logger["wandb"]["ID"] = wandb.run.id
+                self.logger["wandb"]["id"] = wandb.run.id
                 logging.info(f"\t\t- entity: {wandb.run.entity}")
                 logging.info(f"\t\t- project: {wandb.run.project}")
                 logging.info(f"\t\t- name: {wandb.run.name}")
@@ -374,14 +382,12 @@ class BaseTrainer(torch.nn.Module):
 
         # we do metrics before data to allow logging in data
         logging.info("Metrics:")
-        for m in self.logger["metrics"]:
-            if type(self.logger["metrics"][m]) is dict:
-                self.logger["metrics"][m] = torch.nn.ModuleDict(
-                    self.logger["metrics"][m]
-                )
-        if type(self.logger["metrics"]) is dict:
-            self.logger["metrics"] = torch.nn.ModuleDict(self.logger["metrics"])
-        self.logger["metrics"] = self.logger["metrics"].to(self._device)
+        for m in self.logger["metric"]:
+            if type(self.logger["metric"][m]) is dict:
+                self.logger["metric"][m] = torch.nn.ModuleDict(self.logger["metric"][m])
+        if type(self.logger["metric"]) is dict:
+            self.logger["metric"] = torch.nn.ModuleDict(self.logger["metric"])
+        self.logger["metric"] = self.logger["metric"].to(self._device)
 
         # Data
         logging.info("Data:")
@@ -391,9 +397,9 @@ class BaseTrainer(torch.nn.Module):
                 continue
             logging.info(f"\t\t- length: {len(loader)}.")
 
-            if name in self.logger["metrics"]:
+            if name in self.logger["metric"]:
                 logging.info("\t\t- metrics:")
-                for mname in self.logger["metrics"][name]:
+                for mname in self.logger["metric"][name]:
                     logging.info(f"\t\t\t- {mname}.")
             else:
                 if name != "train":
@@ -550,8 +556,8 @@ class BaseTrainer(torch.nn.Module):
             if name_loader == "train" or name_loader[0] == "_":
                 continue
             # Reset the metrics for the epoch.
-            if name_loader in self.logger["metrics"]:
-                for _, v in self.logger["metrics"][name_loader].items():
+            if name_loader in self.logger["metric"]:
+                for _, v in self.logger["metric"][name_loader].items():
                     v.reset()
 
             try:
@@ -583,8 +589,8 @@ class BaseTrainer(torch.nn.Module):
             # Be sure to clean up to avoid silent bugs.
             self.batch = None
             # Compute the final metrics for the epoch.
-            if name_loader in self.logger["metrics"]:
-                for name, metric in self.logger["metrics"][name_loader].items():
+            if name_loader in self.logger["metric"]:
+                for name, metric in self.logger["metric"][name_loader].items():
                     packet[f"{name_loader}/{name}"] = metric.compute()
         self._log(packet, commit=True)
         # Call any user specified post-epoch function.
@@ -630,7 +636,7 @@ class BaseTrainer(torch.nn.Module):
         if scale <= self.scaler.get_scale():
             self.optim["scheduler"].step()
 
-        if self.global_step % self.logger["every_step"] == 0:
+        if self.global_step % self.logger["log_every_step"] == 0:
             bucket = {}
             if isinstance(returned_loss, dict):
                 for name, value in returned_loss.items():
@@ -644,9 +650,19 @@ class BaseTrainer(torch.nn.Module):
 
     def _eval_step(self, name_loader):
         output = self.predict()
-        if name_loader in self.logger["metrics"]:
-            for metric in self.logger["metrics"][name_loader].values():
+        if name_loader in self.logger["metric"]:
+            for metric in self.logger["metric"][name_loader].values():
                 metric.update(output, self.batch[1])
+
+        if name_loader in self.logger["monitor"]:
+            for metric in self.logger["monitor"][name_loader].values():
+                metric: Monitor
+                # NOTE To make this more general (e.g. for GradNorm, etc.)
+                # we should pass in the BaseModel in its entirety and let the
+                # compute method use what it needs.
+                score = metric.compute(output)
+                if self.global_step % self.logger["log_every_step"] == 0:
+                    self._log({f"{name_loader}/{metric.name}": score})
 
     def _set_device(self, hardware):
         # Check if CUDA is available, otherwise set to CPU.

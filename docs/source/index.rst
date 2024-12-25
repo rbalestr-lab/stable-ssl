@@ -20,6 +20,7 @@
     modules
     optimizers
     schedulers
+    monitors
 
 .. toctree::
     :maxdepth: 1

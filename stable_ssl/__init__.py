@@ -18,6 +18,7 @@ from .base import BaseTrainer
 from .trainers import SupervisedTrainer, JointEmbeddingTrainer, SelfDistillationTrainer
 from .losses import NTXEntLoss, VICRegLoss, BarlowTwinsLoss, NegativeCosineSimilarity
 from .config import instanciate_config
+from .modules import load_backbone
 
 __all__ = [
     "__title__",
@@ -26,6 +27,7 @@ __all__ = [
     "__url__",
     "__author__",
     "__license__",
+    "load_backbone",
     "BaseTrainer",
     "SupervisedTrainer",
     "JointEmbeddingTrainer",

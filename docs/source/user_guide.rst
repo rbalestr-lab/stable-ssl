@@ -229,8 +229,8 @@ Example:
       base_dir: "./"
       level: 20
       checkpoint_frequency: 1
-      every_step: 1
-      metrics:
+      log_every_step: 1
+      metric:
          test:
             acc1:
             _target_: torchmetrics.classification.MulticlassAccuracy

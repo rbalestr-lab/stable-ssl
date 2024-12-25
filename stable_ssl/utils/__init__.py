@@ -18,7 +18,9 @@ from .utils import (
     log_and_raise,
     str_to_dtype,
     all_reduce,
+    warn_once,
 )
+
 from .exceptions import BreakEpoch, BreakStep, NanError, BreakAllEpochs
 
 __all__ = [
@@ -38,4 +40,5 @@ __all__ = [
     "update_momentum",
     "log_and_raise",
     "all_reduce",
+    "warn_once",
 ]
