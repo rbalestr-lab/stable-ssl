@@ -1,6 +1,6 @@
 # # -*- coding: utf-8 -*-
-# """Configuration classes specifying default parameters for stable-SSL."""
-# #
+"""Configuration classes specifying default parameters for stable-SSL."""
+
 # # Author: Hugues Van Assel <vanasselhugues@gmail.com>
 # #         Randall Balestriero <randallbalestriero@gmail.com>
 # #
@@ -134,8 +134,8 @@ class WandbConfig:
         Group for the Weights & Biases run. Default is None.
     """
 
-    dir: Path = field(
-        default_factory=lambda: Path(HydraConfig.get().runtime.output_dir)
+    dir: str = field(
+        default_factory=lambda: str(Path(HydraConfig.get().runtime.output_dir))
     )
     entity: Optional[str] = None
     project: Optional[str] = None
