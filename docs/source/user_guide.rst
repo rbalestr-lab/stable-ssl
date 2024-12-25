@@ -229,7 +229,7 @@ Example:
       base_dir: "./"
       level: 20
       checkpoint_frequency: 1
-      every_step: 1
+      log_every_step: 1
       metric:
          test:
             acc1:

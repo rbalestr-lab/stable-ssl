@@ -146,7 +146,7 @@ trainer:
   logger:
     level: 20
     checkpoint_frequency: 10
-    every_step: 1
+    log_every_step: 1
     metric:
       test:
         acc1:

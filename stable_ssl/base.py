@@ -248,7 +248,7 @@ class BaseTrainer(torch.nn.Module):
             for metric in self.logger["monitor"]["train"].values():
                 metric: Monitor
                 score = metric.compute(self._latest_forward)
-                if self.global_step % self.logger["every_step"] == 0:
+                if self.global_step % self.logger["log_every_step"] == 0:
                     self._log({f"train/{metric.name}": score})
 
     def before_eval(self):
@@ -636,7 +636,7 @@ class BaseTrainer(torch.nn.Module):
         if scale <= self.scaler.get_scale():
             self.optim["scheduler"].step()
 
-        if self.global_step % self.logger["every_step"] == 0:
+        if self.global_step % self.logger["log_every_step"] == 0:
             bucket = {}
             if isinstance(returned_loss, dict):
                 for name, value in returned_loss.items():
@@ -661,7 +661,7 @@ class BaseTrainer(torch.nn.Module):
                 # we should pass in the BaseModel in its entirety and let the
                 # compute method use what it needs.
                 score = metric.compute(output)
-                if self.global_step % self.logger["every_step"] == 0:
+                if self.global_step % self.logger["log_every_step"] == 0:
                     self._log({f"{name_loader}/{metric.name}": score})
 
     def _set_device(self, hardware):

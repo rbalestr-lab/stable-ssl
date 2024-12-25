@@ -80,7 +80,7 @@ class LoggerConfig:
     eval_every_epoch : int, optional
         The frequency (in epochs) at which the model will be evaluated.
         For example, if set to 1, evaluation occurs every epoch. Default is 1.
-    every_step : int, optional
+    log_every_step : int, optional
         The frequency (in training steps) at which to log intermediate metrics.
         For example, if set to 1, logs occur every step. Default is 1.
     checkpoint_frequency : int, optional
@@ -103,7 +103,7 @@ class LoggerConfig:
     monitor: dict = field(default_factory=dict)
     save_final_model: Union[str, bool] = False
     eval_every_epoch: int = 1
-    every_step: int = 1
+    log_every_step: int = 1
     checkpoint_frequency: Optional[int] = None
     checkpoint_model_only: bool = True
     dump_path: Path = field(

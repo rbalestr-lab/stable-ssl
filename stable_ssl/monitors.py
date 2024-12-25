@@ -60,7 +60,7 @@ class RankMe(Monitor):
             warn_once(
                 f"RankMe expected tensors of type {torch.float32}, "
                 f"but received {x.dtype}, will convert "
-                f"{x.dtype}->{torch.float32}"
+                f"{x.dtype}->{torch.float32}."
             )
             x = x.to(torch.float32)
 
