@@ -110,7 +110,7 @@ class TeacherModule(nn.Module):
     """Maintain a teacher network as an Exponential Moving Average (EMA) of a student network.
 
     The teacher model is updated by taking a running average of the student’s
-    parameters and buffers. When `ema_coefficient == 1.0`, the teacher and student
+    parameters and buffers. When `ema_coefficient == 0.0`, the teacher and student
     are literally the same object, saving memory but forward passes through the teacher
     will not produce any gradients.
 
@@ -123,8 +123,8 @@ class TeacherModule(nn.Module):
         immediately. Default is True.
     ema_coefficient : float, optional
         The EMA decay factor in [0, 1]. A value of 0.0 means the teacher is fully
-        updated to the student’s parameters on every step, while 1.0 means the teacher
-        and student are the same object (no memory overhead). Default is 0.99.
+        updated to the student’s parameters on every step, while a value of 1.0 means
+        the teacher remains unchanged. Default is 0.99.
 
     Raises
     ------
@@ -147,17 +147,18 @@ class TeacherModule(nn.Module):
         super().__init__()
         self.student = student
 
-        if ema_coefficient == 1.0:
-            # No need to create a teacher network if the EMA coefficient is 1.0.
+        if ema_coefficient == 0.0:
+            # No need to create a teacher network if the EMA coefficient is 0.0.
             self.teacher = student
         else:
             # Create a teacher network with the same architecture as the student.
             self.teacher = copy.deepcopy(student)
             self.teacher.requires_grad_(False)
 
-        if warm_init:
-            self.ema_coefficient = torch.zeros(())
-            self.step()
+            if warm_init: # Initialization step to match the student’s parameters.
+                self.ema_coefficient = torch.zeros(())
+                self.step()
+
         self.ema_coefficient = torch.Tensor([ema_coefficient])[0]
 
     @torch.no_grad
@@ -172,6 +173,11 @@ class TeacherModule(nn.Module):
 
         Everything is updated, including buffers (e.g. batch norm running averages).
         """
+        if (
+            self.ema_coefficient.item() == 0.0
+        ):  # Nothing to update when the teacher is the student.
+            return
+
         for teacher_group, student_group in [
             (self.teacher.parameters(), self.student.parameters()),
             (self.teacher.buffers(), self.student.buffers()),
@@ -184,10 +190,10 @@ class TeacherModule(nn.Module):
         """
         Forward pass through the teacher.
 
-        If ema_coefficient == 1.0, we wrap the forward in torch.no_grad() so that
+        If ema_coefficient == 0.0, we wrap the forward in torch.no_grad() so that
         no gradients flow, even though teacher == student in memory.
         """
-        if self.ema_coefficient == 1.0:
+        if self.ema_coefficient.item() == 0.0:
             with torch.no_grad():
                 return self.teacher(*args, **kwargs)
         else:
