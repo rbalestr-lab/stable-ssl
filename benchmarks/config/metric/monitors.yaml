@@ -2,7 +2,7 @@
 
 trainer:
   logger:
-    monitors:
+    monitor:
       train:
         rankme:
           _target_: stable_ssl.monitors.RankMe

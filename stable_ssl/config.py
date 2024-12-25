@@ -68,9 +68,9 @@ class LoggerConfig:
     ----------
     level : int, optional
         The logging level. Determines the threshold for what gets logged. Default is 20.
-    metrics : dict, optional
+    metric : dict, optional
         A dictionary to store and log various metrics. Default is an empty dict.
-    monitors : dict, optional
+    monitor : dict, optional
         A dictionary to store and log various monitoring statistics.
         Default is an empty dict
     save_final_model : str or bool, optional
@@ -99,8 +99,8 @@ class LoggerConfig:
     """
 
     level: int = 20
-    metrics: dict = field(default_factory=dict)
-    monitors: dict = field(default_factory=dict)
+    metric: dict = field(default_factory=dict)
+    monitor: dict = field(default_factory=dict)
     save_final_model: Union[str, bool] = False
     eval_every_epoch: int = 1
     every_step: int = 1
@@ -118,14 +118,20 @@ class WandbConfig:
 
     Parameters
     ----------
+    dir : pathlib.Path, optional
+        The path where output is dumped. Defaults to Hydra's runtime output directory.
     entity : str, optional
         Name of the (Weights & Biases) entity. Default is None.
     project : str, optional
         Name of the (Weights & Biases) project. Default is None.
     name : str, optional
         Name of the Weights & Biases run. Default is None.
-    ID : str, optional
+    id : str, optional
         ID of the Weights & Biases run. Default is None.
+    tags : list, optional
+        List of tags for the Weights & Biases run. Default is None.
+    group : str, optional
+        Group for the Weights & Biases run. Default is None.
     """
 
     dir: Path = field(

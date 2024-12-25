@@ -2,7 +2,7 @@
 
 trainer:
   logger:
-    metrics:
+    metric:
       test:
         acc1:
           _target_: torchmetrics.classification.MulticlassAccuracy

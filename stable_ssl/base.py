@@ -76,7 +76,7 @@ class BaseTrainer(torch.nn.Module):
                         - `self.before_eval` (setup in eval mode)
                         - loop over mini-batches
                             - `self.before_eval_step` (moves data to device)
-                            - `self._eval_step` (computes eval metrics)
+                            - `self._eval_step` (computes eval metric)
                             - `self.after_eval_step` (nothing by default)
                         - `self.after_eval` (nothing by default)
                     - Save intermittent checkpoint if asked by user config
@@ -244,8 +244,8 @@ class BaseTrainer(torch.nn.Module):
 
     def after_fit_step(self):
         """Handle per-step monitoring. See eg :mod:`stable_ssl.monitors`."""
-        if "train" in self.logger["monitors"]:
-            for metric in self.logger["monitors"]["train"].values():
+        if "train" in self.logger["monitor"]:
+            for metric in self.logger["monitor"]["train"].values():
                 metric: Monitor
                 score = metric.compute(self._latest_forward)
                 if self.global_step % self.logger["every_step"] == 0:
@@ -382,14 +382,12 @@ class BaseTrainer(torch.nn.Module):
 
         # we do metrics before data to allow logging in data
         logging.info("Metrics:")
-        for m in self.logger["metrics"]:
-            if type(self.logger["metrics"][m]) is dict:
-                self.logger["metrics"][m] = torch.nn.ModuleDict(
-                    self.logger["metrics"][m]
-                )
-        if type(self.logger["metrics"]) is dict:
-            self.logger["metrics"] = torch.nn.ModuleDict(self.logger["metrics"])
-        self.logger["metrics"] = self.logger["metrics"].to(self._device)
+        for m in self.logger["metric"]:
+            if type(self.logger["metric"][m]) is dict:
+                self.logger["metric"][m] = torch.nn.ModuleDict(self.logger["metric"][m])
+        if type(self.logger["metric"]) is dict:
+            self.logger["metric"] = torch.nn.ModuleDict(self.logger["metric"])
+        self.logger["metric"] = self.logger["metric"].to(self._device)
 
         # Data
         logging.info("Data:")
@@ -399,9 +397,9 @@ class BaseTrainer(torch.nn.Module):
                 continue
             logging.info(f"\t\t- length: {len(loader)}.")
 
-            if name in self.logger["metrics"]:
+            if name in self.logger["metric"]:
                 logging.info("\t\t- metrics:")
-                for mname in self.logger["metrics"][name]:
+                for mname in self.logger["metric"][name]:
                     logging.info(f"\t\t\t- {mname}.")
             else:
                 if name != "train":
@@ -558,8 +556,8 @@ class BaseTrainer(torch.nn.Module):
             if name_loader == "train" or name_loader[0] == "_":
                 continue
             # Reset the metrics for the epoch.
-            if name_loader in self.logger["metrics"]:
-                for _, v in self.logger["metrics"][name_loader].items():
+            if name_loader in self.logger["metric"]:
+                for _, v in self.logger["metric"][name_loader].items():
                     v.reset()
 
             try:
@@ -591,8 +589,8 @@ class BaseTrainer(torch.nn.Module):
             # Be sure to clean up to avoid silent bugs.
             self.batch = None
             # Compute the final metrics for the epoch.
-            if name_loader in self.logger["metrics"]:
-                for name, metric in self.logger["metrics"][name_loader].items():
+            if name_loader in self.logger["metric"]:
+                for name, metric in self.logger["metric"][name_loader].items():
                     packet[f"{name_loader}/{name}"] = metric.compute()
         self._log(packet, commit=True)
         # Call any user specified post-epoch function.
@@ -652,12 +650,12 @@ class BaseTrainer(torch.nn.Module):
 
     def _eval_step(self, name_loader):
         output = self.predict()
-        if name_loader in self.logger["metrics"]:
-            for metric in self.logger["metrics"][name_loader].values():
+        if name_loader in self.logger["metric"]:
+            for metric in self.logger["metric"][name_loader].values():
                 metric.update(output, self.batch[1])
 
-        if name_loader in self.logger["monitors"]:
-            for metric in self.logger["monitors"][name_loader].values():
+        if name_loader in self.logger["monitor"]:
+            for metric in self.logger["monitor"][name_loader].values():
                 metric: Monitor
                 # NOTE To make this more general (e.g. for GradNorm, etc.)
                 # we should pass in the BaseModel in its entirety and let the
