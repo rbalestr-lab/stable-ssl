@@ -96,7 +96,18 @@ class JointEmbeddingTrainer(BaseTrainer):
 
 
 class SelfDistillationTrainer(JointEmbeddingTrainer):
-    r"""Base class for training a self-distillation SSL model."""
+    r"""Base class for training a self-distillation SSL model.
+
+    Parameters
+    ----------
+    momentum : float, optional
+        Momentum used to update the target (teacher) parameters.
+        Default is 0.99.
+
+    """
+
+    def __init__(self, momentum=0.99, *args, **kwargs):
+        super().__init__(momentum=momentum, *args, **kwargs)
 
     def setup(self):
         logging.getLogger().setLevel(self._logger["level"])
@@ -112,12 +123,8 @@ class SelfDistillationTrainer(JointEmbeddingTrainer):
 
     def before_fit_step(self):
         """Update the target parameters as EMA of the online model parameters."""
-        update_momentum(
-            self.backbone, self.backbone_target, m=self.config.model.momentum
-        )
-        update_momentum(
-            self.projector, self.projector_target, m=self.config.model.momentum
-        )
+        update_momentum(self.backbone, self.backbone_target, m=self.momentum)
+        update_momentum(self.projector, self.projector_target, m=self.momentum)
 
     def compute_loss(self):
         views, labels = self.format_views_labels()
@@ -148,6 +155,15 @@ class SelfDistillationTrainer(JointEmbeddingTrainer):
 class SimSiamTrainer(JointEmbeddingTrainer):
     r"""Base class for training a SimSiam SSL model."""
 
+    def setup(self):
+        super().setup()
+        if not hasattr(self.module, "predictor"):
+            log_and_raise(
+                ValueError,
+                "SimSiam requires a `predictor` module. "
+                "Please define the 'predictor` module in your config.",
+            )
+
     def compute_loss(self):
         views, labels = self.format_views_labels()
         embeddings = [self.module["backbone"](view) for view in views]
@@ -155,9 +171,6 @@ class SimSiamTrainer(JointEmbeddingTrainer):
 
         if len(projections) > 2:
             logging.warning("Only the first two views are used when using SimSiam.")
-
-        if not hasattr(self.module, "predictor"):
-            log_and_raise(ValueError, "SimSiam requires a predictor module.")
 
         predictions = [self.module["predictor"](proj) for proj in projections]
         detached_projections = [proj.detach() for proj in projections]
@@ -172,3 +185,23 @@ class SimSiamTrainer(JointEmbeddingTrainer):
         )
 
         return {"train/loss_ssl": loss_ssl, **classifier_losses}
+
+
+@torch.no_grad()
+def center_mean(x: Tensor, dim: Tuple[int, ...]) -> Tensor:
+    """Returns the center of the input tensor by calculating the mean.
+
+    Args:
+        x:
+            Input tensor.
+        dim:
+            Dimensions along which the mean is calculated.
+
+    Returns:
+        The center of the input tensor.
+    """
+    batch_center = torch.mean(x, dim=dim, keepdim=True)
+    if dist.is_available() and dist.is_initialized():
+        dist.all_reduce(batch_center)
+        batch_center = batch_center / dist.get_world_size()
+    return batch_center
