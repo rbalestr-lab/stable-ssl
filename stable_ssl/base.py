@@ -28,6 +28,7 @@ from .data import DistributedSamplerWrapper
 from . import reader
 from .config import LoggerConfig, WandbConfig, HardwareConfig, OptimConfig
 from .monitors import Monitor
+from .modules import TeacherModule
 
 try:
     import wandb
@@ -70,7 +71,7 @@ class BaseTrainer(torch.nn.Module):
                         - loop over mini-batches
                             - `self.before_fit_step` (moves data to device)
                             - `self._fit_step` (optimization step)
-                            - `self.after_fit_step` (computes per-step monitoring)
+                            - `self.after_fit_step` (per-step monitoring and teacher update)
                     - `self.after_fit_epoch` (nothing by default)
                     - `self._evaluate` (if asked, looping over all non-train datasets)
                         - `self.before_eval` (setup in eval mode)
@@ -243,13 +244,19 @@ class BaseTrainer(torch.nn.Module):
         self.batch = to_device(self.batch, self.device)
 
     def after_fit_step(self):
-        """Handle per-step monitoring. See eg :mod:`stable_ssl.monitors`."""
+        """Handle per-step monitoring and teacher update (if applicable)."""
+        # Compute and log the monitoring metrics.
         if "train" in self.logger["monitor"]:
             for metric in self.logger["monitor"]["train"].values():
                 metric: Monitor
                 score = metric.compute(self._latest_forward)
                 if self.global_step % self.logger["log_every_step"] == 0:
                     self._log({f"train/{metric.name}": score})
+
+        # Update the teacher network if there is one.
+        for m in self.modules():
+            if isinstance(m, TeacherModule):
+                m.step()
 
     def before_eval(self):
         """Set the model to evaluation mode before validation/testing."""

@@ -15,6 +15,7 @@ import torch.nn.functional as F
 
 from .base import BaseTrainer
 from .utils import update_momentum, log_and_raise
+from .modules import TeacherModule
 
 
 class SupervisedTrainer(BaseTrainer):
@@ -107,20 +108,20 @@ class SelfDistillationTrainer(JointEmbeddingTrainer):
 
     """
 
-    def __init__(self, momentum=0.99, *args, **kwargs):
-        super().__init__(momentum=momentum, *args, **kwargs)
+    # def __init__(self, momentum=0.99, *args, **kwargs):
+    #     super().__init__(momentum=momentum, *args, **kwargs)
 
-    def setup(self):
-        logging.getLogger().setLevel(self._logger["level"])
-        logging.info(f"=> SETUP OF {self.__class__.__name__} STARTED.")
-        self._instanciate()
-        self.module["backbone_target"] = copy.deepcopy(self.module["backbone"])
-        self.module["projector_target"] = copy.deepcopy(self.module["projector"])
+    # def setup(self):
+    #     logging.getLogger().setLevel(self._logger["level"])
+    #     logging.info(f"=> SETUP OF {self.__class__.__name__} STARTED.")
+    #     self._instanciate()
+    #     self.module["backbone_target"] = copy.deepcopy(self.module["backbone"])
+    #     self.module["projector_target"] = copy.deepcopy(self.module["projector"])
 
-        self.module["backbone_target"].requires_grad_(False)
-        self.module["projector_target"].requires_grad_(False)
-        self._load_checkpoint()
-        logging.info(f"=> SETUP OF {self.__class__.__name__} COMPLETED.")
+    #     self.module["backbone_target"].requires_grad_(False)
+    #     self.module["projector_target"].requires_grad_(False)
+    #     self._load_checkpoint()
+    #     logging.info(f"=> SETUP OF {self.__class__.__name__} COMPLETED.")
 
     def before_fit_step(self):
         """Update the target parameters as EMA of the online model parameters."""
@@ -150,7 +151,7 @@ class SelfDistillationTrainer(JointEmbeddingTrainer):
             embeddings, projections, labels
         )
 
-        return {"train/loss_ssl": loss_ssl, **classifier_losses}
+        return {"loss_ssl": loss_ssl, **classifier_losses}
 
 
 class SimSiamTrainer(JointEmbeddingTrainer):

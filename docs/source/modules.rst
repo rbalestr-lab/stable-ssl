@@ -7,13 +7,13 @@ stable_ssl.modules
    :toctree: gen_modules/
    :template: myfunc_template.rst
 
-   get_backbone_dim
    load_backbone
 
 .. autosummary::
    :toctree: gen_modules/
    :template: myclass_template.rst
 
+   TeacherModule
    MLP
    Resnet9
    ConvMixer
