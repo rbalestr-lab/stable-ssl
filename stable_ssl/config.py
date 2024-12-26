@@ -137,6 +137,7 @@ class WandbConfig:
     id: Optional[str] = None
     tags: Optional[list] = None
     group: Optional[str] = None
+    config: Optional[dict] = None
 
 
 @dataclass
