@@ -12,7 +12,7 @@ import torch.nn.functional as F
 
 from .base import BaseTrainer
 from .utils import log_and_raise
-from .modules import TeacherModule
+from .modules import TeacherStudentModule
 
 
 class SupervisedTrainer(BaseTrainer):
@@ -27,9 +27,9 @@ class SupervisedTrainer(BaseTrainer):
                 f"using the {self.__class__.__name__} trainer.",
             )
 
-    def forward(self, x):
+    def forward(self, *args, **kwargs):
         """Forward pass. By default, it simply calls the 'backbone' module."""
-        return self.module["backbone"](x)
+        return self.module["backbone"](*args, **kwargs)
 
     def predict(self):
         """Call the forward pass of current batch."""
@@ -84,9 +84,9 @@ class JointEmbeddingTrainer(BaseTrainer):
                     f"using the {self.__class__.__name__} trainer.",
                 )
 
-    def forward(self, x):
+    def forward(self, *args, **kwargs):
         """Forward pass. By default, it simply calls the 'backbone' module."""
-        return self.module["backbone"](x)
+        return self.module["backbone"](*args, **kwargs)
 
     def predict(self):
         """Call the backbone classifier on the forward pass of current batch."""
@@ -134,36 +134,26 @@ class SelfDistillationTrainer(JointEmbeddingTrainer):
         """Check if 'backbone', 'projector', classifiers and teachers are defined."""
         super().check_module()  # check 'backbone', 'projector' and classifiers
 
-        # Find the TeacherModule that wraps the 'projector' and 'backbone' modules.
-        for name, mod in self.module.items():
-            if isinstance(mod, TeacherModule):
-                if mod.student is self.module["projector"]:
-                    self.projector_teacher = mod
-                elif mod.student is self.module["backbone"]:
-                    self.backbone_teacher = mod
-
-        if not hasattr(self, "projector_teacher") or not hasattr(
-            self, "backbone_teacher"
-        ):
-            log_and_raise(
-                ValueError,
-                "A `TeacherModule` needs to be defined for both "
-                "the 'backbone' and 'projector' modules.",
-            )
+        for name in ("backbone", "projector"):
+            if not isinstance(self.module[name], TeacherStudentModule):
+                log_and_raise(
+                    ValueError,
+                    f"The '{name}' module needs to be a `TeacherStudentModule`",
+                )
 
     def compute_loss(self):
         """Compute final loss as sum of SSL loss and classifier losses."""
         views, labels = self.format_views_labels()
-        embeddings = [self.module["backbone"](view) for view in views]
+        embeddings = [self.module["backbone"].student(view) for view in views]
         self.latest_forward = embeddings
-        projections = [self.module["projector"](embed) for embed in embeddings]
+        projections = [self.module["projector"].student(embed) for embed in embeddings]
 
         # If a predictor is used, it is applied to the student projections.
         if "predictor" in self.module:
             projections = [self.module["predictor"](proj) for proj in projections]
 
         projections_teacher = [
-            self.projector_teacher(self.backbone_teacher(view)) for view in views
+            self.module["projector"](self.module["backbone"](view)) for view in views
         ]
 
         loss_ssl = 0.5 * (

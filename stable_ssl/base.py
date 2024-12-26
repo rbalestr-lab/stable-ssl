@@ -28,7 +28,7 @@ from .data import DistributedSamplerWrapper
 from . import reader
 from .config import LoggerConfig, WandbConfig, HardwareConfig, OptimConfig
 from .monitors import Monitor
-from .modules import TeacherModule
+from .modules import TeacherStudentModule
 
 try:
     import wandb
@@ -259,8 +259,8 @@ class BaseTrainer(torch.nn.Module):
 
         # Update the teacher network if there is one.
         for m in self.modules():
-            if isinstance(m, TeacherModule):
-                m.step()
+            if isinstance(m, TeacherStudentModule):
+                m.update_teacher()
 
     def before_eval(self):
         """Set the model to evaluation mode before validation/testing."""
@@ -363,11 +363,6 @@ class BaseTrainer(torch.nn.Module):
         # We skip optim as we may not need it (see below).
         self.data = hydra.utils.instantiate(self._data, _convert_="object")
         self.module = hydra.utils.instantiate(self._module, _convert_="object")
-        for name, module in self.module.items():
-            if isinstance(module, TeacherModule):
-                module.set_student(
-                    self.module[module._student]
-                )  # give student to teacher
         self.loss = hydra.utils.instantiate(self._loss, _convert_="object")
         self.hardware = hydra.utils.instantiate(self._hardware, _convert_="object")
         self.logger = hydra.utils.instantiate(self._logger, _convert_="partial")

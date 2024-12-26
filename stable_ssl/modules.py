@@ -107,7 +107,7 @@ def load_backbone(
         return model
 
 
-class TeacherModule(nn.Module):
+class TeacherStudentModule(nn.Module):
     """Teacher network updated as an EMA of the student network.
 
     The teacher model is updated by taking a running average of the student’s
@@ -117,10 +117,8 @@ class TeacherModule(nn.Module):
 
     Parameters
     ----------
-    student : str
-        The name of the student model to be used as the teacher. It is only a str to
-        indicate the student model to be used. The actual student model is set using
-        the `set_student` method.
+    student : torch.nn.Module
+        The student model whose parameters will be tracked.
     warm_init : bool, optional
         If True, performs an initialization step to match the student’s parameters
         immediately. Default is True.
@@ -137,7 +135,7 @@ class TeacherModule(nn.Module):
 
     def __init__(
         self,
-        student: str = None,
+        student: nn.Module,
         warm_init: bool = True,
         ema_coefficient: float = 0.99,
     ):
@@ -148,14 +146,9 @@ class TeacherModule(nn.Module):
             )
 
         super().__init__()
-        self._student = student
-        self.warm_init = warm_init
-        self.ema_coefficient = torch.Tensor([ema_coefficient])[0]
-
-    def set_student(self, student: nn.Module):
         self.student = student
 
-        if self.ema_coefficient.item() == 0.0:
+        if ema_coefficient == 0.0:
             # No need to create a teacher network if the EMA coefficient is 0.0.
             self.teacher = student
         else:
@@ -163,14 +156,14 @@ class TeacherModule(nn.Module):
             self.teacher = copy.deepcopy(student)
             self.teacher.requires_grad_(False)
 
-            if self.warm_init:  # Initialization step to match the student’s parameters.
-                original_ema_coefficient = self.ema_coefficient.item()
+            if warm_init:  # Initialization step to match the student’s parameters.
                 self.ema_coefficient = torch.zeros(())
-                self.step()
-                self.ema_coefficient = torch.Tensor([original_ema_coefficient])[0]
+                self.update_teacher()
+
+        self.ema_coefficient = torch.Tensor([ema_coefficient])[0]
 
     @torch.no_grad
-    def step(self):
+    def update_teacher(self):
         """Perform one EMA update step on the teacher’s parameters.
 
         The update rule is:
@@ -192,8 +185,6 @@ class TeacherModule(nn.Module):
             (self.teacher.buffers(), self.student.buffers()),
         ]:
             for t, s in zip(teacher_group, student_group):
-                # c = self.ema_coefficient.to(dtype=t.dtype)
-                # t.mul_(c).add_((1.0 - c) * s)
                 ty = t.dtype
                 t.mul_(self.ema_coefficient.to(dtype=ty))
                 t.add_((1.0 - self.ema_coefficient).to(dtype=ty) * s)
