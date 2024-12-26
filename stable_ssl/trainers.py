@@ -7,14 +7,11 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-import copy
-import logging
-
 import torch
 import torch.nn.functional as F
 
 from .base import BaseTrainer
-from .utils import update_momentum, log_and_raise
+from .utils import log_and_raise
 from .modules import TeacherModule
 
 
@@ -35,7 +32,7 @@ class SupervisedTrainer(BaseTrainer):
         return self.module["backbone"](x)
 
     def predict(self):
-        """Calls the forward pass of current batch."""
+        """Call the forward pass of current batch."""
         return self.forward(self.batch[0])
 
     def compute_loss(self):

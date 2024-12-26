@@ -229,13 +229,6 @@ def get_gpu_info():
         logging.info("nvidia-smi failed.", exc_info=e)
 
 
-@torch.no_grad()
-def update_momentum(model: torch.nn.Module, model_ema: torch.nn.Module, m: float):
-    """Update parameters of a model with EMA of another model's parameters."""
-    for model_ema, model in zip(model_ema.parameters(), model.parameters()):
-        model_ema.data = model_ema.data * m + model.data * (1.0 - m)
-
-
 def log_and_raise(exception_class, message):
     """Log an error message and raise an exception."""
     logging.error(message)

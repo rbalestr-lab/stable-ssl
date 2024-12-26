@@ -189,8 +189,7 @@ class TeacherModule(nn.Module):
                 t.mul_(c).add_((1.0 - c) * s)
 
     def forward(self, *args, **kwargs):
-        """
-        Forward pass through the teacher.
+        """Forward pass through the teacher.
 
         If ema_coefficient == 0.0, we wrap the forward in torch.no_grad() so that
         no gradients flow, even though teacher == student in memory.
