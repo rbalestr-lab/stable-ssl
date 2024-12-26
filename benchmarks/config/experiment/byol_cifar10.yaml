@@ -76,6 +76,7 @@ trainer:
 
   # ===== Module Parameters =====
   module:
+    _instance_: true
     backbone:
       _target_: stable_ssl.modules.load_backbone
       name: resnet18
