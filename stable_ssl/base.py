@@ -221,6 +221,10 @@ class BaseTrainer(torch.nn.Module):
         )
         return config
 
+    def check_module(self):
+        """Check if modules are compatible with trainer. Specific to each trainer."""
+        pass
+
     def before_fit(self):
         """Initialize training by setting the starting epoch."""
         self.epoch = 0
@@ -459,6 +463,7 @@ class BaseTrainer(torch.nn.Module):
             )
             logging.info(f"\t- {name} with {trainable} trainable parameters.")
         self.module = torch.nn.ModuleDict(self.module)
+        self.check_module()
         self.scaler = torch.amp.GradScaler("cuda", enabled=self.hardware["float16"])
 
         self.register_buffer("global_step", torch.zeros((1,), dtype=int))

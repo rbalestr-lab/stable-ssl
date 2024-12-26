@@ -134,7 +134,7 @@ class TeacherModule(nn.Module):
 
     def __init__(
         self,
-        student: torch.nn.Module,
+        student: nn.Module,
         warm_init: bool = True,
         ema_coefficient: float = 0.99,
     ):
@@ -155,7 +155,7 @@ class TeacherModule(nn.Module):
             self.teacher = copy.deepcopy(student)
             self.teacher.requires_grad_(False)
 
-            if warm_init: # Initialization step to match the student’s parameters.
+            if warm_init:  # Initialization step to match the student’s parameters.
                 self.ema_coefficient = torch.zeros(())
                 self.step()
 
