@@ -117,8 +117,10 @@ class TeacherModule(nn.Module):
 
     Parameters
     ----------
-    student : torch.nn.Module
-        The student model whose parameters will be tracked.
+    student : str
+        The name of the student model to be used as the teacher. It is only a str to
+        indicate the student model to be used. The actual student model is set using
+        the `set_student` method.
     warm_init : bool, optional
         If True, performs an initialization step to match the student’s parameters
         immediately. Default is True.
@@ -135,7 +137,7 @@ class TeacherModule(nn.Module):
 
     def __init__(
         self,
-        student: nn.Module,
+        student: str = None,
         warm_init: bool = True,
         ema_coefficient: float = 0.99,
     ):
@@ -146,9 +148,14 @@ class TeacherModule(nn.Module):
             )
 
         super().__init__()
+        self._student = student
+        self.warm_init = warm_init
+        self.ema_coefficient = torch.Tensor([ema_coefficient])[0]
+
+    def set_student(self, student: nn.Module):
         self.student = student
 
-        if ema_coefficient == 0.0:
+        if self.ema_coefficient.item() == 0.0:
             # No need to create a teacher network if the EMA coefficient is 0.0.
             self.teacher = student
         else:
@@ -156,11 +163,11 @@ class TeacherModule(nn.Module):
             self.teacher = copy.deepcopy(student)
             self.teacher.requires_grad_(False)
 
-            if warm_init:  # Initialization step to match the student’s parameters.
+            if self.warm_init:  # Initialization step to match the student’s parameters.
+                original_ema_coefficient = self.ema_coefficient.item()
                 self.ema_coefficient = torch.zeros(())
                 self.step()
-
-        self.ema_coefficient = torch.Tensor([ema_coefficient])[0]
+                self.ema_coefficient = torch.Tensor([original_ema_coefficient])[0]
 
     @torch.no_grad
     def step(self):
@@ -185,8 +192,11 @@ class TeacherModule(nn.Module):
             (self.teacher.buffers(), self.student.buffers()),
         ]:
             for t, s in zip(teacher_group, student_group):
-                c = self.ema_coefficient.to(dtype=t.dtype)
-                t.mul_(c).add_((1.0 - c) * s)
+                # c = self.ema_coefficient.to(dtype=t.dtype)
+                # t.mul_(c).add_((1.0 - c) * s)
+                ty = t.dtype
+                t.mul_(self.ema_coefficient.to(dtype=ty))
+                t.add_((1.0 - self.ema_coefficient).to(dtype=ty) * s)
 
     def forward(self, *args, **kwargs):
         """Forward pass through the teacher.

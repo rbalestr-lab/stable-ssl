@@ -76,7 +76,6 @@ trainer:
 
   # ===== Module Parameters =====
   module:
-    _instance_: true
     backbone:
       _target_: stable_ssl.modules.load_backbone
       name: resnet18
@@ -100,10 +99,10 @@ trainer:
           num_features: ${trainer.module.projector._args_.3.out_features}
     backbone_teacher: 
       _target_: stable_ssl.modules.TeacherModule
-      student: ${trainer.module.backbone}
+      student: backbone
     projector_teacher:
       _target_: stable_ssl.modules.TeacherModule
-      student: ${trainer.module.projector}
+      student: projector
     projector_classifier:
       _target_: torch.nn.Linear
       in_features: 128

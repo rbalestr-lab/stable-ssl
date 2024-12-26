@@ -360,9 +360,14 @@ class BaseTrainer(torch.nn.Module):
         seed_everything(self._hardware.get("seed", None))
 
         self.start_time = time.time()
-        # we skip optim as we may not need it (see below)
+        # We skip optim as we may not need it (see below).
         self.data = hydra.utils.instantiate(self._data, _convert_="object")
         self.module = hydra.utils.instantiate(self._module, _convert_="object")
+        for name, module in self.module.items():
+            if isinstance(module, TeacherModule):
+                module.set_student(
+                    self.module[module._student]
+                )  # give student to teacher
         self.loss = hydra.utils.instantiate(self._loss, _convert_="object")
         self.hardware = hydra.utils.instantiate(self._hardware, _convert_="object")
         self.logger = hydra.utils.instantiate(self._logger, _convert_="partial")
