@@ -8,6 +8,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import torchvision
+import torch
 import torch.nn as nn
 
 import logging
@@ -107,7 +108,7 @@ def load_backbone(
 
 
 class TeacherModule(nn.Module):
-    """Maintain a teacher network as an Exponential Moving Average (EMA) of a student network.
+    """Teacher network updated as an EMA of the student network.
 
     The teacher model is updated by taking a running average of the student’s
     parameters and buffers. When `ema_coefficient == 0.0`, the teacher and student
@@ -166,7 +167,8 @@ class TeacherModule(nn.Module):
         """Perform one EMA update step on the teacher’s parameters.
 
         The update rule is:
-            teacher_param = ema_coefficient * teacher_param + (1 - ema_coefficient) * student_param
+            teacher_param = ema_coefficient * teacher_param
+            + (1 - ema_coefficient) * student_param
 
         This is done in a `no_grad` context to ensure the teacher’s parameters do
         not accumulate gradients, but the student remains fully trainable.

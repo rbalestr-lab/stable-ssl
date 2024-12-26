@@ -71,7 +71,7 @@ class BaseTrainer(torch.nn.Module):
                         - loop over mini-batches
                             - `self.before_fit_step` (moves data to device)
                             - `self._fit_step` (optimization step)
-                            - `self.after_fit_step` (per-step monitoring and teacher update)
+                            - `self.after_fit_step` (perf monitoring and teacher update)
                     - `self.after_fit_epoch` (nothing by default)
                     - `self._evaluate` (if asked, looping over all non-train datasets)
                         - `self.before_eval` (setup in eval mode)
