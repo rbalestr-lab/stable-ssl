@@ -16,6 +16,7 @@ from contextlib import closing
 import socket
 import numpy as np
 from functools import cache
+from typing import Union, Tuple
 
 import torch
 import torch.distributed as dist
@@ -45,22 +46,6 @@ def gather(x: torch.Tensor):
         return torch.cat(GatherLayer.apply(x), dim=0)
 
 
-def gather_to_rank0(x: torch.Tensor):
-    """Gather tensors from all processes in the distributed environment to rank 0."""
-    if (
-        not (dist.is_available() and dist.is_initialized())
-        or (world_size := dist.get_world_size()) == 1
-    ):
-        return x
-
-    if dist.get_rank() == 0:
-        output = [torch.zeros_like(x) for _ in range(world_size)]
-        dist.gather(x, output, dst=0)
-        return torch.cat(output, dim=0)
-    else:
-        return x
-
-
 def all_reduce(x: torch.Tensor):
     """Reduce tensors from all processes if DDP is initialized."""
     if not (dist.is_available() and dist.is_initialized()):
@@ -69,6 +54,27 @@ def all_reduce(x: torch.Tensor):
         x = x / dist.get_world_size()
         dist.all_reduce(x)
         return x
+
+
+@torch.no_grad()
+def compute_global_mean(
+    x: torch.Tensor,
+    dim: Union[int, Tuple[int, ...]],
+    keepdim: bool = True,
+    sync: bool = True,
+) -> torch.Tensor:
+    """Compute the mean of the input tensor across specified dimension(s).
+
+    If running in a distributed environment (and `sync=True`), this function
+    synchronizes the mean across all processes, effectively computing a global mean.
+    """
+    mean = torch.mean(x, dim=dim, keepdim=keepdim)
+
+    if sync and dist.is_available() and dist.is_initialized():
+        dist.all_reduce(mean, op=dist.ReduceOp.SUM)
+        mean = mean / dist.get_world_size()
+
+    return mean
 
 
 def str_to_dtype(v: str) -> torch.dtype:

@@ -60,7 +60,7 @@ class BaseTrainer(torch.nn.Module):
 
     This class is intended to be subclassed for specific training methods
     (see examples for more details). For each subclass, the following methods must
-    be implemented: `forward`, `predict`, and `compute_loss`.
+    be implemented: ``forward``, ``predict``, and ``compute_loss``.
 
     Execution flow when calling `launch`:
             - `self.before_fit` (nothing by default)

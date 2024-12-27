@@ -2,17 +2,18 @@
 
 trainer:
   # ===== Base Trainer =====
-  _target_: stable_ssl.trainers.SelfDistillationTrainer
+  _target_: stable_ssl.trainers.DINOTrainer
 
   # ===== loss Parameters =====
   loss:
-    _target_: stable_ssl.losses.NegativeCosineSimilarity
+    _target_: stable_ssl.NTXEntLoss
+    temperature: 0.5
 
   # ===== Data Parameters =====
   data:
     _num_classes: 10
     _num_samples: 50000
-    train: # training dataset as indicated by name 'train'
+    train: # training dataset as indicated by name
       _target_: torch.utils.data.DataLoader
       batch_size: 256
       drop_last: True
@@ -55,6 +56,8 @@ trainer:
                     _target_: stable_ssl.utils.str_to_dtype
                     _args_: [float32]
                   scale: True
+            - ${trainer.data.train.dataset.transform.transforms.0}
+            - ${trainer.data.train.dataset.transform.transforms.0}
             - ${trainer.data.train.dataset.transform.transforms.0}
     test: # can be any name
       _target_: torch.utils.data.DataLoader

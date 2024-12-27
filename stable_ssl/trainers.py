@@ -11,8 +11,13 @@ import torch
 import torch.nn.functional as F
 
 from .base import BaseTrainer
-from .utils import log_and_raise
+from .utils import log_and_raise, compute_global_mean
 from .modules import TeacherStudentModule
+
+
+# ==========================================
+# Base trainers that require a loss function
+# ==========================================
 
 
 class SupervisedTrainer(BaseTrainer):
@@ -141,7 +146,7 @@ class SelfDistillationTrainer(JointEmbeddingTrainer):
         embeddings_teacher = [
             self.module["backbone"].forward_teacher(view) for view in views
         ]
-        self.latest_forward = embeddings_student
+        self.latest_forward = embeddings_teacher
         projections_teacher = [
             self.module["projector"].forward_teacher(embed)
             for embed in embeddings_teacher
@@ -159,8 +164,56 @@ class SelfDistillationTrainer(JointEmbeddingTrainer):
         return {"loss_ssl": loss_ssl, **classifier_losses}
 
 
+# ===============================
+# Trainers with Specific Losses
+# ===============================
+
+
 class DINOTrainer(SelfDistillationTrainer):
-    r"""Base class for training a DINO SSL model."""
+    r"""DINO SSL model by :cite:`caron2021emerging`.
+
+    Parameters
+    ----------
+    warmup_teacher_temp : float, optional
+        The initial temperature for the teacher output.
+        Default is 0.04.
+    teacher_temp : float, optional
+        The temperature for the teacher output.
+        Default is 0.04.
+    warmup_teacher_temp_epochs : int, optional
+        The number of epochs to warm up the teacher temperature.
+        Default is 30.
+    student_temp : float, optional
+        The temperature for the student output.
+        Default is 0.1.
+    center_momentum : float, optional
+        The momentum used to update the center.
+        Default is 0.9.
+    **kwargs
+        Additional arguments passed to the base class.
+    """
+
+    def __init__(
+        self,
+        warmup_teacher_temp: float = 0.04,
+        teacher_temp: float = 0.04,
+        warmup_teacher_temp_epochs: int = 30,
+        student_temp: float = 0.1,
+        center_momentum: float = 0.9,
+        **kwargs,
+    ):
+        super().__init__(
+            warmup_teacher_temp_epochs=warmup_teacher_temp_epochs,
+            student_temp=student_temp,
+            center_momentum=center_momentum,
+            **kwargs,
+        )
+
+        self.teacher_temp_schedule = torch.linspace(
+            start=warmup_teacher_temp,
+            end=teacher_temp,
+            steps=warmup_teacher_temp_epochs,
+        )
 
     def compute_loss(self):
         """Compute the DINO loss."""
@@ -169,32 +222,60 @@ class DINOTrainer(SelfDistillationTrainer):
         embeddings_student = [
             self.module["backbone"].forward_student(view) for view in views
         ]
-        self.latest_forward = embeddings_student
         projections_student = [
             self.module["projector"].forward_student(embed)
             for embed in embeddings_student
         ]
 
-        # If a predictor is used, it is applied to the student projections.
-        if "predictor" in self.module:
-            projections_student = [
-                self.module["predictor"](proj) for proj in projections_student
-            ]
-
         # Construct target *from global views only* with the target ('teacher') network.
         with torch.no_grad():
             global_views = self.batch[0][:2]  # First two views should be global views.
+            embeddings_teacher = [
+                self.module["backbone"].forward_teacher(view) for view in global_views
+            ]
+            self.latest_forward = embeddings_teacher
             projections_teacher = [
-                self.module["projector"].forward_teacher(
-                    self.module["backbone"].forward_teacher(view)
-                )
-                for view in global_views
+                self.module["projector"].forward_teacher(embed)
+                for embed in embeddings_teacher
             ]
 
-        loss_ssl = self.loss(projections_student, projections_teacher)
+        # loss_ssl = self.loss(projections_student, projections_teacher)
+        if self.epoch < self.warmup_teacher_temp_epochs:
+            teacher_temp = self.teacher_temp_schedule[self.epoch]
+        else:
+            teacher_temp = self.teacher_temp
+
+        teacher_out = torch.stack(projections_teacher)
+        if hasattr(self, "center"):
+            t_out = F.softmax((teacher_out - self.center) / teacher_temp, dim=-1)
+        else:
+            t_out = F.softmax(teacher_out / teacher_temp, dim=-1)
+
+        student_out = torch.stack(projections_student)
+        s_out = F.log_softmax(student_out / self.student_temp, dim=-1)
+
+        # Calculate feature similarities, ignoring the diagonal
+        # b = batch_size, t = n_views_teacher, s = n_views_student, d = output_dim
+        loss = -torch.einsum("tbd,sbd->ts", t_out, s_out)
+        loss.fill_diagonal_(0)
+
+        # Number of loss terms, ignoring the diagonal
+        n_terms = loss.numel() - loss.diagonal().numel()
+        batch_size = teacher_out.shape[1]
+
+        loss = loss.sum() / (n_terms * batch_size)
+
+        with torch.no_grad():
+            batch_center = compute_global_mean(teacher_out, dim=(0, 1))
+            if not hasattr(self, "center"):
+                self.center = batch_center
+            else:
+                self.center = self.center * self.center_momentum + batch_center * (
+                    1 - self.center_momentum
+                )
 
         classifier_losses = self.compute_loss_classifiers(
-            embeddings, projections, labels
+            embeddings_teacher, projections_teacher, labels
         )
 
-        return {"loss_ssl": loss_ssl, **classifier_losses}
+        return {"loss_ssl": loss, **classifier_losses}

@@ -18,6 +18,7 @@ from .utils import (
     str_to_dtype,
     all_reduce,
     warn_once,
+    compute_global_mean,
 )
 
 from .exceptions import BreakEpoch, BreakStep, NanError, BreakAllEpochs
@@ -39,4 +40,5 @@ __all__ = [
     "log_and_raise",
     "all_reduce",
     "warn_once",
+    "compute_global_mean",
 ]
