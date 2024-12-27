@@ -189,17 +189,27 @@ class TeacherStudentModule(nn.Module):
                 t.mul_(self.ema_coefficient.to(dtype=ty))
                 t.add_((1.0 - self.ema_coefficient).to(dtype=ty) * s)
 
-    def forward(self, *args, **kwargs):
-        """Forward pass through the teacher.
+    def forward_student(self, *args, **kwargs):
+        """Forward pass through the student network. Gradients will flow normally."""
+        return self.student(*args, **kwargs)
 
-        If ema_coefficient == 0.0, we wrap the forward in torch.no_grad() so that
-        no gradients flow, even though teacher == student in memory.
+    def forward_teacher(self, *args, **kwargs):
+        """Forward pass through the teacher network.
+
+        By default, the teacher network does not require grad.
+        If ema_coefficient == 0, then teacher==student,
+        so we wrap in torch.no_grad() to ensure no gradients flow.
         """
-        if self.ema_coefficient.item() == 0.0:
-            with torch.no_grad():
-                return self.teacher(*args, **kwargs)
-        else:
+        with torch.no_grad():
             return self.teacher(*args, **kwargs)
+
+    def forward(self, *args, **kwargs):
+        """Forward pass through either the student or teacher network.
+
+        You can choose which model to run in the default forward.
+        Commonly you'd train the student, so you might use the student forward.
+        """
+        return self.forward_student(*args, **kwargs)
 
 
 class MLP(nn.Module):

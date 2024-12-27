@@ -144,16 +144,21 @@ class SelfDistillationTrainer(JointEmbeddingTrainer):
     def compute_loss(self):
         """Compute final loss as sum of SSL loss and classifier losses."""
         views, labels = self.format_views_labels()
-        embeddings = [self.module["backbone"].student(view) for view in views]
+        embeddings = [self.module["backbone"].forward_student(view) for view in views]
         self.latest_forward = embeddings
-        projections = [self.module["projector"].student(embed) for embed in embeddings]
+        projections = [
+            self.module["projector"].forward_student(embed) for embed in embeddings
+        ]
 
         # If a predictor is used, it is applied to the student projections.
         if "predictor" in self.module:
             projections = [self.module["predictor"](proj) for proj in projections]
 
         projections_teacher = [
-            self.module["projector"](self.module["backbone"](view)) for view in views
+            self.module["projector"].forward_teacher(
+                self.module["backbone"].forward_teacher(view)
+            )
+            for view in views
         ]
 
         loss_ssl = 0.5 * (
