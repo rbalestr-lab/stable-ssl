@@ -175,10 +175,10 @@ class TeacherStudentModule(nn.Module):
 
         Everything is updated, including buffers (e.g. batch norm running averages).
         """
-        if (
-            self.ema_coefficient.item() == 0.0
-        ):  # Nothing to update when the teacher is the student.
-            return
+        if self.ema_coefficient.item() == 0.0:
+            return  # Nothing to update when the teacher is the student.
+        elif self.ema_coefficient.item() == 1.0:
+            return  # No need to update when the teacher is fixed.
 
         for teacher_group, student_group in [
             (self.teacher.parameters(), self.student.parameters()),
@@ -207,9 +207,9 @@ class TeacherStudentModule(nn.Module):
         """Forward pass through either the student or teacher network.
 
         You can choose which model to run in the default forward.
-        Commonly you'd train the student, so you might use the student forward.
+        Commonly the teacher is evaluated, so we default to that.
         """
-        return self.forward_student(*args, **kwargs)
+        return self.forward_teacher(*args, **kwargs)
 
 
 class MLP(nn.Module):
@@ -224,7 +224,7 @@ class MLP(nn.Module):
                 layers.append(nn.BatchNorm1d(sizes[i + 1]))
             layers.append(nn.__dict__[activation]())
         layers.append(nn.Linear(sizes[-2], sizes[-1], bias=False))
-        self.layers = nn.Sequential(layers)
+        self.layers = nn.Sequential(*layers)
 
     def forward(self, x):
         """Forward pass."""
