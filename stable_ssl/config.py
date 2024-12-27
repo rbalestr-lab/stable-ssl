@@ -162,6 +162,8 @@ class OptimConfig:
         Number of epochs to train the model. Default is 1000.
     max_steps : int, optional
         Maximum number of steps to train the model. Default is -1.
+        If negative, the models trains on the full dataset.
+        If it is between 0 and 1, it represents the fraction of the dataset to train on.
     accumulation_steps : int, optional
         Number of steps to accumulate gradients before updating the model.
         Default is 1.

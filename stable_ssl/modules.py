@@ -108,7 +108,7 @@ def load_backbone(
 
 
 class TeacherStudentModule(nn.Module):
-    """Teacher network updated as an EMA of the student network.
+    """Student network and its teacher network updated as an EMA of the student network.
 
     The teacher model is updated by taking a running average of the student’s
     parameters and buffers. When `ema_coefficient == 0.0`, the teacher and student

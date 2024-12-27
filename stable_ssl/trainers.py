@@ -18,14 +18,7 @@ from .modules import TeacherStudentModule
 class SupervisedTrainer(BaseTrainer):
     r"""Base class for training a supervised model."""
 
-    def check_module(self):
-        """Check if a 'backbone' module is defined."""
-        if "backbone" not in self.module:
-            log_and_raise(
-                ValueError,
-                "A `backbone` module needs to be defined when "
-                f"using the {self.__class__.__name__} trainer.",
-            )
+    required_modules = {"backbone": torch.nn.Module}
 
     def forward(self, *args, **kwargs):
         """Forward pass. By default, it simply calls the 'backbone' module."""
@@ -43,6 +36,13 @@ class SupervisedTrainer(BaseTrainer):
 
 class JointEmbeddingTrainer(BaseTrainer):
     r"""Base class for training a joint-embedding SSL model."""
+
+    required_modules = {
+        "backbone": torch.nn.Module,
+        "projector": torch.nn.Module,
+        "backbone_classifier": torch.nn.Module,
+        "projector_classifier": torch.nn.Module,
+    }
 
     def format_views_labels(self):
         if (
@@ -66,23 +66,6 @@ class JointEmbeddingTrainer(BaseTrainer):
             Most methods expect 2 views, some can use more."""
             log_and_raise(ValueError, msg)
         return views, labels
-
-    def check_module(self):
-        """Check if 'backbone', 'projector' and their classifiers are defined."""
-        required_modules = [
-            "backbone",
-            "projector",
-            "backbone_classifier",
-            "projector_classifier",
-        ]
-
-        for module_name in required_modules:
-            if module_name not in self.module:
-                log_and_raise(
-                    ValueError,
-                    f"A `{module_name}` module needs to be defined when "
-                    f"using the {self.__class__.__name__} trainer.",
-                )
 
     def forward(self, *args, **kwargs):
         """Forward pass. By default, it simply calls the 'backbone' module."""
@@ -130,54 +113,88 @@ class JointEmbeddingTrainer(BaseTrainer):
 class SelfDistillationTrainer(JointEmbeddingTrainer):
     r"""Base class for training a self-distillation SSL model."""
 
-    def check_module(self):
-        """Check if 'backbone', 'projector', classifiers and teachers are defined."""
-        super().check_module()  # check 'backbone', 'projector' and classifiers
-
-        for name in ("backbone", "projector"):
-            if not isinstance(self.module[name], TeacherStudentModule):
-                log_and_raise(
-                    ValueError,
-                    f"The '{name}' module needs to be a `TeacherStudentModule`",
-                )
+    required_modules = {
+        "backbone": TeacherStudentModule,
+        "projector": TeacherStudentModule,
+        "backbone_classifier": torch.nn.Module,
+        "projector_classifier": torch.nn.Module,
+    }
 
     def compute_loss(self):
         """Compute final loss as sum of SSL loss and classifier losses."""
         views, labels = self.format_views_labels()
-        embeddings = [self.module["backbone"].forward_student(view) for view in views]
-        self.latest_forward = embeddings
-        projections = [
-            self.module["projector"].forward_student(embed) for embed in embeddings
+
+        embeddings_student = [
+            self.module["backbone"].forward_student(view) for view in views
+        ]
+        projections_student = [
+            self.module["projector"].forward_student(embed)
+            for embed in embeddings_student
         ]
 
         # If a predictor is used, it is applied to the student projections.
         if "predictor" in self.module:
-            projections = [self.module["predictor"](proj) for proj in projections]
+            projections_student = [
+                self.module["predictor"](proj) for proj in projections_student
+            ]
 
+        embeddings_teacher = [
+            self.module["backbone"].forward_teacher(view) for view in views
+        ]
+        self.latest_forward = embeddings_student
         projections_teacher = [
-            self.module["projector"].forward_teacher(
-                self.module["backbone"].forward_teacher(view)
-            )
-            for view in views
+            self.module["projector"].forward_teacher(embed)
+            for embed in embeddings_teacher
         ]
 
         loss_ssl = 0.5 * (
-            self.loss(projections[0], projections_teacher[1])
-            + self.loss(projections[1], projections_teacher[0])
+            self.loss(projections_student[0], projections_teacher[1])
+            + self.loss(projections_student[1], projections_teacher[0])
         )
+
+        classifier_losses = self.compute_loss_classifiers(
+            embeddings_teacher, projections_teacher, labels
+        )
+
+        return {"loss_ssl": loss_ssl, **classifier_losses}
+
+
+class DINOTrainer(SelfDistillationTrainer):
+    r"""Base class for training a DINO SSL model."""
+
+    def compute_loss(self):
+        """Compute the DINO loss."""
+        views, labels = self.format_views_labels()
+
+        embeddings_student = [
+            self.module["backbone"].forward_student(view) for view in views
+        ]
+        self.latest_forward = embeddings_student
+        projections_student = [
+            self.module["projector"].forward_student(embed)
+            for embed in embeddings_student
+        ]
+
+        # If a predictor is used, it is applied to the student projections.
+        if "predictor" in self.module:
+            projections_student = [
+                self.module["predictor"](proj) for proj in projections_student
+            ]
+
+        # Construct target *from global views only* with the target ('teacher') network.
+        with torch.no_grad():
+            global_views = self.batch[0][:2]  # First two views should be global views.
+            projections_teacher = [
+                self.module["projector"].forward_teacher(
+                    self.module["backbone"].forward_teacher(view)
+                )
+                for view in global_views
+            ]
+
+        loss_ssl = self.loss(projections_student, projections_teacher)
 
         classifier_losses = self.compute_loss_classifiers(
             embeddings, projections, labels
         )
 
         return {"loss_ssl": loss_ssl, **classifier_losses}
-
-
-# @torch.no_grad()
-# def center_mean(x: Tensor, dim: Tuple[int, ...]) -> Tensor:
-#     """Returns the center of the input tensor by calculating the mean."""
-#     batch_center = torch.mean(x, dim=dim, keepdim=True)
-#     if dist.is_available() and dist.is_initialized():
-#         dist.all_reduce(batch_center)
-#         batch_center = batch_center / dist.get_world_size()
-#     return batch_center

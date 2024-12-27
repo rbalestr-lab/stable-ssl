@@ -24,7 +24,6 @@ class NTXEntLoss(torch.nn.Module):
     temperature : float, optional
         The temperature scaling factor.
         Default is 0.5.
-
     """
 
     def __init__(self, temperature: float = 0.5):
@@ -74,7 +73,6 @@ class NegativeCosineSimilarity(torch.nn.Module):
 
     This objective is used for instance in BYOL :cite:`grill2020bootstrap`
     or SimSiam :cite:`chen2021exploring`.
-
     """
 
     def forward(self, z_i, z_j):
@@ -113,7 +111,6 @@ class VICRegLoss(torch.nn.Module):
     epsilon : float, optional
         Small value to avoid division by zero.
         Default is 1e-4.
-
     """
 
     def __init__(
@@ -178,7 +175,6 @@ class BarlowTwinsLoss(torch.nn.Module):
     lambd : float, optional
         The weight of the off-diagonal terms in the loss.
         Default is 5e-3.
-
     """
 
     def __init__(self, lambd: float = 5e-3):
@@ -209,3 +205,56 @@ class BarlowTwinsLoss(torch.nn.Module):
         off_diag = off_diagonal(c).pow(2).sum()
         loss = on_diag + self.lambd * off_diag
         return loss
+
+
+# class DINOLoss(torch.nn.Module):
+#     """SSL objective used in DINO :cite:`caron2021emerging`.
+
+#     Parameters
+
+#     """
+#     def __init__(self):
+#         super().__init__()
+
+#     def forward(self, teacher_projections, student_projections):
+
+#         # Get teacher temperature
+#         if epoch < self.warmup_teacher_temp_epochs:
+#             teacher_temp = self.teacher_temp_schedule[epoch]
+#         else:
+#             teacher_temp = self.teacher_temp
+
+#         teacher_out = torch.stack(teacher_projections)
+#         t_out = F.softmax((teacher_out - self.center) / teacher_temp, dim=-1)
+
+#         student_out = torch.stack(student_projections)
+#         s_out = F.log_softmax(student_out / self.student_temp, dim=-1)
+
+#         teacher_out = torch.stack(projections_target)
+#         t_out = F.softmax((teacher_out - self.center) / teacher_temp, dim=-1)
+
+#         # Calculate feature similarities, ignoring the diagonal
+#         # b = batch_size, t = n_views_teacher, s = n_views_student, d = output_dim
+#         loss = -torch.einsum("tbd,sbd->ts", t_out, s_out)
+#         loss.fill_diagonal_(0)
+
+#         # Number of loss terms, ignoring the diagonal
+#         n_terms = loss.numel() - loss.diagonal().numel()
+#         batch_size = teacher_out.shape[1]
+
+#         loss = loss.sum() / (n_terms * batch_size)
+
+#         # Update the center used for the teacher output
+#         self.update_center(teacher_out)
+
+#         return loss
+
+
+# # @torch.no_grad()
+# # def center_mean(x: Tensor, dim: Tuple[int, ...]) -> Tensor:
+# #     """Returns the center of the input tensor by calculating the mean."""
+# #     batch_center = torch.mean(x, dim=dim, keepdim=True)
+# #     if dist.is_available() and dist.is_initialized():
+# #         dist.all_reduce(batch_center)
+# #         batch_center = batch_center / dist.get_world_size()
+# #     return batch_center

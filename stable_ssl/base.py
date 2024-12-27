@@ -221,10 +221,6 @@ class BaseTrainer(torch.nn.Module):
         )
         return config
 
-    def check_module(self):
-        """Check if modules are compatible with trainer. Specific to each trainer."""
-        pass
-
     def before_fit(self):
         """Initialize training by setting the starting epoch."""
         self.epoch = 0
@@ -463,7 +459,7 @@ class BaseTrainer(torch.nn.Module):
             )
             logging.info(f"\t- {name} with {trainable} trainable parameters.")
         self.module = torch.nn.ModuleDict(self.module)
-        self.check_module()
+        self._check_modules()
         self.scaler = torch.amp.GradScaler("cuda", enabled=self.hardware["float16"])
 
         self.register_buffer("global_step", torch.zeros((1,), dtype=int))
@@ -532,7 +528,7 @@ class BaseTrainer(torch.nn.Module):
         # If max_steps is negative, train on the full dataset.
         if self.optim["max_steps"] < 0:
             max_steps = len(loader)
-        # If max_steps is a float between 0 and 1, treat it as a percentage.
+        # If max_steps is a float between 0 and 1, treat it as a fraction.
         elif 0 < self.optim["max_steps"] < 1:
             max_steps = int(self.optim["max_steps"] * len(loader))
         # Otherwise, set max_steps to the length of the dataset.
@@ -855,3 +851,32 @@ class BaseTrainer(torch.nn.Module):
 
         logging.info("Device status after cleaning.")
         get_gpu_info()
+
+    def _check_modules(self):
+        """Check if the required modules are defined."""
+        missing_modules = []
+        incorrect_types = {}
+
+        for module_name, expected_type in self.required_modules.items():
+            if module_name not in self.module:
+                missing_modules.append(module_name)
+            else:
+                actual_obj = self.module[module_name]
+                if not isinstance(actual_obj, expected_type):
+                    incorrect_types[module_name] = (
+                        f"Expected {expected_type.__name__}, got {type(actual_obj).__name__}"
+                    )
+
+        if missing_modules:
+            log_and_raise(
+                ValueError,
+                f"The following required modules are missing: {missing_modules} "
+                f"for the {self.__class__.__name__} trainer.",
+            )
+
+        if incorrect_types:
+            log_and_raise(
+                ValueError,
+                f"Some modules are not of the required type:\n{incorrect_types}\n"
+                f"for the {self.__class__.__name__} trainer.",
+            )
