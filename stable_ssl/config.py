@@ -26,18 +26,21 @@ def collapse_nested_dict(
 ) -> dict:
     """Parse a Hydra config and make it readable for wandb (flatten).
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     cfg: Union[dict, object]
         The original (Hydra) nested dict.
     level_separator: str, optional
         The string to separate level names. Defaults to ".".
     _base_name: str, optional
-        The parent string, used for recursion only, users should ignore. Defaults to None.
+        The parent string, used for recursion only, users should ignore.
+        Defaults to None.
     _flat_cfg: dict, optional
-        The flattened config, used for recursion only, users should ignore. Defaults to None.
+        The flattened config, used for recursion only, users should ignore.
+        Defaults to None.
 
-    Returns:
+    Returns
+    -------
         dict: Flat config.
     """
     # INIT
@@ -98,9 +101,11 @@ class HardwareConfig:
     seed : int, optional
         Random seed for reproducibility. Default is None.
     float16 : bool, optional
-        Whether to use mixed precision (float16) for training. Default is False.
+        Whether to use mixed precision (float16) for training.
+        Default is False.
     world_size : int, optional
-        Number of processes participating in distributed training. Default is 1.
+        Number of processes participating in distributed training.
+        Default is 1.
     device : str, optional
         The device to use for training. Default is "cuda" if available, else "cpu".
     """
