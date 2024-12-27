@@ -15,6 +15,57 @@ import lzma
 import hydra
 from hydra.core.hydra_config import HydraConfig
 import logging
+import omegaconf
+
+
+def collapse_nested_dict(
+    cfg: Union[dict, object],
+    level_separator: str = ".",
+    _base_name: str = None,
+    _flat_cfg: dict = None,
+) -> dict:
+    """Parse a Hydra config and make it readable for wandb (flatten).
+
+    Parameters:
+    -----------
+    cfg: Union[dict, object]
+        The original (Hydra) nested dict.
+    level_separator: str, optional
+        The string to separate level names. Defaults to ".".
+    _base_name: str, optional
+        The parent string, used for recursion only, users should ignore. Defaults to None.
+    _flat_cfg: dict, optional
+        The flattened config, used for recursion only, users should ignore. Defaults to None.
+
+    Returns:
+        dict: Flat config.
+    """
+    # INIT
+    if _flat_cfg is None:
+        _flat_cfg = {}
+    if _base_name is None:
+        _base_name = ""
+    if isinstance(cfg, list) or isinstance(cfg, tuple):
+        for i in range(len(cfg)):
+            collapse_nested_dict(
+                cfg[i],
+                level_separator=level_separator,
+                _base_name=_base_name + f"{level_separator}{i}",
+                _flat_cfg=_flat_cfg,
+            )
+    elif isinstance(cfg, dict) or isinstance(cfg, omegaconf.dictconfig.DictConfig):
+        for key in cfg:
+            collapse_nested_dict(
+                cfg[key],
+                level_separator=level_separator,
+                _base_name=_base_name + f"{level_separator}{key}",
+                _flat_cfg=_flat_cfg,
+            )
+    else:
+        if _base_name.startswith(level_separator):
+            _base_name = _base_name[len(level_separator) :]
+        _flat_cfg[_base_name] = cfg
+    return _flat_cfg
 
 
 def instanciate_config(cfg=None, debug_hash=None) -> object:
@@ -145,7 +196,6 @@ class WandbConfig:
     id: Optional[str] = None
     tags: Optional[list] = None
     group: Optional[str] = None
-    config: Optional[dict] = None
 
 
 @dataclass

@@ -26,7 +26,13 @@ import torch
 
 from .data import DistributedSamplerWrapper
 from . import reader
-from .config import LoggerConfig, WandbConfig, HardwareConfig, OptimConfig
+from .config import (
+    LoggerConfig,
+    WandbConfig,
+    HardwareConfig,
+    OptimConfig,
+    collapse_nested_dict,
+)
 from .monitors import Monitor
 from .modules import TeacherStudentModule
 
@@ -376,7 +382,11 @@ class BaseTrainer(torch.nn.Module):
         if self.logger["wandb"]:
             logging.info("\t- Wandb:")
             try:
-                wandb.init(**self.logger["wandb"], resume="allow")
+                wandb.init(
+                    **self.logger["wandb"],
+                    config=collapse_nested_dict(self.get_config()),
+                    resume="allow",
+                )
                 self.logger["wandb"]["entity"] = wandb.run.entity
                 self.logger["wandb"]["project"] = wandb.run.project
                 self.logger["wandb"]["name"] = wandb.run.name
