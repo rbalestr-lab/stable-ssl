@@ -100,6 +100,7 @@ class JointEmbeddingTrainer(BaseTrainer):
         loss_backbone_classifier = 0
         loss_projector_classifier = 0
 
+        # Inputs are detached to avoid backprop through backbone and projector.
         if labels is not None:
             for embed, proj in zip(embeddings, projections):
                 loss_backbone_classifier += F.cross_entropy(
@@ -265,12 +266,11 @@ class DINOTrainer(SelfDistillationTrainer):
         # Compute the cross entropy loss between the student and teacher probabilities.
         probs_teacher_flat = probs_teacher.flatten(start_dim=1)
         log_probs_student_flat = log_probs_student.flatten(start_dim=1)
-        loss_ssl = probs_teacher_flat @ log_probs_student_flat.T
+        loss_ssl = -probs_teacher_flat @ log_probs_student_flat.T
         loss_ssl.fill_diagonal_(0)
 
         # Normalize the loss.
-        N = loss_ssl.size(0)
-        n_terms = N * (N - 1)
+        n_terms = loss_ssl.numel() - loss_ssl.diagonal().numel()
         batch_size = stacked_projections_teacher.shape[1]
         loss_ssl = loss_ssl.sum() / (n_terms * batch_size)
 

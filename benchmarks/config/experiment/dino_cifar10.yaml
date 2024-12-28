@@ -4,10 +4,10 @@ trainer:
   # ===== Base Trainer =====
   _target_: stable_ssl.trainers.DINOTrainer
 
-  # ===== loss Parameters =====
-  loss:
-    _target_: stable_ssl.NTXEntLoss
-    temperature: 0.5
+  # # ===== loss Parameters =====
+  # loss:
+  #   _target_: stable_ssl.NTXEntLoss
+  #   temperature: 0.5
 
   # ===== Data Parameters =====
   data:

@@ -99,9 +99,6 @@ class BaseTrainer(torch.nn.Module):
     module: dict
         Names and definition of the modules (neural networks).
         See :mod:`stable_ssl.modules` for examples of available modules.
-    loss: dict
-        Loss function used in the final criterion to be minimized.
-        See :mod:`stable_ssl.losses` for examples.
     hardware: dict
         Hardware parameters. See :mod:`stable_ssl.config.HardwareConfig`
         for the full list of parameters and their defaults.
@@ -112,21 +109,26 @@ class BaseTrainer(torch.nn.Module):
         Logging and checkpointing parameters.
         See :mod:`stable_ssl.config.LoggerConfig`
         for the full list of parameters and their defaults.
+    loss: dict, optional
+        Loss function used in the final criterion to be minimized.
+        See :mod:`stable_ssl.losses` for examples.
+        Defaults to None.
     **kwargs
         Additional arguments to be set as attributes of the class.
     """
 
-    def __init__(self, data, module, loss, hardware, optim, logger, **kwargs):
+    def __init__(self, data, module, hardware, optim, logger, loss=None, **kwargs):
         super().__init__()
         logging.info(f"=> INIT OF {self.__class__.__name__} STARTED.")
         for key, value in kwargs.items():
             setattr(self, key, value)
         self._data = data
         self._module = module
-        self._loss = loss
         self._hardware = hardware
         self._optim = optim
         self._logger = logger
+        self._loss = loss
+        self._kwargs = kwargs  # Save kwargs for checkpointing.
 
         # Set the logger defaults.
         self._logger = asdict(LoggerConfig(**self._logger))
@@ -303,6 +305,7 @@ class BaseTrainer(torch.nn.Module):
             self._hardware,
             self._optim,
             self._logger,
+            **self._kwargs,
         )
         logging.info("Cleaning up the current task before submitting a new one.")
         self._cleanup()
@@ -367,13 +370,16 @@ class BaseTrainer(torch.nn.Module):
         # We skip optim as we may not need it (see below).
         self.data = hydra.utils.instantiate(self._data, _convert_="object")
         self.module = hydra.utils.instantiate(self._module, _convert_="object")
-        self.loss = hydra.utils.instantiate(self._loss, _convert_="object")
         self.hardware = hydra.utils.instantiate(self._hardware, _convert_="object")
         self.logger = hydra.utils.instantiate(self._logger, _convert_="partial")
 
         self._set_device(self.hardware)
 
-        self.loss = self.loss.to(self._device)
+        if self._loss is not None:
+            self.loss = hydra.utils.instantiate(self._loss, _convert_="object")
+            self.loss = self.loss.to(self._device)
+        else:
+            self.loss = None
 
         logging.info("Logger:")
         logging.info(f"\t- Dump path: `{self.logger['dump_path']}`")
