@@ -174,16 +174,16 @@ class DINOTrainer(SelfDistillationTrainer):
 
     Parameters
     ----------
-    warmup_teacher_temp : float, optional
+    warmup_temperature_teacher : float, optional
         The initial temperature for the teacher output.
         Default is 0.04.
-    teacher_temp : float, optional
+    temperature_teacher : float, optional
         The temperature for the teacher output.
         Default is 0.04.
-    warmup_teacher_temp_epochs : int, optional
+    warmup_epochs_temperature_teacher : int, optional
         The number of epochs to warm up the teacher temperature.
         Default is 30.
-    student_temp : float, optional
+    temperature_student : float, optional
         The temperature for the student output.
         Default is 0.1.
     center_momentum : float, optional
@@ -195,24 +195,26 @@ class DINOTrainer(SelfDistillationTrainer):
 
     def __init__(
         self,
-        warmup_teacher_temp: float = 0.04,
-        teacher_temp: float = 0.04,
-        warmup_teacher_temp_epochs: int = 30,
-        student_temp: float = 0.1,
+        warmup_temperature_teacher: float = 0.04,
+        temperature_teacher: float = 0.04,
+        warmup_epochs_temperature_teacher: int = 30,
+        temperature_student: float = 0.1,
         center_momentum: float = 0.9,
         **kwargs,
     ):
         super().__init__(
-            warmup_teacher_temp_epochs=warmup_teacher_temp_epochs,
-            student_temp=student_temp,
+            warmup_temperature_teacher=warmup_temperature_teacher,
+            temperature_teacher=temperature_teacher,
+            warmup_epochs_temperature_teacher=warmup_epochs_temperature_teacher,
+            temperature_student=temperature_student,
             center_momentum=center_momentum,
             **kwargs,
         )
 
-        self.teacher_temp_schedule = torch.linspace(
-            start=warmup_teacher_temp,
-            end=teacher_temp,
-            steps=warmup_teacher_temp_epochs,
+        self.temperature_teacher_schedule = torch.linspace(
+            start=warmup_temperature_teacher,
+            end=temperature_teacher,
+            steps=warmup_epochs_temperature_teacher,
         )
 
     def compute_loss(self):
@@ -239,34 +241,42 @@ class DINOTrainer(SelfDistillationTrainer):
                 for embed in embeddings_teacher
             ]
 
-        # loss_ssl = self.loss(projections_student, projections_teacher)
-        if self.epoch < self.warmup_teacher_temp_epochs:
-            teacher_temp = self.teacher_temp_schedule[self.epoch]
+        if self.epoch < self.warmup_epochs_temperature_teacher:
+            temperature_teacher = self.temperature_teacher_schedule[self.epoch]
         else:
-            teacher_temp = self.teacher_temp
+            temperature_teacher = self.temperature_teacher
 
-        teacher_out = torch.stack(projections_teacher)
+        stacked_projections_teacher = torch.stack(projections_teacher)
         if hasattr(self, "center"):
-            t_out = F.softmax((teacher_out - self.center) / teacher_temp, dim=-1)
+            probs_teacher = F.softmax(
+                (stacked_projections_teacher - self.center) / temperature_teacher,
+                dim=-1,
+            )
         else:
-            t_out = F.softmax(teacher_out / teacher_temp, dim=-1)
+            probs_teacher = F.softmax(
+                stacked_projections_teacher / temperature_teacher, dim=-1
+            )
 
-        student_out = torch.stack(projections_student)
-        s_out = F.log_softmax(student_out / self.student_temp, dim=-1)
+        stacked_projections_student = torch.stack(projections_student)
+        log_probs_student = F.log_softmax(
+            stacked_projections_student / self.temperature_student, dim=-1
+        )
 
-        # Calculate feature similarities, ignoring the diagonal
-        # b = batch_size, t = n_views_teacher, s = n_views_student, d = output_dim
-        loss = -torch.einsum("tbd,sbd->ts", t_out, s_out)
-        loss.fill_diagonal_(0)
+        # Compute the cross entropy loss between the student and teacher probabilities.
+        probs_teacher_flat = probs_teacher.flatten(start_dim=1)
+        log_probs_student_flat = log_probs_student.flatten(start_dim=1)
+        loss_ssl = probs_teacher_flat @ log_probs_student_flat.T
+        loss_ssl.fill_diagonal_(0)
 
-        # Number of loss terms, ignoring the diagonal
-        n_terms = loss.numel() - loss.diagonal().numel()
-        batch_size = teacher_out.shape[1]
+        # Normalize the loss.
+        N = loss_ssl.size(0)
+        n_terms = N * (N - 1)
+        batch_size = stacked_projections_teacher.shape[1]
+        loss_ssl = loss_ssl.sum() / (n_terms * batch_size)
 
-        loss = loss.sum() / (n_terms * batch_size)
-
+        # Update the center of the teacher network.
         with torch.no_grad():
-            batch_center = compute_global_mean(teacher_out, dim=(0, 1))
+            batch_center = compute_global_mean(stacked_projections_teacher, dim=(0, 1))
             if not hasattr(self, "center"):
                 self.center = batch_center
             else:
@@ -278,4 +288,4 @@ class DINOTrainer(SelfDistillationTrainer):
             embeddings_teacher, projections_teacher, labels
         )
 
-        return {"loss_ssl": loss, **classifier_losses}
+        return {"loss_ssl": loss_ssl, **classifier_losses}
