@@ -179,7 +179,7 @@ class DINOTrainer(SelfDistillationTrainer):
         Default is 0.04.
     temperature_teacher : float, optional
         The temperature for the teacher output.
-        Default is 0.04.
+        Default is 0.07.
     warmup_epochs_temperature_teacher : int, optional
         The number of epochs to warm up the teacher temperature.
         Default is 30.
@@ -196,7 +196,7 @@ class DINOTrainer(SelfDistillationTrainer):
     def __init__(
         self,
         warmup_temperature_teacher: float = 0.04,
-        temperature_teacher: float = 0.04,
+        temperature_teacher: float = 0.07,
         warmup_epochs_temperature_teacher: int = 30,
         temperature_student: float = 0.1,
         center_momentum: float = 0.9,

@@ -57,8 +57,6 @@ trainer:
                     _args_: [float32]
                   scale: True
             - ${trainer.data.train.dataset.transform.transforms.0}
-            - ${trainer.data.train.dataset.transform.transforms.0}
-            - ${trainer.data.train.dataset.transform.transforms.0}
     test: # can be any name
       _target_: torch.utils.data.DataLoader
       batch_size: 256
