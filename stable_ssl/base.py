@@ -106,6 +106,8 @@ class BaseTrainer(torch.nn.Module):
         Logging and checkpointing parameters.
         See :mod:`stable_ssl.config.LoggerConfig`
         for the full list of parameters and their defaults.
+    **kwargs
+        Additional arguments to be set as attributes of the class.
     """
 
     def __init__(self, data, module, loss, hardware, optim, logger, **kwargs):
