@@ -35,6 +35,13 @@ class SupervisedTrainer(BaseTrainer):
 
     def compute_loss(self):
         """Compute the loss of the model using the `loss` provided in the config."""
+        if self.loss is None:
+            log_and_raise(
+                ValueError,
+                f"When using the trainer {self.__class__.__name__}, "
+                "one needs to either provide a loss function in the config "
+                "or implement a custom `compute_loss` method.",
+            )
         loss = self.loss(self.predict(), self.batch[1])
         return {"loss": loss}
 
@@ -82,6 +89,14 @@ class JointEmbeddingTrainer(BaseTrainer):
 
     def compute_loss(self):
         """Compute final loss as sum of SSL loss and classifier losses."""
+        if self.loss is None:
+            log_and_raise(
+                ValueError,
+                f"When using the trainer {self.__class__.__name__}, "
+                "one needs to either provide a loss function in the config "
+                "or implement a custom `compute_loss` method.",
+            )
+
         views, labels = self.format_views_labels()
         embeddings = [self.module["backbone"](view) for view in views]
         self.latest_forward = embeddings
@@ -128,6 +143,14 @@ class SelfDistillationTrainer(JointEmbeddingTrainer):
 
     def compute_loss(self):
         """Compute final loss as sum of SSL loss and classifier losses."""
+        if self.loss is None:
+            log_and_raise(
+                ValueError,
+                f"When using the trainer {self.__class__.__name__}, "
+                "one needs to either provide a loss function in the config "
+                "or implement a custom `compute_loss` method.",
+            )
+
         views, labels = self.format_views_labels()
 
         embeddings_student = [
