@@ -10,4 +10,4 @@ stable_ssl.trainers
    SupervisedTrainer
    JointEmbeddingTrainer
    SelfDistillationTrainer
-   SimSiamTrainer
+   DINOTrainer
