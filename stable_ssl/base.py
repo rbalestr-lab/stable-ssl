@@ -864,7 +864,8 @@ class BaseTrainer(torch.nn.Module):
                 actual_obj = self.module[module_name]
                 if not isinstance(actual_obj, expected_type):
                     incorrect_types[module_name] = (
-                        f"Expected {expected_type.__name__}, got {type(actual_obj).__name__}"
+                        f"Expected {expected_type.__name__}, "
+                        f"got {type(actual_obj).__name__}."
                     )
 
         if missing_modules:

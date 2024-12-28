@@ -10,7 +10,7 @@
 import torch
 import torch.nn.functional as F
 
-from stable_ssl.utils import gather, off_diagonal, all_reduce, compute_global_mean
+from stable_ssl.utils import gather, off_diagonal, all_reduce
 
 
 class NTXEntLoss(torch.nn.Module):
