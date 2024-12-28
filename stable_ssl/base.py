@@ -205,12 +205,44 @@ class BaseTrainer(torch.nn.Module):
 
     @abstractmethod
     def predict(self):
-        """Prediction of the model used for evaluation."""
+        """Generate model predictions for evaluation purposes.
+
+        This method should produce the model's predictions based on the current
+        input batch. It is primarily used to evaluate the performance of both supervised
+        and self-supervised learning (SSL) models.
+
+        For **Supervised Learning**:
+            Predictions typically involve classifying inputs into discrete labels
+            using the model's output logits or probabilities.
+
+        For **Self-Supervised Learning (SSL)**:
+            Evaluation requires adding a classifier head on top of the backbone network.
+            This transforms the SSL model into a supervised model,
+            enabling the computation of metrics based on discrete labels.
+
+        Implementations of this method should ensure that the returned predictions
+        are compatible with the evaluation metrics used within the training framework.
+
+        **See Also**:
+            :mod:`stable_ssl.trainers` for concrete examples of implementations.
+        """
         pass
 
     @abstractmethod
     def compute_loss(self):
-        """Compute the global loss to be minimized."""
+        """Calculate the global loss to be minimized during training.
+
+        This method is responsible for computing the total loss that the
+        model aims to minimize. Implementations can utilize the ``loss`` function
+        provided during the trainer's initialization to calculate loss based on the
+        current input batch.
+
+        Note that it can return a list or dictionary of losses. The various losses
+        are then summed to compute the final loss but logged independently.
+
+        **See Also**:
+            :mod:`stable_ssl.trainers` for concrete examples of implementations.
+        """
         pass
 
     def get_logs(self, keys=None):
@@ -302,10 +334,10 @@ class BaseTrainer(torch.nn.Module):
         model = type(self)(
             self._data,
             self._module,
-            self._loss,
             self._hardware,
             self._optim,
             self._logger,
+            self._loss,
             **self._kwargs,
         )
         logging.info("Cleaning up the current task before submitting a new one.")
