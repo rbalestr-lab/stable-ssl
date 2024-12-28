@@ -19,6 +19,8 @@ We achieve that by taking the best--and only the best--from the most eponymous A
 ``stable-SSL`` implements all the basic boilerplate code, including data loading, logging, checkpointing and optimization. It offers users full flexibility to customize each part of the pipeline through a configuration file, enabling easy selection of network architectures, loss functions, evaluation metrics, data augmentations and more.
 These components can be sourced from ``stable-SSL`` itself, popular libraries like ``PyTorch``, or custom modules created by the user.
 
+While the organization is similar to that of ``PyTorch Lightning``, the goal of ``stable-SSL`` is to significantly reduce codebase complexity without sacrificing performance. Think of ``PyTorch Lightning`` as industry-driven (abstracting everything away), whereas ``stable-SSL`` is academia-driven (providing users with complete visibility into every aspect).
+
 
 Why stable-SSL?
 ---------------
@@ -27,9 +29,9 @@ Why stable-SSL?
 
 A quick search of ``AI libraries`` or ``Self Supervised Learning libraries`` will return hundreds of results. 99% will be independent project-centric libraries that can't be reused for general purpose AI research. The other 1% includes:
 
-- Framework libraries such as PytorchLightning that focus on production needs.
-- SSL libraries such as VISSL, FFCV-SSL, LightlySSL that are too rigid, often discontinued or not maintained, or commercial.
-- Standalone libraries such as Wandb, submitit, Hydra that do not offer enough boilerplate for AI research.
+- Framework libraries such as ``PytorchLightning`` that focus on production needs.
+- SSL libraries such as ``VISSL``, ``FFCV-SSL``, ``LightlySSL`` that are discontinued, not maintained or too rigid.
+- Standalone libraries such as ``Wandb``, ``submitit``, ``Hydra`` that do not offer enough boilerplate for AI research.
 
 Hence our goal is to fill that void.
 
@@ -55,35 +57,21 @@ Or you can also run:
 Minimal Documentation
 ---------------------
 
-Library Design
-~~~~~~~~~~~~~~
-
-.. _design:
-
 ``stable-SSL`` provides all the boilerplate to quickly get started with AI research, focusing on Self-Supervised Learning (SSL), albeit other applications can certainly build upon ``stable-SSL``.
-At its core, ``stable-SSL`` provides a `BaseTrainer <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/gen_modules/stable_ssl.BaseTrainer.html#stable_ssl.BaseTrainer>`_ class that provides all the essential methods required to train and evaluate your model effectively. This class is intended to be subclassed for specific training needs (see these `trainers <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/trainers.html>`_ as examples). For detailed instructions on configuring the trainers' input parameters, refer to the `User Guide <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/user_guide.html>`_.
+At its core, ``stable-SSL`` provides a `BaseTrainer <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/gen_modules/stable_ssl.BaseTrainer.html#stable_ssl.BaseTrainer>`_ class that provides all the essential methods required to train and evaluate your model effectively. This class is intended to be subclassed for specific training needs (see these `trainers <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/trainers.html>`_ as examples).
 
-While the organization is similar to that of ``PyTorch Lightning``, the goal of ``stable-SSL`` is to significantly reduce codebase complexity without sacrificing performance. Think of ``PyTorch Lightning`` as industry-driven (abstracting everything away), whereas ``stable-SSL`` is academia-driven (providing users with complete visibility into every aspect).
-
-
-How to launch runs
-~~~~~~~~~~~~~~~~~~
-
-.. _launch:
-
-When using ``stable-SSL``, we recommend relying on configuration files to specify the parameters, typically using ``Hydra`` (see `Hydra documentation <https://hydra.cc/>`_).
-
+``stable-SSL`` relies on ``Hydra`` (see `Hydra documentation <https://hydra.cc/>`_) to manage the configuration parameters.
 The parameters are organized into the following groups (more details in the `User Guide <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/user_guide.html>`_):
 
 * **data**: Defines the dataset, loading, and augmentation pipelines. Only the dataset called ``train`` is used for training. If there is no dataset named ``train``, the model runs in evaluation mode. `Example <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/user_guide.html#data>`_.
 * **module**: Specifies the neural network modules, with a required ``backbone`` as the model's core. `Example <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/user_guide.html#module>`_.
-* **loss**: Defines the model's loss function. `Example <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/user_guide.html#loss>`_.
 * **optim**: Contains optimization parameters, including ``epochs``, ``max_steps`` (per epoch), and ``optimizer`` / ``scheduler`` settings. `Example <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/user_guide.html#optim>`_.
 * **hardware**: Specifies the hardware used, including the number of GPUs, CPUs, etc. `Example <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/user_guide.html#hardware>`_.
 * **logger**: Configures model performance monitoring. APIs like `WandB <https://wandb.ai/home>`_ are supported. `Example <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/user_guide.html#logger>`_.
+* **loss** (optional): Defines a loss function that can then be used in the ``compute_loss`` method of the trainer. `Example <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/user_guide.html#loss>`_.
 
 
-Then, create a Python script that will load the configuration and launch the run. Here is an example with Hydra:
+Then, create a Python script that will load the configuration and launch the run.
 
 .. code-block:: python
    :name: run.py
@@ -116,21 +104,21 @@ In this example, to launch the run using the configuration file ``default_config
 Examples of Methods
 ~~~~~~~~~~~~~~~~~~~
 
-+----------------+--------------------------------------------+------------------------------------------+---------------------------------+
-| **Method**     | **Trainer**                                | **Loss**                                 | **Example Config**              |
-+----------------+--------------------------------------------+------------------------------------------+---------------------------------+
-| Barlow Twins   | `JointEmbeddingTrainer <jointembed_>`_     | `BarlowTwinsLoss <barlow_>`_             |                                 |
-+----------------+--------------------------------------------+------------------------------------------+---------------------------------+
-| BYOL           | `SelfDistillationTrainer <selfdistill_>`_  | `NegativeCosineSimilarity <negcosine_>`_ |                                 |
-+----------------+--------------------------------------------+------------------------------------------+---------------------------------+
-| MoCo           | `SelfDistillationTrainer <selfdistill_>`_  | `NTXEntLoss <ntxent_>`_                  |                                 |
-+----------------+--------------------------------------------+------------------------------------------+---------------------------------+
-| SimCLR         | `JointEmbeddingTrainer <jointembed_>`_     | `NTXEntLoss <ntxent_>`_                  | `link <exsimclr_>`_             |
-+----------------+--------------------------------------------+------------------------------------------+---------------------------------+
-| SimSiam        | `SelfDistillationTrainer <selfdistill_>`_  | `NegativeCosineSimilarity <negcosine_>`_ |                                 |
-+----------------+--------------------------------------------+------------------------------------------+---------------------------------+
-| VICReg         | `JointEmbeddingTrainer <jointembed_>`_     | `VICRegLoss <vicreg_>`_                  |                                 |
-+----------------+--------------------------------------------+------------------------------------------+---------------------------------+
++----------------+--------------------------------------------+---------------------------------+
+| **Method**     | **Trainer**                                | **Example Config**              |
++----------------+--------------------------------------------+---------------------------------+
+| Barlow Twins   | `JointEmbeddingTrainer <jointembed_>`_     |                                 |
++----------------+--------------------------------------------+---------------------------------+
+| BYOL           | `SelfDistillationTrainer <selfdistill_>`_  |                                 |
++----------------+--------------------------------------------+---------------------------------+
+| MoCo           | `SelfDistillationTrainer <selfdistill_>`_  |                                 |
++----------------+--------------------------------------------+---------------------------------+
+| SimCLR         | `JointEmbeddingTrainer <jointembed_>`_     | `link <exsimclr_>`_             |
++----------------+--------------------------------------------+---------------------------------+
+| SimSiam        | `SelfDistillationTrainer <selfdistill_>`_  |                                 |
++----------------+--------------------------------------------+---------------------------------+
+| VICReg         | `JointEmbeddingTrainer <jointembed_>`_     |                                 |
++----------------+--------------------------------------------+---------------------------------+
 
 
 .. _exsimclr: _github_url/blob/main/examples/simclr_cifar10_full.yaml

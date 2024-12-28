@@ -181,7 +181,6 @@ class BaseTrainer(torch.nn.Module):
         ----------
         BreakAllEpochs
             Raised if the training is interrupted by the user.
-
         """
         if "train" not in self.data:
             self._evaluate()
