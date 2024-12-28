@@ -207,21 +207,12 @@ class BaseTrainer(torch.nn.Module):
     def predict(self):
         """Generate model predictions for evaluation purposes.
 
-        This method should produce the model's predictions based on the current
-        input batch. It is primarily used to evaluate the performance of both supervised
-        and self-supervised learning (SSL) models.
+        Supervised and Self-Supervised models are typically evaluated using
+        predictions over discrete labels. This method should return the output
+        of this classification used for evaluation.
 
-        For **Supervised Learning**:
-            Predictions typically involve classifying inputs into discrete labels
-            using the model's output logits or probabilities.
-
-        For **Self-Supervised Learning (SSL)**:
-            Evaluation requires adding a classifier head on top of the backbone network.
-            This transforms the SSL model into a supervised model,
-            enabling the computation of metrics based on discrete labels.
-
-        Implementations of this method should ensure that the returned predictions
-        are compatible with the evaluation metrics used within the training framework.
+        In SSL, this typically involves using a classifier head on top of the backbone,
+        thus turning the SSL model into a supervised model for evaluation.
 
         **See Also**:
             :mod:`stable_ssl.trainers` for concrete examples of implementations.
@@ -232,13 +223,12 @@ class BaseTrainer(torch.nn.Module):
     def compute_loss(self):
         """Calculate the global loss to be minimized during training.
 
-        This method is responsible for computing the total loss that the
-        model aims to minimize. Implementations can utilize the ``loss`` function
-        provided during the trainer's initialization to calculate loss based on the
-        current input batch.
+        Compute the total loss that the model aims to minimize.
+        Implementations can utilize the ``loss`` function provided during the
+        trainer's initialization to calculate loss based on the current batch.
 
         Note that it can return a list or dictionary of losses. The various losses
-        are then summed to compute the final loss but logged independently.
+        are logged independently and summed to compute the final loss.
 
         **See Also**:
             :mod:`stable_ssl.trainers` for concrete examples of implementations.
