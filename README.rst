@@ -123,7 +123,7 @@ Examples of Methods
 +----------------+--------------------------------------------+---------------------------------+
 
 
-.. _exsimclr: _github_url/blob/main/examples/simclr_cifar10_full.yaml
+.. _exsimclr: https://github.com/huguesva/stable-SSL/tree/main/examples/config_examples/simclr_cifar10_full.yaml
 
 .. _ntxent: https://rbalestr-lab.github.io/stable-SSL.github.io/dev/gen_modules/stable_ssl.losses.NTXEntLoss.html#stable_ssl.losses.NTXEntLoss
 .. _barlow: https://rbalestr-lab.github.io/stable-SSL.github.io/dev/gen_modules/stable_ssl.losses.BarlowTwinsLoss.html#stable_ssl.losses.BarlowTwinsLoss
