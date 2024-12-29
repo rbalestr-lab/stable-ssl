@@ -154,7 +154,7 @@ class TeacherStudentModule(nn.Module):
         else:
             # Create a teacher network with the same architecture as the student.
             self.teacher = copy.deepcopy(student)
-            self.teacher.requires_grad_(False)
+            self.teacher.requires_grad_(False)  # Teacher should not require gradients.
 
             if warm_init:  # Initialization step to match the student’s parameters.
                 self.ema_coefficient = torch.zeros(())
