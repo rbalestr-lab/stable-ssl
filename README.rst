@@ -75,7 +75,7 @@ To start a run using the ``default_config.yaml`` configuration file located in t
 
 .. code-block:: bash
 
-   stable-ssl -m --config-path configs/ --config-name default_config
+   stable-ssl --config-path configs/ --config-name default_config
 
 This command utilizes `Hydra <https://hydra.cc/>`_, making it compatible with multirun functionality and CLI overrides.
 It is important to note that the multirun flag (``-m`` or ``--multirun``) is **mandatory** when using the Slurm launcher.
