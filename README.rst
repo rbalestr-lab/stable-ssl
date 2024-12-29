@@ -60,8 +60,8 @@ Minimal Documentation
 ``stable-SSL`` provides all the boilerplate to quickly get started with AI research, focusing on Self-Supervised Learning (SSL), albeit other applications can certainly build upon ``stable-SSL``.
 At its core, ``stable-SSL`` provides a `BaseTrainer <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/gen_modules/stable_ssl.BaseTrainer.html#stable_ssl.BaseTrainer>`_ class that provides all the essential methods required to train and evaluate your model effectively. This class is intended to be subclassed for specific training needs (see these `trainers <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/trainers.html>`_ as examples).
 
-``stable-SSL`` relies on ``Hydra`` (see `Hydra documentation <https://hydra.cc/>`_) to manage the configuration parameters.
-The parameters are organized into the following groups (more details in the `User Guide <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/user_guide.html>`_):
+``stable-SSL`` uses ``Hydra`` (see the `Hydra documentation <https://hydra.cc/>`_) to manage input parameters via configuration files. 
+These parameters are grouped into the following categories (detailed in the `User Guide <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/user_guide.html>`_):
 
 * **data**: Defines the dataset, loading, and augmentation pipelines. Only the dataset called ``train`` is used for training. If there is no dataset named ``train``, the model runs in evaluation mode. `Example <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/user_guide.html#data>`_.
 * **module**: Specifies the neural network modules, with a required ``backbone`` as the model's core. `Example <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/user_guide.html#module>`_.
@@ -75,32 +75,32 @@ To start a run using the ``default_config.yaml`` configuration file located in t
 
 .. code-block:: bash
 
-   stable-ssl -m --config-name default_config --config-path configs/
+   stable-ssl -m --config-path configs/ --config-name default_config
 
 This command utilizes `Hydra <https://hydra.cc/>`_, making it compatible with multirun functionality and CLI overrides.
 It is important to note that the multirun flag (``-m`` or ``--multirun``) is **mandatory** when using the Slurm launcher.
 
 
-Examples of Methods
-~~~~~~~~~~~~~~~~~~~
+.. Examples of Methods
+.. ~~~~~~~~~~~~~~~~~~~
 
-+----------------+--------------------------------------------+---------------------------------+
-| **Method**     | **Trainer**                                | **Example Config**              |
-+----------------+--------------------------------------------+---------------------------------+
-| Barlow Twins   | `JointEmbeddingTrainer <jointembed_>`_     |                                 |
-+----------------+--------------------------------------------+---------------------------------+
-| BYOL           | `SelfDistillationTrainer <selfdistill_>`_  |                                 |
-+----------------+--------------------------------------------+---------------------------------+
-| DINO           | `DINOTrainer <dinotrainer_>`_              |                                 |
-+----------------+--------------------------------------------+---------------------------------+
-| MoCo           | `SelfDistillationTrainer <selfdistill_>`_  |                                 |
-+----------------+--------------------------------------------+---------------------------------+
-| SimCLR         | `JointEmbeddingTrainer <jointembed_>`_     | `link <exsimclr_>`_             |
-+----------------+--------------------------------------------+---------------------------------+
-| SimSiam        | `SelfDistillationTrainer <selfdistill_>`_  |                                 |
-+----------------+--------------------------------------------+---------------------------------+
-| VICReg         | `JointEmbeddingTrainer <jointembed_>`_     |                                 |
-+----------------+--------------------------------------------+---------------------------------+
+.. +----------------+--------------------------------------------+---------------------------------+
+.. | **Method**     | **Trainer**                                | **Example Config**              |
+.. +----------------+--------------------------------------------+---------------------------------+
+.. | Barlow Twins   | `JointEmbeddingTrainer <jointembed_>`_     |                                 |
+.. +----------------+--------------------------------------------+---------------------------------+
+.. | BYOL           | `SelfDistillationTrainer <selfdistill_>`_  |                                 |
+.. +----------------+--------------------------------------------+---------------------------------+
+.. | DINO           | `DINOTrainer <dinotrainer_>`_              |                                 |
+.. +----------------+--------------------------------------------+---------------------------------+
+.. | MoCo           | `SelfDistillationTrainer <selfdistill_>`_  |                                 |
+.. +----------------+--------------------------------------------+---------------------------------+
+.. | SimCLR         | `JointEmbeddingTrainer <jointembed_>`_     | `link <exsimclr_>`_             |
+.. +----------------+--------------------------------------------+---------------------------------+
+.. | SimSiam        | `SelfDistillationTrainer <selfdistill_>`_  |                                 |
+.. +----------------+--------------------------------------------+---------------------------------+
+.. | VICReg         | `JointEmbeddingTrainer <jointembed_>`_     |                                 |
+.. +----------------+--------------------------------------------+---------------------------------+
 
 
 .. _exsimclr: https://github.com/huguesva/stable-SSL/tree/main/examples/config_examples/simclr_cifar10_full.yaml
