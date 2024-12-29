@@ -28,6 +28,9 @@ dependencies = [
 
 dynamic = ["version"]
 
+[project.entry-points."console_scripts"]
+stable-ssl = "stable_ssl.cli:entry"
+
 [tool.setuptools]
 packages = ["stable_ssl"]
 
