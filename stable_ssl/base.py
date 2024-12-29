@@ -894,6 +894,11 @@ class BaseTrainer(torch.nn.Module):
 
     def _check_modules(self):
         """Check if the required modules are defined."""
+        if not hasattr(self, "required_modules"):
+            logging.info(
+                "\t-skipping module check as `required_modules' was not provided."
+            )
+            return
         missing_modules = []
         incorrect_types = {}
 
