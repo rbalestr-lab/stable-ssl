@@ -41,8 +41,4 @@ def entry():
             if not os.path.isabs(config_path):
                 sys.argv[index + 1] = os.path.abspath(config_path)
 
-    # Automatically add the "-m" flag if not present (for slurm jobs).
-    if "-m" not in sys.argv:
-        sys.argv.insert(1, "-m")
-
     main()
