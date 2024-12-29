@@ -39,7 +39,7 @@ def LinearWarmup(optimizer, total_steps, start_factor=0.01, peak_step=0.1):
 
 
 def LinearWarmupCosineAnnealing(
-    optimizer, total_steps, start_factor=0.01, end_lr=0.0001, peak_step=0.01
+    optimizer, total_steps, start_factor=0.01, end_lr=0.0, peak_step=0.01
 ):
     """Combine linear warmup with cosine annealing decay."""
     if peak_step < 1:
