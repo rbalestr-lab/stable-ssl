@@ -1,11 +1,12 @@
-# # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """Script to launch a stable-SSL run from the command line."""
 
-# # Author: Hugues Van Assel <vanasselhugues@gmail.com>
-# #
-# # This source code is licensed under the license found in the
-# # LICENSE file in the root directory of this source tree.
+# Author: Hugues Van Assel <vanasselhugues@gmail.com>
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
 
+import os
 import hydra
 from omegaconf import OmegaConf
 
@@ -30,4 +31,14 @@ def main(cfg):
 
 def entry():
     """CLI entry point for the stable-ssl command."""
+    import sys
+
+    # We need to pass the config path as an absolute path to Hydra.
+    if "--config-path" in sys.argv:
+        index = sys.argv.index("--config-path")
+        if index + 1 < len(sys.argv):
+            config_path = sys.argv[index + 1]
+            if not os.path.isabs(config_path):
+                sys.argv[index + 1] = os.path.abspath(config_path)
+
     main()
