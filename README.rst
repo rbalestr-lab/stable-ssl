@@ -12,14 +12,14 @@
 The Self-Supervised Learning Library by Researchers for Researchers
 ===================================================================
 
-*Have a research idea? With stable-SSL, you can go from concept to execution in under 10 minutes. Start from scratch and quickly set up your pipeline, all while being able to generate high-quality figures and tables from your results. That's the goal of stable-SSL.*
+*Got a research idea? With stable-SSL, you can go from concept to execution in under 10 minutes. Start from scratch and quickly set up your pipeline, all while being able to generate high-quality figures and tables from your results. That's the goal of stable-SSL.*
 
 We achieve that by taking the best--and only the best--from the most eponymous AI libraries: ``PytorchLightning``, ``VISSL``, ``WandB``, ``Hydra``, ``Submitit``.
 
-``stable-SSL`` implements all the basic boilerplate code, including data loading, logging, checkpointing and optimization. It offers users full flexibility to customize each part of the pipeline through a configuration file, enabling easy selection of network architectures, loss functions, evaluation metrics, data augmentations and more.
+``stable-SSL`` implements all the basic boilerplate code, including job submission, data loading, optimization, evaluation, logging, monitoring, checkpointing, and requeuing. It offers users full flexibility to customize each part of the pipeline through a configuration file, enabling easy selection of network architectures, loss functions, evaluation metrics, data augmentations, and more.
 These components can be sourced from ``stable-SSL`` itself, popular libraries like ``PyTorch``, or custom modules created by the user.
 
-While the organization is similar to that of ``PyTorch Lightning``, the goal of ``stable-SSL`` is to significantly reduce codebase complexity without sacrificing performance. Think of ``PyTorch Lightning`` as industry-driven (abstracting everything away), whereas ``stable-SSL`` is academia-driven (providing users with complete visibility into every aspect).
+While the organization is similar to that of ``PyTorch Lightning``, the goal of ``stable-SSL`` is to significantly reduce codebase complexity without sacrificing performance. Think of ``PyTorch Lightning`` as industry-driven (abstracting everything away), whereas ``stable-SSL`` is academia-driven (offering complete visibility into all important aspects of the pipeline.).
 
 
 Why stable-SSL?
@@ -111,6 +111,8 @@ Examples of Methods
 +----------------+--------------------------------------------+---------------------------------+
 | BYOL           | `SelfDistillationTrainer <selfdistill_>`_  |                                 |
 +----------------+--------------------------------------------+---------------------------------+
+| DINO           | `DINOTrainer <dinotrainer_>`_              |                                 |
++----------------+--------------------------------------------+---------------------------------+
 | MoCo           | `SelfDistillationTrainer <selfdistill_>`_  |                                 |
 +----------------+--------------------------------------------+---------------------------------+
 | SimCLR         | `JointEmbeddingTrainer <jointembed_>`_     | `link <exsimclr_>`_             |
@@ -129,7 +131,8 @@ Examples of Methods
 .. _vicreg: https://rbalestr-lab.github.io/stable-SSL.github.io/dev/gen_modules/stable_ssl.losses.VICRegLoss.html
 
 .. _jointembed: https://rbalestr-lab.github.io/stable-SSL.github.io/dev/gen_modules/stable_ssl.trainers.JointEmbeddingTrainer.html
-.. _selfdistill: https://rbalestr-lab.github.io/stable-SSL.github.io/dev/gen_modules/stable_ssl.trainers.SelfDistillationTrainer.html#stable_ssl.trainers.SelfDistillationTrainer
+.. _selfdistill: https://rbalestr-lab.github.io/stable-SSL.github.io/dev/gen_modules/stable_ssl.trainers.SelfDistillationTrainer.html
+.. _dinotrainer: https://rbalestr-lab.github.io/stable-SSL.github.io/dev/gen_modules/stable_ssl.trainers.DINOTrainer.html
 
 
 
