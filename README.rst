@@ -71,34 +71,17 @@ The parameters are organized into the following groups (more details in the `Use
 * **loss** (optional): Defines a loss function that can then be used in the ``compute_loss`` method of the trainer. `Example <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/user_guide.html#loss>`_.
 
 
-Then, create a Python script that will load the configuration and launch the run.
-
-.. code-block:: python
-   :name: run.py
-
-   import hydra
-   from omegaconf import OmegaConf
-
-   OmegaConf.register_new_resolver("eval", eval) # to evaluate expressions in the config file
-
-   @hydra.main(version_base="1.2")
-   def main(cfg):
-       """Load the configuration and launch the run."""
-       trainer = hydra.utils.instantiate(
-           cfg.trainer, _convert_="object", _recursive_=False
-       )
-       trainer.setup()
-       trainer.launch()
-
-
-    if __name__ == "__main__":
-       main()
-
-In this example, to launch the run using the configuration file ``default_config.yaml`` located in the ``./configs/`` folder, use the following command, where ``run.py`` is the above script: 
+To start a run using the ``default_config.yaml`` configuration file located in the ``./configs/`` folder, use the following command:
 
 .. code-block:: bash
 
-   python run.py -m --config-name default_config --config-path configs/
+   stable-ssl -m --config-name default_config --config-path configs/
+
+This command utilizes `Hydra <https://hydra.cc/>`_, making it compatible with multirun functionality and CLI overrides.
+
+.. note::
+
+   The multirun flag (``-m`` or ``--multirun``) is **required** when using the Slurm launcher.
 
 
 Examples of Methods
