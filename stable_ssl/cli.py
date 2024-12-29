@@ -7,7 +7,6 @@
 # # LICENSE file in the root directory of this source tree.
 
 import hydra
-from stable_ssl.utils import log_and_raise
 from omegaconf import OmegaConf
 
 # Register a resolver to evaluate expressions in the config file.
@@ -30,5 +29,5 @@ def main(cfg):
 
 
 def entry():
-    """CLI entry point for the stable_ssl command."""
+    """CLI entry point for the stable-ssl command."""
     main()
