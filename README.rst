@@ -3,7 +3,7 @@
    :width: 200px
    :align: right
 
-|Documentation| |Benchmark| |CircleCI| |Pytorch| |Black| |License| |WandB|
+|Documentation| |Benchmark| |Test Status| |CircleCI| |Pytorch| |Black| |License| |WandB|
 
 
 ⚠️ This library is currently in a phase of active development. All features are subject to change without prior notice.
@@ -130,4 +130,5 @@ It is important to note that the multirun flag (``-m`` or ``--multirun``) is **m
    :target: https://opensource.org/licenses/MIT
 .. |WandB| image:: https://raw.githubusercontent.com/wandb/assets/main/wandb-github-badge-gradient.svg
    :target: https://wandb.ai/site
+.. |Test Status| image:: https://github.com/rbalestr-lab/stable-ssl/actions/workflows/testing.yml/badge.svg
    
