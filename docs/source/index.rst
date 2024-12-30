@@ -8,6 +8,9 @@
 
     self
     user_guide
+    whats_new
+    contributing
+    bibliography
 
 .. currentmodule:: stable_ssl
 
@@ -21,10 +24,3 @@
     optimizers
     schedulers
     monitors
-
-.. toctree::
-    :maxdepth: 1
-    :caption: References
-
-    contributing
-    bibliography
