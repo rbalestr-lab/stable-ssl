@@ -35,7 +35,7 @@ jobs:
           python -m pip install --user --upgrade --progress-bar off pip
       - name: Install 'stable_ssl' package
         run: |
-          python -m pip install --user -e .[all,test]
+          python -m pip install --user -e .[all,dev]
       # Run Tests
       - name: Run Tests without torch
         run: pytest stable_ssl/ --verbose --cov=stable_ssl stable_ssl/ --cov-report term
@@ -64,7 +64,7 @@ jobs:
           python -m pip install --user --upgrade --progress-bar off pip
       - name: Install 'stable_ssl' package
         run: |
-          python -m pip install --user -e .[test]
+          python -m pip install --user -e .[dev]
       # Run Tests
       - name: Run Tests without torch
         run: pytest stable_ssl/ --verbose --cov=stable_ssl stable_ssl/ --cov-report term
