@@ -66,7 +66,7 @@ When creating a pull request (PR), use the appropriate prefix to indicate its st
 - ``[WIP]`` **(Work in Progress)**: Use this prefix for an incomplete contribution where further work is planned before seeking a full review. Consider including a `task list <https://github.com/blog/1375-task-lists-in-gfm-issues-pulls-comments>`_ in your PR description to outline planned work or track progress. Change the prefix to `[MRG]` once the PR is mature and ready for detailed review.
 
 
-A `[WIP]` PR can serve multiple purposes:
+A ``[WIP]`` PR can serve multiple purposes:
 1- Indicate that you are actively working on something to prevent duplicated efforts by others.
 2- Request early feedback on functionality, design, or API.
 3- Seek collaborators to assist with development.
