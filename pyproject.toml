@@ -38,13 +38,15 @@ packages = ["stable_ssl"]
 version = {attr = "stable_ssl.__about__.__version__"}
 
 [project.optional-dependencies]
-test = [
+dev = [
     "pytest",
     "flake8",
     "coverage",
     "numpydoc",
     "pytest-cov",
-    "codecov"
+    "codecov",
+    "pykeops",
+    "pre-commit",
 ]
 
 doc = [

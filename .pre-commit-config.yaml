@@ -1,0 +1,111 @@
+default_language_version:
+  python: python3
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      # list of supported hooks: https://pre-commit.com/hooks.html
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-docstring-first
+      - id: check-yaml
+      - id: debug-statements
+      - id: detect-private-key
+      - id: check-executables-have-shebangs
+      - id: check-toml
+      - id: check-case-conflict
+      - id: check-added-large-files
+
+  # python import sorting
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        require_serial: true
+        args: ["--profile", "black", "--filter-files"]
+
+  # python code formatting
+  - repo: https://github.com/psf/black
+    rev: 23.1.0
+    hooks:
+      - id: black
+        require_serial: true
+        args: ["--exclude", "docs/"]
+
+  # python upgrading syntax to newer version
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.3.1
+    hooks:
+      - id: pyupgrade
+        require_serial: true
+        args: [--py38-plus]
+
+  # python docstring coverage checking
+  - repo: https://github.com/econchick/interrogate
+    rev: 1.7.0
+    hooks:
+      - id: interrogate
+        require_serial: true
+        args:
+          [
+            --verbose,
+            --fail-under=55,
+            --ignore-init-module,
+            --ignore-init-method,
+            --ignore-module,
+            --ignore-nested-functions,
+            -vv,
+          ]
+
+  # python check (PEP8), programming errors and code complexity
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.1.1
+    hooks:
+      - id: flake8
+        require_serial: true
+        args:
+          [
+            "--extend-ignore",
+            "E203,E402,E501,F401,F841,RST2,RST301,RST304",
+            "--exclude",
+            "logs/*,data/*",
+          ]
+        additional_dependencies: [flake8-rst-docstrings==0.3.0]
+
+  # yaml formatting
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.0.0-alpha.6
+    hooks:
+      - id: prettier
+        require_serial: true
+        types: [yaml]
+
+  # shell scripts linter
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.2
+    hooks:
+      - id: shellcheck
+        require_serial: true
+
+  # word spelling linter
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.2.4
+    hooks:
+      - id: codespell
+        require_serial: true
+        args:
+          - --skip=logs/**,data/**,*.ipynb
+          - --ignore-words-list=OT,ot
+  - repo: https://github.com/pycqa/pydocstyle
+    rev: 6.3.0 # pick a git hash / tag to point to
+    hooks:
+      - id: pydocstyle
+        exclude: examples/
+        args: ["--ignore", "D100,D102,D104,D107,D203,D213,D413,D412,D202"]
+  - repo: https://github.com/adamchainz/blacken-docs
+    rev: 1.19.1 # replace with latest tag on GitHub
+    hooks:
+      - id: blacken-docs
+        additional_dependencies:
+          - black==22.12.0
