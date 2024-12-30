@@ -26,12 +26,9 @@ GitHub, clone, and develop on a branch. Steps:
       $ git clone git@github.com:YourLogin/stable-SSL.git
       $ cd stable-SSL
 
-3. Install pre-commit hooks to ensure that your code is properly formatted::
+3. Install the package in editable mode with the development dependencies, as well as the pre-commit hooks that will run on every commit::
 
-      $ pip install pre-commit
-      $ pre-commit install
-
-   This will install the pre-commit hooks that will run on every commit. If the hooks fail, the commit will be aborted.
+      $ pip install -e .[dev,doc] && pre-commit install
 
 4. Create a ``feature`` branch to hold your development changes::
 
