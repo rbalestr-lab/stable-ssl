@@ -101,7 +101,7 @@ repos:
     rev: 6.3.0 # pick a git hash / tag to point to
     hooks:
       - id: pydocstyle
-        exclude: examples/
+        exclude: ^(examples/|benchmarks/|cli/)
         args: ["--ignore", "D100,D102,D104,D107,D203,D213,D413,D412,D202"]
   - repo: https://github.com/adamchainz/blacken-docs
     rev: 1.19.1 # replace with latest tag on GitHub
