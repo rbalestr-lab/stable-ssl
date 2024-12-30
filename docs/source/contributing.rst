@@ -39,10 +39,10 @@ GitHub, clone, and develop on a branch. Steps:
 
    Always use a ``feature`` branch. It's good practice to never work on the ``master`` branch!
 
-5. Develop the feature on your feature branch. Add changed files using ``git add`` and then ``git commit`` files::
+5. Develop the feature on your feature branch. Add changed files using ``git add`` and then commit the changes using ``git commit``::
 
       $ git add modified_files
-      $ git commit
+      $ git commit -m "Your commit message here"
 
    To record your changes in Git, then push the changes to your GitHub account with::
 
@@ -79,5 +79,5 @@ New contributor tips
 --------------------
 
 A great way to start contributing to ``stable-SSL`` is to pick an item
-from the list of `good first issues <https://github.com/TorchDR/TorchDR/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22>`_ in the issue tracker. Resolving these issues allow you to start
+from the list of `good first issues <https://github.com/rbalestr-lab/stable-SSL/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22>`_ in the issue tracker. Resolving these issues allow you to start
 contributing to the project without much prior knowledge.
