@@ -5,7 +5,7 @@
     :maxdepth: 1
     :hidden:
     :caption: Contents:
-    
+
     self
     user_guide
 

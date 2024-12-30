@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Script to launch a stable-SSL run from the command line."""
 
 # Author: Hugues Van Assel <vanasselhugues@gmail.com>
@@ -7,6 +6,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
+
 import hydra
 from omegaconf import OmegaConf
 

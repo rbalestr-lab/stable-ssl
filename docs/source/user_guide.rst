@@ -29,7 +29,7 @@ In ``stable-SSL``, the main ``trainer`` object must inherit from the ``BaseTrain
 
    BaseTrainer
 
-:mod:`stable_ssl.trainers` provides default trainer classes for various self-supervised learning approaches. 
+:mod:`stable_ssl.trainers` provides default trainer classes for various self-supervised learning approaches.
 
 Here is what instantiating an SSL trainer class from ``stable_ssl.trainers`` looks like in the YAML configuration file:
 
@@ -61,8 +61,8 @@ Here's an example of how to define the `loss` section in your YAML file:
 data
 ~~~~
 
-The ``data`` keyword specifies the settings for data loading, preprocessing, and data augmentation. 
-Multiple datasets can be defined, with the dataset named ``train`` used for training. 
+The ``data`` keyword specifies the settings for data loading, preprocessing, and data augmentation.
+Multiple datasets can be defined, with the dataset named ``train`` used for training.
 Other datasets, which can have any name, are used for evaluation purposes.
 
 Example:
@@ -96,7 +96,7 @@ Example:
                      p: 0.5
                      - _target_: torchvision.transforms.v2.ToImage
                      - _target_: torchvision.transforms.v2.ToDtype
-                     dtype: 
+                     dtype:
                         _target_: stable_ssl.utils.str_to_dtype
                         _args_: [float32]
                      scale: True
@@ -114,7 +114,7 @@ Example:
                transforms:
                - _target_: torchvision.transforms.v2.ToImage
                - _target_: torchvision.transforms.v2.ToDtype
-                  dtype: 
+                  dtype:
                      _target_: stable_ssl.utils.str_to_dtype
                      _args_: [float32]
                   scale: True
@@ -125,7 +125,7 @@ Example:
 module
 ~~~~~~
 
-The ``module`` keyword is used to define the settings of all the neural networks used, including the architecture of the backbone, projectors etc. 
+The ``module`` keyword is used to define the settings of all the neural networks used, including the architecture of the backbone, projectors etc.
 
 :mod:`stable_ssl.modules` provides a variety of utility functions that can be used to load specific architectures and pre-trained models.
 
@@ -192,7 +192,7 @@ Example:
 
    optim:
     epochs: 1000
-    optimizer: 
+    optimizer:
       _target_: stable_ssl.optimizers.LARS
       _partial_: True
       lr: 5
@@ -208,7 +208,7 @@ Example:
 logger
 ~~~~~~
 
-The ``logger`` keyword is used to configure the logging settings for your run. 
+The ``logger`` keyword is used to configure the logging settings for your run.
 
 One important section is ``metrics``, which lets you define the evaluation metrics to track during training. Metrics can be specified for each dataset.
 

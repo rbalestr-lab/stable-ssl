@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Base class for training a model."""
 #
 # Author: Hugues Van Assel <vanasselhugues@gmail.com>
@@ -7,34 +6,33 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-import logging
-import time
-import hydra
 import gc
-import numpy as np
-import submitit
-import jsonlines
-from tqdm import tqdm
-import subprocess
+import logging
 import os
-import omegaconf
+import subprocess
+import time
 from abc import abstractmethod
-
 from dataclasses import asdict
 
+import hydra
+import jsonlines
+import numpy as np
+import omegaconf
+import submitit
 import torch
+from tqdm import tqdm
 
-from .data import DistributedSamplerWrapper
 from . import reader
 from .config import (
-    LoggerConfig,
-    WandbConfig,
     HardwareConfig,
+    LoggerConfig,
     OptimConfig,
+    WandbConfig,
     collapse_nested_dict,
 )
-from .monitors import Monitor
+from .data import DistributedSamplerWrapper
 from .modules import TeacherStudentModule
+from .monitors import Monitor
 
 try:
     import wandb
@@ -47,10 +45,10 @@ from .utils import (
     BreakAllEpochs,
     BreakEpoch,
     NanError,
-    seed_everything,
-    to_device,
     get_gpu_info,
     log_and_raise,
+    seed_everything,
+    to_device,
 )
 
 
@@ -616,7 +614,6 @@ class BaseTrainer(torch.nn.Module):
                         total=max_steps,
                         desc=f"Eval {name_loader}: {self.epoch=}",
                     ):
-
                         # Call any user specified pre-step function.
                         self.before_eval_step()
 
@@ -725,7 +722,6 @@ class BaseTrainer(torch.nn.Module):
             dist_env = submitit.JobEnvironment()
             port = 10000 + int(os.environ["SLURM_JOBID"]) % 55000
             if "SLURM_JOB_NODELIST" in os.environ:
-
                 cmd = ["scontrol", "show", "hostnames", os.getenv("SLURM_JOB_NODELIST")]
                 host_name = subprocess.check_output(cmd).decode().splitlines()[0]
                 dist_url = f"tcp://{host_name}:{port}"

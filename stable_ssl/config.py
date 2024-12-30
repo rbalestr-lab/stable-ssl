@@ -1,4 +1,3 @@
-# # -*- coding: utf-8 -*-
 """Configuration classes specifying default parameters for stable-SSL."""
 
 # # Author: Hugues Van Assel <vanasselhugues@gmail.com>
@@ -7,15 +6,16 @@
 # # This source code is licensed under the license found in the
 # # LICENSE file in the root directory of this source tree.
 
-from typing import Optional, Union
+import logging
+import lzma
+import pickle
 from dataclasses import dataclass, field
 from pathlib import Path
-import pickle
-import lzma
+from typing import Optional, Union
+
 import hydra
-from hydra.core.hydra_config import HydraConfig
-import logging
 import omegaconf
+from hydra.core.hydra_config import HydraConfig
 
 
 def collapse_nested_dict(
@@ -72,7 +72,7 @@ def collapse_nested_dict(
 
 
 def instanciate_config(cfg=None, debug_hash=None) -> object:
-    """Instanciate the config and debug hash."""
+    """Instantiate the config and debug hash."""
     if debug_hash is None:
         assert cfg is not None
         print("Your debugging hash:", lzma.compress(pickle.dumps(cfg)))

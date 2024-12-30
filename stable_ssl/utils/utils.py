@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 """Utility functions."""
+
 #
 # Author: Randall Balestriero <randallbalestriero@gmail.com>
 #         Hugues Van Assel <vanasselhugues@gmail.com>
@@ -7,17 +7,17 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-import random
-import os
-import time
-import subprocess
 import logging
-from contextlib import closing
+import os
+import random
 import socket
-import numpy as np
+import subprocess
+import time
+from contextlib import closing
 from functools import cache
-from typing import Union, Tuple
+from typing import Tuple, Union
 
+import numpy as np
 import torch
 import torch.distributed as dist
 
@@ -182,7 +182,7 @@ def off_diagonal(x):
 
 
 def get_open_port():
-    """Request the OS for any unusued port."""
+    """Request the OS for any unused port."""
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
         s.bind(("", 0))
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

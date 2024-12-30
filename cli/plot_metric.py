@@ -1,8 +1,9 @@
 import argparse
+import logging
 from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
-import logging
 import pandas as pd
 
 import stable_ssl as ssl

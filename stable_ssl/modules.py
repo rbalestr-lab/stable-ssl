@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Neural network modules."""
 #
 # Author: Randall Balestriero <randallbalestriero@gmail.com>
@@ -7,12 +6,12 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-import torchvision
+import copy
+import logging
+
 import torch
 import torch.nn as nn
-
-import logging
-import copy
+import torchvision
 
 from .utils import log_and_raise
 

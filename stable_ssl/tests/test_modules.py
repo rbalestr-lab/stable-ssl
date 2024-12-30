@@ -1,12 +1,13 @@
 import pytest
 import torch
 import torch.nn as nn
+
 from stable_ssl.modules import (
-    load_backbone,
-    TeacherStudentModule,
     MLP,
-    Resnet9,
     ConvMixer,
+    Resnet9,
+    TeacherStudentModule,
+    load_backbone,
 )
 
 

@@ -3,9 +3,10 @@ This script demonstrates how to launch a run using the stable-SSL library.
 python benchmarks/run.py
 """
 
-import stable_ssl
 import hydra
 from omegaconf import OmegaConf
+
+import stable_ssl
 
 OmegaConf.register_new_resolver("eval", eval)
 

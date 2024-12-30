@@ -6,19 +6,18 @@
 
 
 from .__about__ import (
-    __title__,
-    __summary__,
-    __version__,
-    __url__,
     __author__,
     __license__,
+    __summary__,
+    __title__,
+    __url__,
+    __version__,
 )
-
 from .base import BaseTrainer
-from .trainers import SupervisedTrainer, JointEmbeddingTrainer, SelfDistillationTrainer
-from .losses import NTXEntLoss, VICRegLoss, BarlowTwinsLoss, NegativeCosineSimilarity
 from .config import instanciate_config
+from .losses import BarlowTwinsLoss, NegativeCosineSimilarity, NTXEntLoss, VICRegLoss
 from .modules import load_backbone
+from .trainers import JointEmbeddingTrainer, SelfDistillationTrainer, SupervisedTrainer
 
 __all__ = [
     "__title__",

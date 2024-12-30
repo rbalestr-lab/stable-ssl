@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Optimizers."""
 #
 # Author: Randall Balestriero <randallbalestriero@gmail.com>
@@ -47,11 +46,11 @@ class LARS(Optimizer):
         epsilon=0,
     ):
         if lr is not required and lr < 0.0:
-            raise ValueError("Invalid learning rate: {}".format(lr))
+            raise ValueError(f"Invalid learning rate: {lr}")
         if momentum < 0.0:
-            raise ValueError("Invalid momentum value: {}".format(momentum))
+            raise ValueError(f"Invalid momentum value: {momentum}")
         if weight_decay < 0.0:
-            raise ValueError("Invalid weight_decay value: {}".format(weight_decay))
+            raise ValueError(f"Invalid weight_decay value: {weight_decay}")
 
         defaults = dict(
             lr=lr,
@@ -66,11 +65,11 @@ class LARS(Optimizer):
             raise ValueError(
                 "Nesterov momentum requires a momentum and zero dampening."
             )
-        super(LARS, self).__init__(params, defaults)
+        super().__init__(params, defaults)
 
     def __setstate__(self, state):
         """Set the optimizer state."""
-        super(LARS, self).__setstate__(state)
+        super().__setstate__(state)
         for group in self.param_groups:
             group.setdefault("nesterov", False)
 

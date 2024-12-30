@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Reader for logs."""
 #
 # Author: Randall Balestriero <randallbalestriero@gmail.com>
@@ -15,14 +14,15 @@ except ModuleNotFoundError:
         "Wandb module is not installed, make sure to not use wandb for logging "
         "or an error will be thrown."
     )
-import pandas as pd
-import numpy as np
-from multiprocessing import Pool
-from tqdm import tqdm
-import jsonlines
-from pathlib import Path
-import omegaconf
 import logging
+from multiprocessing import Pool
+from pathlib import Path
+
+import jsonlines
+import numpy as np
+import omegaconf
+import pandas as pd
+from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
 
 

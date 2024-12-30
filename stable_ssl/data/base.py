@@ -1,11 +1,11 @@
 import logging
-from typing import Optional
+from typing import Iterable, Optional, Union
+
 import numpy as np
-from typing import Union
 import torch
-from stable_ssl.utils import log_and_raise
 from typing_extensions import override
-from typing import Iterable
+
+from stable_ssl.utils import log_and_raise
 
 
 class _DatasetSamplerWrapper(torch.utils.data.Dataset):
@@ -227,7 +227,7 @@ class HuggingFace(torch.utils.data.Dataset):
 
         Returns
         -------
-            int: lenght
+            int: length
         """
         return len(self.dataset)
 

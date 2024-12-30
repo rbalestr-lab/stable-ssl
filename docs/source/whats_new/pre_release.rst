@@ -1,6 +1,6 @@
 
 Pre-Release
-------------    
+------------
 
 - Base modules for training a model : fully supervised or self supervised.
 - Classes to load a dataset and create a dataloader.

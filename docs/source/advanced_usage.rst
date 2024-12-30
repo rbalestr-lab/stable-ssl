@@ -23,7 +23,7 @@
 .. .. code-block:: bash
 
 ..    python3 main.py --config-name=simclr_cifar10_sgd ++optim.lr=2
-   
+
 .. .. # same but with SLURM
 .. .. python3 main.py --config-name=simclr_cifar10_sgd ++optim.epochs=4 ++optim.lr=1 hydra/launcher=submitit_slurm hydra.launcher.timeout_min=1800 hydra.launcher.cpus_per_task=4 hydra.launcher.gpus_per_task=1 hydra.launcher.partition=gpu-he
 
@@ -134,7 +134,7 @@
 
 .. .. _slurm:
 
-.. To launch on slurm simply add ``hydra/launcher=submitit_slurm`` in the command line, for instance: 
+.. To launch on slurm simply add ``hydra/launcher=submitit_slurm`` in the command line, for instance:
 
 .. .. code-block:: bash
 
@@ -148,4 +148,3 @@
 
 ..    defaults:
 ..      - override hydra/launcher: submitit_slurm
-

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Exceptions."""
 #
 # Author: Randall Balestriero <randallbalestriero@gmail.com>

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Training/evaluation metrics that are computed at the end of each step."""
 #
 # Author: @sami-bg

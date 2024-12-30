@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """SSL losses."""
 #
 # Author: Hugues Van Assel <vanasselhugues@gmail.com>
@@ -10,7 +9,7 @@
 import torch
 import torch.nn.functional as F
 
-from stable_ssl.utils import gather, off_diagonal, all_reduce
+from stable_ssl.utils import all_reduce, gather, off_diagonal
 
 
 class NTXEntLoss(torch.nn.Module):

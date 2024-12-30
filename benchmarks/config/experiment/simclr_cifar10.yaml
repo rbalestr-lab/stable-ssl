@@ -39,12 +39,12 @@ trainer:
                 - _target_: torchvision.transforms.v2.RandomApply
                   p: 0.8
                   transforms:
-                    - { 
+                    - {
                         _target_: torchvision.transforms.v2.ColorJitter,
                         brightness: 0.8,
                         contrast: 0.8,
                         saturation: 0.8,
-                        hue: 0.2 
+                        hue: 0.2,
                       }
                 - _target_: stable_ssl.data.augmentations.GaussianBlur
                   sigma:
@@ -52,7 +52,7 @@ trainer:
                     - 2.0
                 - _target_: torchvision.transforms.v2.ToImage
                 - _target_: torchvision.transforms.v2.ToDtype
-                  dtype: 
+                  dtype:
                     _target_: stable_ssl.utils.str_to_dtype
                     _args_: [float32]
                   scale: True
@@ -70,7 +70,7 @@ trainer:
           transforms:
             - _target_: torchvision.transforms.v2.ToImage
             - _target_: torchvision.transforms.v2.ToDtype
-              dtype: 
+              dtype:
                 _target_: stable_ssl.utils.str_to_dtype
                 _args_: [float32]
               scale: True
@@ -97,7 +97,7 @@ trainer:
   # ===== Optim Parameters =====
   optim:
     epochs: 1000
-    optimizer: 
+    optimizer:
       _target_: stable_ssl.optimizers.LARS
       _partial_: True
       lr: 5

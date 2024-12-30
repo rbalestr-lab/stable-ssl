@@ -31,7 +31,7 @@ base:
               p: 0.2
             - _target_: torchvision.transforms.v2.ToImage
             - _target_: torchvision.transforms.v2.ToDtype
-              dtype: 
+              dtype:
                 _target_: stable_ssl.utils.str_to_dtype
                 _args_: [float32]
               scale: True
@@ -49,7 +49,7 @@ test_out:
       transforms:
         - _target_: torchvision.transforms.v2.ToImage
         - _target_: torchvision.transforms.v2.ToDtype
-          dtype: 
+          dtype:
             _target_: stable_ssl.utils.str_to_dtype
             _args_: [float32]
           scale: True

@@ -4,15 +4,15 @@ with class imbalance.
 """
 
 import hydra
-from omegaconf import DictConfig
+import numpy as np
 import torch
 import torch.nn.functional as F
 import torchvision
+from omegaconf import DictConfig
 from torchvision import transforms
 
 import stable_ssl as ssl
 from stable_ssl.supervised import Supervised
-import numpy as np
 
 
 class MyCustomSupervised(Supervised):
@@ -74,7 +74,6 @@ class MyCustomSupervised(Supervised):
 
 @hydra.main(version_base=None)
 def main(cfg: DictConfig):
-
     args = ssl.get_args(cfg)
 
     print("--- Arguments ---")
@@ -89,8 +88,8 @@ def main(cfg: DictConfig):
 
 def visualization():
     import matplotlib.pyplot as plt
-    from matplotlib import colormaps
     import seaborn
+    from matplotlib import colormaps
 
     seaborn.set(font_scale=2)
 

@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
-"""Template classes to easily instanciate Supervised or SSL trainers."""
+"""Template classes to easily instantiate Supervised or SSL trainers."""
+
 #
 # Author: Hugues Van Assel <vanasselhugues@gmail.com>
 #         Randall Balestriero <randallbalestriero@gmail.com>
@@ -11,9 +11,8 @@ import torch
 import torch.nn.functional as F
 
 from .base import BaseTrainer
-from .utils import log_and_raise, compute_global_mean
 from .modules import TeacherStudentModule
-
+from .utils import compute_global_mean, log_and_raise
 
 # ==========================================
 # Base trainers that require a loss function
@@ -67,7 +66,7 @@ class JointEmbeddingTrainer(BaseTrainer):
         elif (
             len(self.batch) > 1
             and all([torch.is_tensor(b) for b in self.batch])
-            and len(set([b.ndim for b in self.batch])) == 1
+            and len({b.ndim for b in self.batch}) == 1
         ):
             # we assume all elements are views
             views = self.batch

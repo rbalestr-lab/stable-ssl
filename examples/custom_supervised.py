@@ -4,10 +4,10 @@ This example demonstrates how to create a custom supervised model using the
 """
 
 import hydra
-from omegaconf import DictConfig
 import torch
 import torch.nn.functional as F
 import torchvision
+from omegaconf import DictConfig
 from torchvision import transforms
 
 import stable_ssl
@@ -62,7 +62,6 @@ class MyCustomSupervised(Supervised):
 
 @hydra.main()
 def main(cfg: DictConfig):
-
     args = stable_ssl.get_args(cfg)
 
     print("--- Arguments ---")
