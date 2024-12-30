@@ -26,4 +26,5 @@
     :maxdepth: 1
     :caption: References
 
+    contributing
     bibliography
