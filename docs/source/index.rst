@@ -8,7 +8,7 @@
 
     self
     user_guide
-    whats_new
+    releases
     contributing
     bibliography
 
