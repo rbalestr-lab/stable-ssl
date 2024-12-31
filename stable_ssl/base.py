@@ -236,10 +236,10 @@ class BaseTrainer(torch.nn.Module):
     def get_logs(self, keys=None):
         """Retrieve the logs from the logger."""
         if self.logger["wandb"] is None:
-            logging.info("Retreiving JSONL logs")
+            logging.info("Retrieving JSONL logs")
             return reader.jsonl(self.logger["dump_path"])
         else:
-            logging.info("Retreiving Wandb logs")
+            logging.info("Retrieving Wandb logs")
             return reader.wandb(
                 self.logger["wandb"]["entity"],
                 self.logger["wandb"]["project"],
