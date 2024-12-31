@@ -1,4 +1,5 @@
 """Reader for logs."""
+
 #
 # Author: Randall Balestriero <randallbalestriero@gmail.com>
 #
@@ -112,7 +113,7 @@ def wandb(entity, project, run_id, max_steps=-1, keys=None):
     run = api.run(f"{entity}/{project}/{run_id}")
 
     if max_steps == -1:
-        max_steps = run.lastHistoryStep
+        max_steps = run.lastHistoryStep + 1
 
     summary = run.summary
     # extract names that are not hidden

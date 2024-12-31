@@ -1,4 +1,5 @@
 """Base class for training a model."""
+
 #
 # Author: Hugues Van Assel <vanasselhugues@gmail.com>
 #         Randall Balestriero <randallbalestriero@gmail.com>
@@ -235,12 +236,14 @@ class BaseTrainer(torch.nn.Module):
     def get_logs(self, keys=None):
         """Retrieve the logs from the logger."""
         if self.logger["wandb"] is None:
+            logging.info("Retreiving JSONL logs")
             return reader.jsonl(self.logger["dump_path"])
         else:
+            logging.info("Retreiving Wandb logs")
             return reader.wandb(
                 self.logger["wandb"]["entity"],
                 self.logger["wandb"]["project"],
-                self.logger["wandb"]["ID"],
+                self.logger["wandb"]["id"],
                 keys=keys,
             )
 
