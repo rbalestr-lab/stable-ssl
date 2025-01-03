@@ -79,7 +79,7 @@ class MultiViewSampler:
 
 
 def resample_classes(dataset, samples_or_freq, random_seed=None):
-    """Create an exponential class imbalance.
+    """Resample classes to reach a specific number of samples or frequency per class.
 
     Parameters
     ----------

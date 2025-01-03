@@ -18,9 +18,10 @@
     :maxdepth: 1
     :caption: API
 
-    trainers
-    losses
-    modules
-    optimizers
-    schedulers
-    monitors
+    api/trainers
+    api/data
+    api/losses
+    api/modules
+    api/optimizers
+    api/schedulers
+    api/monitors
