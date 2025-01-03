@@ -1,3 +1,11 @@
+"""Data utilities for stable-ssl."""
+
+# Author: Hugues Van Assel <vanasselhugues@gmail.com>
+#         Randall Balestriero <randallbalestriero@gmail.com>
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+
 import logging
 from typing import Iterable, Optional, Union
 
@@ -36,7 +44,7 @@ class DistributedSamplerWrapper(torch.utils.data.DistributedSampler):
     Parameters
     ----------
     sampler: iterable
-        the original dataloader sampler
+        The original dataset sampler.
     """
 
     def __init__(self, sampler, *args, **kwargs) -> None:
@@ -68,56 +76,6 @@ class MultiViewSampler:
         if len(self.transforms) == 1:
             return views[0]
         return views
-
-
-# def load_dataset(dataset_name, data_path, train=True):
-#     """
-#     Load a dataset from torchvision.datasets.
-#     Uses PositivePairSampler for training and ValSampler for validation.
-#     If coeff_imbalance is not None, create an imbalanced version of the dataset with
-#     the specified coefficient (exponential imbalance).
-#     """
-
-#     if not hasattr(torchvision.datasets, dataset_name):
-#         raise ValueError(f"Dataset {dataset_name} not found in torchvision.datasets.")
-
-#     torchvision_dataset = getattr(torchvision.datasets, dataset_name)
-
-#     if train:
-#         return torchvision_dataset(
-#             root=data_path,
-#             train=True,
-#             download=True,
-#             transform=Sampler(dataset=dataset_name),
-#         )
-
-#     return torchvision_dataset(
-#         root=data_path,
-#         train=False,
-#         download=True,
-#         transform=ValSampler(dataset=dataset_name),
-#     )
-
-
-# def imbalance_torchvision_dataset(
-#     data_path, dataset, dataset_name, coeff_imbalance=2.0
-# ):
-#     save_path = os.path.join(data_path, f"imbalanced_coeff_{coeff_imbalance}.pt")
-
-#     if not os.path.exists(save_path):
-#         data, labels = from_torchvision(data_path=data_path, dataset=dataset)
-#         imbalanced_data, imbalanced_labels = resample_classes(
-#             data, labels, coeff_imbalance=coeff_imbalance
-#         )
-#       imbalanced_dataset = {"features": imbalanced_data, "labels": imbalanced_labels}
-#         save_path = os.path.join(data_path, f"imbalanced_coeff_{coeff_imbalance}.pt")
-#         torch.save(imbalanced_dataset, save_path)
-
-#         print(f"[stable-SSL] Subsampling : imbalanced dataset saved to {save_path}.")
-
-#     return CustomTorchvisionDataset(
-#         root=save_path, transform=PositivePairSampler(dataset=dataset_name)
-#     )
 
 
 def resample_classes(dataset, samples_or_freq, random_seed=None):
