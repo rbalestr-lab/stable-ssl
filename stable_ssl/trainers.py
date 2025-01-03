@@ -100,7 +100,7 @@ class JointEmbeddingTrainer(BaseTrainer):
         representations = [self.module["backbone"](view) for view in views]
         self._latest_representations = representations
 
-        embeddings = [self.module["projector"](_repr) for _repr in representations]
+        embeddings = [self.module["projector"](rep) for rep in representations]
         self._latest_embeddings = embeddings
 
         loss_ssl = self.loss(*embeddings)
@@ -111,19 +111,19 @@ class JointEmbeddingTrainer(BaseTrainer):
 
         return {"loss_ssl": loss_ssl, **classifier_losses}
 
-    def compute_loss_classifiers(self, embeddings, projections, labels):
+    def compute_loss_classifiers(self, representations, embeddings, labels):
         """Compute the classifier loss for both backbone and projector."""
         loss_backbone_classifier = 0
         loss_projector_classifier = 0
 
         # Inputs are detached to avoid backprop through backbone and projector.
         if labels is not None:
-            for embed, proj in zip(embeddings, projections):
+            for rep, embed in zip(representations, embeddings):
                 loss_backbone_classifier += F.cross_entropy(
-                    self.module["backbone_classifier"](embed.detach()), labels
+                    self.module["backbone_classifier"](rep.detach()), labels
                 )
                 loss_projector_classifier += F.cross_entropy(
-                    self.module["projector_classifier"](proj.detach()), labels
+                    self.module["projector_classifier"](embed.detach()), labels
                 )
 
         return {
@@ -131,12 +131,6 @@ class JointEmbeddingTrainer(BaseTrainer):
             "loss_projector_classifier": loss_projector_classifier,
         }
 
-    # NOTE From the LiDAR paper:
-    # "We adopt the terminology in (Garrido et al., 2022), and refer to the
-    # output of the encoder f as a representation, and the output of the
-    # composed encoder and projector # e = ψ◦f as an embedding"
-    # My assumption is that all SSL methods have `representations` but only `JEA` draws
-    # the distinction between `representations` and `embeddings`.
     @property
     def latest_embeddings(self):
         if not hasattr(self, "_latest_embeddings"):
@@ -180,37 +174,37 @@ class SelfDistillationTrainer(JointEmbeddingTrainer):
 
         views, labels = self.format_views_labels()
 
-        embeddings_student = [
+        representations_student = [
             self.module["backbone"].forward_student(view) for view in views
         ]
-        projections_student = [
-            self.module["projector"].forward_student(embed)
-            for embed in embeddings_student
+        embeddings_student = [
+            self.module["projector"].forward_student(rep)
+            for rep in representations_student
         ]
 
-        # If a predictor is used, it is applied to the student projections.
+        # If a predictor is used, it is applied to the student embeddings.
         if "predictor" in self.module:
-            projections_student = [
-                self.module["predictor"](proj) for proj in projections_student
+            embeddings_student = [
+                self.module["predictor"](embed) for embed in embeddings_student
             ]
 
-        embeddings_teacher = [
+        representations_teacher = [
             self.module["backbone"].forward_teacher(view) for view in views
         ]
-        self.latest_representations = embeddings_teacher
-        projections_teacher = [
-            self.module["projector"].forward_teacher(embed)
-            for embed in embeddings_teacher
+        self.latest_representations = representations_teacher
+        embeddings_teacher = [
+            self.module["projector"].forward_teacher(rep)
+            for rep in representations_teacher
         ]
-        self.latest_embeddings = projections_teacher
+        self.latest_embeddings = embeddings_teacher
 
         loss_ssl = 0.5 * (
-            self.loss(projections_student[0], projections_teacher[1])
-            + self.loss(projections_student[1], projections_teacher[0])
+            self.loss(embeddings_student[0], embeddings_teacher[1])
+            + self.loss(embeddings_student[1], embeddings_teacher[0])
         )
 
         classifier_losses = self.compute_loss_classifiers(
-            embeddings_teacher, projections_teacher, labels
+            representations_teacher, embeddings_teacher, labels
         )
 
         return {"loss_ssl": loss_ssl, **classifier_losses}
@@ -273,46 +267,46 @@ class DINOTrainer(SelfDistillationTrainer):
         """Compute the DINO loss."""
         views, labels = self.format_views_labels()
 
-        embeddings_student = [
+        representations_student = [
             self.module["backbone"].forward_student(view) for view in views
         ]
-        projections_student = [
-            self.module["projector"].forward_student(embed)
-            for embed in embeddings_student
+        embeddings_student = [
+            self.module["projector"].forward_student(rep)
+            for rep in representations_student
         ]
 
         # Construct target *from global views only* with the target ('teacher') network.
         with torch.no_grad():
             global_views = self.batch[0][:2]  # First two views should be global views.
-            embeddings_teacher = [
+            representations_teacher = [
                 self.module["backbone"].forward_teacher(view) for view in global_views
             ]
-            self.latest_representations = embeddings_teacher
-            projections_teacher = [
-                self.module["projector"].forward_teacher(embed)
-                for embed in embeddings_teacher
+            self.latest_representations = representations_teacher
+            embeddings_teacher = [
+                self.module["projector"].forward_teacher(rep)
+                for rep in representations_teacher
             ]
-            self.latest_embeddings = projections_teacher
+            self.latest_embeddings = embeddings_teacher
 
         if self.epoch < self.warmup_epochs_temperature_teacher:
             temperature_teacher = self.temperature_teacher_schedule[self.epoch]
         else:
             temperature_teacher = self.temperature_teacher
 
-        stacked_projections_teacher = torch.stack(projections_teacher)
+        stacked_embeddings_teacher = torch.stack(embeddings_teacher)
         if hasattr(self, "center"):
             probs_teacher = F.softmax(
-                (stacked_projections_teacher - self.center) / temperature_teacher,
+                (stacked_embeddings_teacher - self.center) / temperature_teacher,
                 dim=-1,
             )
         else:
             probs_teacher = F.softmax(
-                stacked_projections_teacher / temperature_teacher, dim=-1
+                stacked_embeddings_teacher / temperature_teacher, dim=-1
             )
 
-        stacked_projections_student = torch.stack(projections_student)
+        stacked_embeddings_student = torch.stack(embeddings_student)
         log_probs_student = F.log_softmax(
-            stacked_projections_student / self.temperature_student, dim=-1
+            stacked_embeddings_student / self.temperature_student, dim=-1
         )
 
         # Compute the cross entropy loss between the student and teacher probabilities.
@@ -323,12 +317,12 @@ class DINOTrainer(SelfDistillationTrainer):
 
         # Normalize the loss.
         n_terms = loss_ssl.numel() - loss_ssl.diagonal().numel()
-        batch_size = stacked_projections_teacher.shape[1]
+        batch_size = stacked_embeddings_teacher.shape[1]
         loss_ssl = loss_ssl.sum() / (n_terms * batch_size)
 
         # Update the center of the teacher network.
         with torch.no_grad():
-            batch_center = compute_global_mean(stacked_projections_teacher, dim=(0, 1))
+            batch_center = compute_global_mean(stacked_embeddings_teacher, dim=(0, 1))
             if not hasattr(self, "center"):
                 self.center = batch_center
             else:
@@ -337,7 +331,7 @@ class DINOTrainer(SelfDistillationTrainer):
                 )
 
         classifier_losses = self.compute_loss_classifiers(
-            embeddings_teacher, projections_teacher, labels
+            representations_teacher, embeddings_teacher, labels
         )
 
         return {"loss_ssl": loss_ssl, **classifier_losses}
