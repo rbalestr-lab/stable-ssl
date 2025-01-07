@@ -236,11 +236,27 @@ class BaseTrainer(torch.nn.Module):
         """
         pass
 
-    def get_logs(self, keys=None):
+    def get_project_logs(self, keys=None, state=["finished"]):
+        """Retrieve the project logs from the logger."""
+        if self.logger["wandb"] is None:
+            raise NotImplementedError("For now only usable with Wandb")
+        return reader.wandb_project(
+            self.logger["wandb"]["entity"],
+            self.logger["wandb"]["project"],
+            keys=keys,
+            state=state,
+        )
+
+    def get_logs(self, keys=None, min_step=0, max_step=-1):
         """Retrieve the logs from the logger."""
         if self.logger["wandb"] is None:
             logging.info("Retrieving JSONL logs")
-            return reader.jsonl(self.logger["dump_path"])
+            logs = reader.jsonl(self.logger["dump_path"])
+            if min_step < 0:
+                min_step = len(logs) + min_step
+            if max_step == -1:
+                max_step = len(logs) + 1
+            return logs[min_step:max_step]
         else:
             logging.info("Retrieving Wandb logs")
             return reader.wandb(
@@ -248,6 +264,8 @@ class BaseTrainer(torch.nn.Module):
                 self.logger["wandb"]["project"],
                 self.logger["wandb"]["id"],
                 keys=keys,
+                max_step=max_step,
+                min_step=min_step,
             )
 
     def get_config(self):
