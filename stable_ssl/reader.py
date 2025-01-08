@@ -78,56 +78,76 @@ def config(path):
 
 
 def wandb_project(
-    entity, project, max_steps=-1, keys=None, num_workers=10, state="finished"
+    entity,
+    project,
+    min_step=0,
+    max_step=-1,
+    keys=None,
+    num_workers=10,
+    state=["finished"],
 ):
     """Download configs and data from a wandb project."""
     api = wandbapi.Api()
     runs = api.runs(f"{entity}/{project}")
-    runs = [r for r in runs if r.state == state]
-
-    configs = []
-    dfs = []
+    runs = [r for r in runs if r.state in state]
+    logging.info(f"Found {len(runs)} runs for project {project}")
     with Pool(num_workers) as p:
         results = list(
             tqdm(
                 p.imap(
                     _wandb_run_packed,
-                    [(entity, project, r.id, max_steps, keys) for r in runs],
+                    [(entity, project, r.id, min_step, max_step, keys) for r in runs],
                 ),
                 total=len(runs),
                 desc=f"Downloading project: {project}",
             )
         )
-    configs, dfs = zip(*results)
-    config = pd.DataFrame(configs)
-    return config, dfs
+    dfs = {}
+    for r, result in zip(runs, results):
+        dfs[r.name] = result
+    return dfs
 
 
 def _wandb_run_packed(args):
-    return wandb(*args)
+    return wandb(*args, _tqdm_disable=True)
 
 
-def wandb(entity, project, run_id, max_steps=-1, keys=None):
+def wandb(
+    entity, project, run_id, min_step=0, max_step=-1, keys=None, _tqdm_disable=False
+):
     """Download data for a single wandb run."""
     api = wandbapi.Api()
     run = api.run(f"{entity}/{project}/{run_id}")
 
-    if max_steps == -1:
-        max_steps = run.lastHistoryStep + 1
+    if max_step == -1:
+        max_step = run.lastHistoryStep + 1
+    if min_step < 0:
+        min_step = max_step + min_step
 
-    summary = run.summary
-    # extract names that are not hidden
-    columns = [k for k, v in summary.items() if k[0] != "_" and np.isscalar(v)]
-    # add back the runtime and timestamp and this is useful to users
-    columns += ["_runtime", "_timestamp"]
-    df = pd.DataFrame(index=range(max_steps), columns=columns)
-    df.index.name = "step"
+    if keys is None:
+        summary = run.summary
+        # extract names that are not hidden
+        keys = [k for k, v in summary.items() if k[0] != "_" and np.isscalar(v)]
+        # add back the runtime and timestamp and this is useful to users
+        keys += ["_runtime", "_timestamp", "_step"]
+    else:
+        if "_step" not in keys:
+            keys.append("_step")
+
+    data = []
     for row_idx, row in tqdm(
-        enumerate(run.scan_history(page_size=10000, keys=keys)),
-        total=max_steps,
+        enumerate(
+            run.scan_history(
+                page_size=10000, keys=keys, min_step=min_step, max_step=max_step
+            )
+        ),
+        total=max_step,
         desc=f"Downloading run: {run.name}",
+        disable=_tqdm_disable,
     ):
-        df.update(pd.DataFrame([row], index=[row_idx]))
+        data.append(row)
+    df = pd.DataFrame(data)
+    df.set_index("_step", inplace=True)
     # config = flatten_config(run.config)
     return df
 
