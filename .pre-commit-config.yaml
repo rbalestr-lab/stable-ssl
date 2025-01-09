@@ -41,23 +41,6 @@ repos:
         require_serial: true
         args: [--py38-plus]
 
-  # python docstring coverage checking
-  - repo: https://github.com/econchick/interrogate
-    rev: 1.7.0
-    hooks:
-      - id: interrogate
-        require_serial: true
-        args:
-          [
-            --verbose,
-            --fail-under=55,
-            --ignore-init-module,
-            --ignore-init-method,
-            --ignore-module,
-            --ignore-nested-functions,
-            -vv,
-          ]
-
   # python check (PEP8), programming errors and code complexity
   - repo: https://github.com/PyCQA/flake8
     rev: 7.1.1

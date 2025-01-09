@@ -8,7 +8,6 @@ from stable_ssl.data import (
     HuggingFaceDataset,
     MultiViewSampler,
     _DatasetSamplerWrapper,
-    resample_classes,
 )
 
 
