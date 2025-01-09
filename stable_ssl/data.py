@@ -7,10 +7,11 @@
 # LICENSE file in the root directory of this source tree.
 
 import logging
-from typing import Iterable, Optional, Union
+from typing import Callable, Iterable, Optional, Union
 
 import numpy as np
 import torch
+from datasets import load_dataset
 from typing_extensions import override
 
 from stable_ssl.utils import log_and_raise
@@ -66,7 +67,7 @@ class MultiViewSampler:
     """Apply a list of transforms to an input and return all outputs."""
 
     def __init__(self, transforms: list):
-        logging.info(f"MultiViewSampler initialized with {len(transforms)} views")
+        logging.info(f"MultiViewSampler initialized with {len(transforms)} views.")
         self.transforms = transforms
 
     def __call__(self, x):
@@ -78,135 +79,66 @@ class MultiViewSampler:
         return views
 
 
-def resample_classes(dataset, samples_or_freq, random_seed=None):
-    """Resample classes to reach a specific number of samples or frequency per class.
-
-    Parameters
-    ----------
-    dataset : torch.utils.data.Dataset
-        The input dataset.
-    samples_or_freq : iterable
-        Number of samples or frequency for each class in the new dataset.
-    random_seed : int, optional
-        The random seed for reproducibility. Default is None.
-
-    Returns
-    -------
-    torch.utils.data.Subset
-        Subset of the dataset with the resampled classes.
-
-    Raises
-    ------
-    ValueError
-        If the dataset does not have 'labels' or 'targets' attributes.
-    """
-    if hasattr(dataset, "labels"):
-        labels = dataset.labels
-    elif hasattr(dataset, "targets"):
-        labels = dataset.targets
-    else:
-        log_and_raise(ValueError, "Dataset does not have `labels`.")
-
-    classes, class_inverse, class_counts = np.unique(
-        labels, return_counts=True, return_inverse=True
-    )
-
-    logging.info(f"Subsampling : original class counts: {list(class_counts)}")
-
-    if np.min(samples_or_freq) < 0:
-        log_and_raise(
-            ValueError,
-            "There can't be any negative values in `samples_or_freq`, "
-            "got {samples_or_freq}.",
-        )
-    elif np.sum(samples_or_freq) <= 1:
-        target_class_counts = np.array(samples_or_freq) * len(dataset)
-    elif np.sum(samples_or_freq) == len(dataset):
-        freq = np.array(samples_or_freq) / np.sum(samples_or_freq)
-        target_class_counts = freq * len(dataset)
-        if (target_class_counts / class_counts).max() > 1:
-            log_and_raise(
-                ValueError, "Specified more samples per class than available."
-            )
-    else:
-        log_and_raise(
-            ValueError,
-            "Samples_or_freq needs to sum to <= 1 or len(dataset) "
-            f"({len(dataset)}), got {np.sum(samples_or_freq)}.",
-        )
-
-    target_class_counts = (
-        target_class_counts / (target_class_counts / class_counts).max()
-    ).astype(int)
-
-    logging.info(f"Subsampling : target class counts: {list(target_class_counts)}")
-
-    keep_indices = []
-    generator = np.random.Generator(np.random.PCG64(seed=random_seed))
-    for cl, count in zip(classes, target_class_counts):
-        cl_indices = np.flatnonzero(class_inverse == cl)
-        cl_indices = generator.choice(cl_indices, size=count, replace=False)
-        keep_indices.extend(cl_indices)
-
-    return torch.utils.data.Subset(dataset, indices=keep_indices)
-
-
-class HuggingFace(torch.utils.data.Dataset):
+class HuggingFaceDataset(torch.utils.data.Dataset):
     """Load a HuggingFace dataset.
 
     Parameters
     ----------
+    path: str
+        Path to the dataset (can be a Hugging Face dataset name or a local path).
     x: str
-        name of the column to treat as x (input)
+        Name of the column to treat as x (input).
     y: str
-        name of the column to treat as y (label)
-    transform (optional): callable
-        transform to apply on x
+        Name of the column to treat as y (label).
+    transform (optional): callable, default=None
+        Transform to apply on x. By default, no transform is applied (identity transform).
     *args: list
-        args to pass to datasets.load_dataset
+        Additional arguments to pass to `datasets.load_dataset`.
     **kwargs: dict
-        kwargs to pass to datasets.load_dataset
+        Additional keyword arguments to pass to `datasets.load_dataset`.
     """
 
     def __init__(
-        self, x: str, y: str, transform: Optional[callable], *args: list, **kwargs: dict
+        self,
+        path: str,
+        x: str,
+        y: str,
+        transform: Optional[Callable] = None,
+        *args: list,
+        **kwargs: dict,
     ):
-        from datasets import load_dataset
+        self.dataset = load_dataset(path, *args, **kwargs)
 
-        self.dataset = load_dataset(*args, **kwargs)
-        assert x in self.dataset.column_names
-        assert y in self.dataset.column_names
+        assert x in self.dataset.column_names, f"Column '{x}' not found in the dataset."
+        assert y in self.dataset.column_names, f"Column '{y}' not found in the dataset."
+
         self.x = x
         self.y = y
-        self.transform = transform
+        self.transform = transform if transform else lambda x: x
 
     def __len__(self) -> int:
-        """Get length of dataset.
-
-        Returns
-        -------
-            int: length
-        """
+        """Get the length of the dataset."""
         return len(self.dataset)
 
-    def __getitem__(self, i: Union[int, torch.Tensor]) -> tuple:
-        """Get an sample.
+    def __getitem__(self, idx: Union[int, torch.Tensor]) -> tuple:
+        """Get a sample from the dataset.
 
         Parameters
         ----------
-        i: int
-            index to sample from the dataset
+        idx: int or torch.Tensor
+            Index to sample from the dataset.
 
         Returns
         -------
-            tuple: (transform(x), y)
+        tuple: (transformed x, y)
+            A tuple containing the transformed input (x) and the label (y).
         """
-        if torch.is_tensor(i) and i.dim() == 0:
-            i = i.item()
-        x = self.dataset[i][self.x]
-        if self.transform is not None:
-            xt = self.transform(x)
-        else:
-            xt = x
-        y = self.dataset[i][self.y]
-        return xt, y
+        if isinstance(idx, torch.Tensor) and idx.dim() == 0:
+            idx = idx.item()
+
+        x = self.dataset[idx][self.x]
+        y = self.dataset[idx][self.y]
+
+        x_transformed = self.transform(x)
+
+        return x_transformed, y

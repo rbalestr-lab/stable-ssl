@@ -9,10 +9,4 @@ stable_ssl.data
 
    DistributedSamplerWrapper
    MultiViewSampler
-   HuggingFace
-
-.. autosummary::
-   :toctree: gen_modules/
-   :template: myfunc_template.rst
-
-   resample_classes
+   HuggingFaceDataset

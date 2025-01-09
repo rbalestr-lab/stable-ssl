@@ -24,6 +24,7 @@ dependencies = [
     "jsonlines",
     "torchmetrics",
     "scipy",
+    "datasets",
 ]
 
 dynamic = ["version"]
@@ -45,7 +46,6 @@ dev = [
     "numpydoc",
     "pytest-cov",
     "codecov",
-    "pykeops",
     "pre-commit",
 ]
 
