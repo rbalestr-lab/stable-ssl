@@ -41,12 +41,12 @@ version = {attr = "stable_ssl.__about__.__version__"}
 [project.optional-dependencies]
 dev = [
     "pytest",
-    "flake8",
     "coverage",
     "numpydoc",
     "pytest-cov",
     "codecov",
     "pre-commit",
+    "ruff",
 ]
 
 doc = [
@@ -58,5 +58,4 @@ doc = [
     "numpydoc",
     "memory_profiler",
     "myst-parser",
-    "pydocstyle",
 ]

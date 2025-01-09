@@ -1,4 +1,5 @@
 """Neural network modules."""
+
 #
 # Author: Randall Balestriero <randallbalestriero@gmail.com>
 #         Hugues Van Assel <vanasselhugues@gmail.com>

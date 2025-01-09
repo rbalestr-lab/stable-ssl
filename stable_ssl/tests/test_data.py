@@ -1,13 +1,6 @@
-import numpy as np
-import pytest
-import torch
-from torch.utils.data import Dataset
-
 from stable_ssl.data import (
-    DistributedSamplerWrapper,
     HuggingFaceDataset,
     MultiViewSampler,
-    _DatasetSamplerWrapper,
 )
 
 
@@ -24,10 +17,6 @@ def test_multiview_sampler():
 
 
 def test_huggingface_dataset():
-    from datasets import load_dataset
-
-    mnist_dataset = load_dataset("mnist", split="train[:1000]")
-
     hf_dataset = HuggingFaceDataset(
         path="mnist",
         x="image",

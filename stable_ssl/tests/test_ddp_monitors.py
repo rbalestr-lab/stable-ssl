@@ -19,8 +19,8 @@ def ddp_env(monkeypatch):
 
 
 def ddp_worker_lidar(rank: int, world_size: int, backend: str):
-    """
-    Worker function for testing LiDAR in DDP.
+    """Worker function for testing LiDAR in DDP.
+
     Each spawned process calls this, with a unique rank.
     """
     with ddp_group_manager(rank, world_size, backend):
@@ -34,9 +34,7 @@ def ddp_worker_lidar(rank: int, world_size: int, backend: str):
 
 
 def ddp_worker_rankme(rank: int, world_size: int, backend: str):
-    """
-    Worker function for testing RankMe in DDP.
-    """
+    """Worker function for testing RankMe in DDP."""
     with ddp_group_manager(rank, world_size, backend):
         local_batch_size, d = 5, 8
         local_encoding = torch.randn(local_batch_size, d) + rank
@@ -54,9 +52,7 @@ def ddp_worker_rankme(rank: int, world_size: int, backend: str):
 @pytest.mark.usefixtures("ddp_env")
 @pytest.mark.parametrize("backend", ["gloo"])
 def test_lidar_ddp(backend: str):
-    """
-    Pytest test that spawns multiple CPU processes to test LiDAR in a DDP environment.
-    """
+    """Pytest test that spawns multiple CPU processes to test LiDAR in a DDP environment."""
     world_size = 2
 
     mp.spawn(ddp_worker_lidar, args=(world_size, backend), nprocs=world_size, join=True)
@@ -65,9 +61,7 @@ def test_lidar_ddp(backend: str):
 @pytest.mark.usefixtures("ddp_env")
 @pytest.mark.parametrize("backend", ["gloo"])
 def test_rankme_ddp(backend: str):
-    """
-    Pytest test that spawns multiple CPU processes to test RankMe in a DDP environment.
-    """
+    """Pytest test that spawns multiple CPU processes to test RankMe in a DDP environment."""
     world_size = 2
 
     mp.spawn(

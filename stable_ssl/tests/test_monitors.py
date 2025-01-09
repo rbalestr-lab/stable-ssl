@@ -6,9 +6,7 @@ from stable_ssl.monitors import LiDAR, RankMe
 
 @pytest.fixture
 def random_seed() -> None:
-    """
-    Pytest fixture to fix the random seed for reproducibility.
-    """
+    """Pytest fixture to fix the random seed for reproducibility."""
     torch.manual_seed(1234)
 
 
@@ -22,9 +20,7 @@ def device() -> torch.device:
 # --------------------------------------------------------------------------
 @pytest.mark.usefixtures("random_seed")
 def test_lidar_smoke(device: torch.device) -> None:
-    """
-    Basic smoke test to ensure LiDAR runs without error and returns a float.
-    """
+    """Basic smoke test to ensure LiDAR runs without error and returns a float."""
     batch_size, q, d = 4, 2, 8
     embeddings = [torch.randn((q, d), device=device) for _ in range(batch_size)]
 
@@ -38,7 +34,8 @@ def test_lidar_smoke(device: torch.device) -> None:
 
 @pytest.mark.usefixtures("random_seed")
 def test_lidar_identical_embeddings(device: torch.device) -> None:
-    """
+    """Test LiDAR with identical embeddings.
+
     If all embeddings are identical, the between-class scatter should be zero,
     often leading LiDAR to a trivial value
     (usually ~1, but numeric issues might shift it).
@@ -55,7 +52,8 @@ def test_lidar_identical_embeddings(device: torch.device) -> None:
 
 @pytest.mark.usefixtures("random_seed")
 def test_lidar_single_class(device: torch.device) -> None:
-    """
+    """Test LiDAR with a single class.
+
     Edge case: single class (batch_size=1).
     May produce (n-1)=0 in denominator. We can check if the code handles it gracefully.
     """
@@ -76,9 +74,7 @@ def test_lidar_single_class(device: torch.device) -> None:
 # --------------------------------------------------------------------------
 @pytest.mark.usefixtures("random_seed")
 def test_rankme_smoke(device: torch.device) -> None:
-    """
-    Basic smoke test for RankMe to ensure it runs and returns a float.
-    """
+    """Basic smoke test for RankMe to ensure it runs and returns a float."""
     batch_size, d = 16, 32
     encoding = torch.randn((batch_size, d), device=device)
 
@@ -91,7 +87,8 @@ def test_rankme_smoke(device: torch.device) -> None:
 
 @pytest.mark.usefixtures("random_seed")
 def test_rankme_identical_embeddings(device: torch.device) -> None:
-    """
+    """Test RankMe with identical embeddings.
+
     If all embeddings are identical, the singular values should be mostly zero except
     for one direction => RankMe often yields ~1.
     """
@@ -108,9 +105,7 @@ def test_rankme_identical_embeddings(device: torch.device) -> None:
 
 @pytest.mark.usefixtures("random_seed")
 def test_rankme_multi_view(device: torch.device) -> None:
-    """
-    Tests feeding a list of encodings for multiple views.
-    """
+    """Tests feeding a list of encodings for multiple views."""
     batch_size, d = 8, 32
     view1 = torch.randn((batch_size, d), device=device)
     view2 = torch.randn((batch_size, d), device=device)

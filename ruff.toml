@@ -1,0 +1,10 @@
+[lint]
+select = ["E4", "E7", "E9", "F", "D"]
+ignore = ["D100", "D102", "D103", "D104"]
+
+[lint.pydocstyle]
+convention = "numpy"
+
+[format]
+# Enable reformatting of code snippets in docstrings.
+docstring-code-format = true

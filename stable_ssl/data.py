@@ -9,12 +9,9 @@
 import logging
 from typing import Callable, Iterable, Optional, Union
 
-import numpy as np
 import torch
 from datasets import load_dataset
 from typing_extensions import override
-
-from stable_ssl.utils import log_and_raise
 
 
 class _DatasetSamplerWrapper(torch.utils.data.Dataset):

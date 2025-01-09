@@ -26,5 +26,5 @@ def ddp_group_manager(rank, world_size, backend):
         if dist.is_initialized():
             try:
                 dist.barrier()
-            except:
+            except Exception:
                 pass
