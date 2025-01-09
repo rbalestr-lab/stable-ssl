@@ -44,9 +44,9 @@ def ddp_worker_rankme(rank: int, world_size: int, backend: str):
         score = rankme_monitor.rankme(local_encoding, epsilon=1e-7)
 
         if rank == 0:
-            assert isinstance(
-                score, float
-            ), "RankMe did not return a float in DDP test."
+            assert isinstance(score, float), (
+                "RankMe did not return a float in DDP test."
+            )
 
 
 @pytest.mark.usefixtures("ddp_env")

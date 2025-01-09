@@ -768,7 +768,7 @@ class BaseTrainer(torch.nn.Module):
             logging.info(f"\tglobal rank: {dist_env.global_rank}")
             logging.info(f"\tlocal rank: {dist_env.local_rank}")
             logging.info(f"\tnumber of nodes: {dist_env.num_nodes}")
-            logging.info(f"\tworld size: {dist_env.num_nodes*dist_env.num_tasks}")
+            logging.info(f"\tworld size: {dist_env.num_nodes * dist_env.num_tasks}")
 
             torch.distributed.init_process_group(
                 "nccl",

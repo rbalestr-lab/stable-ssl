@@ -48,9 +48,9 @@ class RankMe(Monitor):
 
         self.num_devices = get_num_devices()
 
-        assert (
-            self.global_limit % self.num_devices == 0
-        ), f"RankMe {limit=} must be divisible by {self.num_devices=}"
+        assert self.global_limit % self.num_devices == 0, (
+            f"RankMe {limit=} must be divisible by {self.num_devices=}"
+        )
         self.device_limit = self.global_limit // self.num_devices
 
         self.epsilon = epsilon

@@ -63,9 +63,9 @@ def test_lidar_single_class(device: torch.device) -> None:
     lidar_monitor = LiDAR(n=1)
     score = lidar_monitor.lidar(embeddings)
 
-    assert isinstance(
-        score, float
-    ), "LiDAR did not produce a float with single-class input."
+    assert isinstance(score, float), (
+        "LiDAR did not produce a float with single-class input."
+    )
     assert score > 0, "LiDAR is expected to be > 0 even for single-class edge case."
 
 
