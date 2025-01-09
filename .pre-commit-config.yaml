@@ -3,7 +3,7 @@ default_language_version:
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.6
+    rev: v0.9.0
     hooks:
       # Run the linter.
       - id: ruff
@@ -17,7 +17,7 @@ repos:
         types_or: [ python, pyi ]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v5.0.0
     hooks:
       # list of supported hooks: https://pre-commit.com/hooks.html
       - id: trailing-whitespace
@@ -34,14 +34,14 @@ repos:
 
   # shell scripts linter
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.9.0.2
+    rev: v0.10.0.1
     hooks:
       - id: shellcheck
         require_serial: true
 
   # word spelling linter
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.4
+    rev: v2.3.0
     hooks:
       - id: codespell
         require_serial: true
