@@ -9,7 +9,11 @@ repos:
       - id: ruff
         types_or: [ python, pyi ]
         args:
+          - check
+          - --select
+          - I
           - --fix
+          - .
           - --exclude=examples/
           - --exclude=benchmarks/
       # Run the formatter.
