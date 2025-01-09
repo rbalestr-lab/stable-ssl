@@ -14,7 +14,7 @@ from stable_ssl.modules import (
 @pytest.fixture
 def setup_models():
     student_model = Resnet9(num_classes=10)
-    teacher_model = TeacherStudentModule(student_model, ema_coefficient=0.99)
+    teacher_model = TeacherStudentModule(student_model, base_ema_coefficient=0.99)
     return student_model, teacher_model
 
 
@@ -38,21 +38,21 @@ def test_load_backbone_torchvision_model():
 
 def test_load_backbone_low_resolution():
     model = load_backbone("resnet9", num_classes=10, low_resolution=True)
-    assert isinstance(
-        model.conv1, nn.Conv2d
-    ), "The first conv layer should be a Conv2d layer"
+    assert isinstance(model.conv1, nn.Conv2d), (
+        "The first conv layer should be a Conv2d layer"
+    )
     assert isinstance(model.maxpool, nn.Identity), "Maxpool should be an Identity layer"
 
 
 def test_teacher_student_module_initialization(setup_models):
     student_model, teacher_model = setup_models
-    assert isinstance(
-        teacher_model.teacher, nn.Module
-    ), "The teacher should be a model instance"
+    assert isinstance(teacher_model.teacher, nn.Module), (
+        "The teacher should be a model instance"
+    )
     for param in teacher_model.teacher.parameters():
-        assert (
-            param.requires_grad is False
-        ), "The teacher model should not require gradients"
+        assert param.requires_grad is False, (
+            "The teacher model should not require gradients"
+        )
 
 
 def test_mlp_forward():
