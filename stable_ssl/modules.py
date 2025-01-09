@@ -7,6 +7,7 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
+import math
 import copy
 import logging
 
@@ -122,33 +123,41 @@ class TeacherStudentModule(nn.Module):
     warm_init : bool, optional
         If True, performs an initialization step to match the student’s parameters
         immediately. Default is True.
-    ema_coefficient : float, optional
-        The EMA decay factor in [0, 1]. A value of 0.0 means the teacher is fully
+    base_ema_coefficient : float, optional
+        EMA decay factor at the start of training.
+        This value will be updated following a cosine schedule.
+        Should be in [0, 1]. A value of 0.0 means the teacher is fully
         updated to the student’s parameters on every step, while a value of 1.0 means
-        the teacher remains unchanged. Default is 0.99.
-
-    Raises
-    ------
-    ValueError
-        If `ema_coefficient` is not in [0.0, 1.0].
+        the teacher remains unchanged.
+        Default is 0.996.
+    final_ema_coefficient : float, optional
+        EMA decay factor at the end of training.
+        Default is 1.
     """
 
     def __init__(
         self,
         student: nn.Module,
         warm_init: bool = True,
-        ema_coefficient: float = 0.99,
+        base_ema_coefficient: float = 0.996,
+        final_ema_coefficient: float = 1,
     ):
-        if not (0.0 <= ema_coefficient <= 1.0):
+        if not (0.0 <= base_ema_coefficient <= 1.0) or not (
+            0.0 <= final_ema_coefficient <= 1.0
+        ):
             log_and_raise(
                 ValueError,
-                f"ema_coefficient must be in [0, 1]. Found: {ema_coefficient}.",
+                f"ema_coefficient must be in [0, 1]. Found: "
+                f"base_ema_coefficient={base_ema_coefficient}, "
+                "final_ema_coefficient={final_ema_coefficient}.",
             )
 
         super().__init__()
         self.student = student
+        self.base_ema_coefficient = base_ema_coefficient
+        self.final_ema_coefficient = final_ema_coefficient
 
-        if ema_coefficient == 0.0:
+        if self.base_ema_coefficient == 0.0 and self.final_ema_coefficient == 0.0:
             # No need to create a teacher network if the EMA coefficient is 0.0.
             self.teacher = student
         else:
@@ -160,7 +169,7 @@ class TeacherStudentModule(nn.Module):
                 self.ema_coefficient = torch.zeros(())
                 self.update_teacher()
 
-        self.ema_coefficient = torch.Tensor([ema_coefficient])[0]
+        self.ema_coefficient = torch.Tensor([base_ema_coefficient])[0]
 
     @torch.no_grad
     def update_teacher(self):
@@ -188,6 +197,25 @@ class TeacherStudentModule(nn.Module):
                 ty = t.dtype
                 t.mul_(self.ema_coefficient.to(dtype=ty))
                 t.add_((1.0 - self.ema_coefficient).to(dtype=ty) * s)
+
+    def update_ema_coefficient(self, step: int, total_steps: int):
+        """Update the EMA coefficient following a cosine schedule.
+
+        The EMA coefficient is updated following a cosine schedule:
+            ema_coefficient = final_ema_coefficient -
+            0.5 * (final_ema_coefficient - base_ema_coefficient)
+            * (1 + cos(step / total_steps * pi))
+
+        Parameters
+        ----------
+        step : int
+            Current step in the training loop.
+        total_steps : int
+            Total number of steps in the training loop.
+        """
+        self.ema_coefficient = self.final_ema_coefficient - 0.5 * (
+            self.final_ema_coefficient - self.base_ema_coefficient
+        ) * (1 + math.cos(step / total_steps * math.pi))
 
     def forward_student(self, *args, **kwargs):
         """Forward pass through the student network. Gradients will flow normally."""
