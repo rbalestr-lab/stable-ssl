@@ -3,7 +3,7 @@
    :width: 200px
    :align: right
 
-|Documentation| |Benchmark| |Test Status| |CircleCI| |Pytorch| |Black| |License| |WandB|
+|Documentation| |Benchmark| |Test Status| |CircleCI| |Pytorch| |Ruff| |License| |WandB|
 
 
 ⚠️ This library is currently in a phase of active development. All features are subject to change without prior notice.
@@ -124,8 +124,8 @@ It is important to note that the multirun flag (``-m`` or ``--multirun``) is **m
     :target: https://dl.circleci.com/status-badge/redirect/gh/rbalestr-lab/stable-SSL/tree/main
 .. |Pytorch| image:: https://img.shields.io/badge/PyTorch-ee4c2c?logo=pytorch&logoColor=white
    :target: https://pytorch.org/get-started/locally/
-.. |Black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
-    :target: https://github.com/psf/black
+.. |Ruff| https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json
+   :target: https://github.com/astral-sh/ruff
 .. |License| image:: https://img.shields.io/badge/License-MIT-yellow.svg
    :target: https://opensource.org/licenses/MIT
 .. |WandB| image:: https://raw.githubusercontent.com/wandb/assets/main/wandb-github-badge-gradient.svg
