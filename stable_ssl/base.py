@@ -202,11 +202,6 @@ class BaseTrainer(torch.nn.Module):
             self.after_fit()
         except BreakAllEpochs:
             logging.error("Training stopped by user.")
-        if self.logger["wandb"]:
-            try:
-                wandb.finish()
-            except Exception as e:
-                logging.error(f"Encountered error during wandb.finish: {e}")
         self._cleanup()
 
     @abstractmethod
@@ -908,6 +903,13 @@ class BaseTrainer(torch.nn.Module):
         return bucket
 
     def _cleanup(self):
+        if self.logger["wandb"]:
+            logging.info("Cleaning up Wandb:")
+            try:
+                logging.info("\t- Calling wandb.finish()")
+                wandb.finish()
+            except Exception as e:
+                logging.error(f"Encountered error during wandb.finish: {e}")
         logging.info("Cleaning up process, device status before cleaning:")
         get_gpu_info()
 
