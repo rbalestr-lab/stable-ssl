@@ -35,6 +35,14 @@ from .config import (
 from .data import DistributedSamplerWrapper
 from .modules import TeacherStudentModule
 
+try:
+    import wandb as wandbapi
+except ModuleNotFoundError:
+    logging.warning(
+        "Wandb module is not installed, make sure to not use wandb for logging "
+        "or an error will be thrown."
+    )
+
 if TYPE_CHECKING:
     from .monitors import Monitor
 
@@ -195,7 +203,10 @@ class BaseTrainer(torch.nn.Module):
         except BreakAllEpochs:
             logging.exception("Training stopped by user.")
         if self.logger["wandb"]:
-            wandb.finish()
+            try:
+                wandb.finish()
+            except Exception as e:
+                logging.error(f"Encountered error during wandb.finish: {e}")
         self._cleanup()
 
     @abstractmethod
@@ -245,6 +256,15 @@ class BaseTrainer(torch.nn.Module):
             keys=keys,
             state=state,
         )
+
+    @property
+    def wandb_run(self):
+        api = wandbapi.Api()
+        entity = self.logger["wandb"]["entity"]
+        project = self.logger["wandb"]["project"]
+        id = self.logger["wandb"]["id"]
+        run = api.run(f"{entity}/{project}/{id}")
+        return run
 
     def get_logs(self, keys=None, min_step=0, max_step=-1):
         """Retrieve the logs from the logger."""
@@ -536,11 +556,11 @@ class BaseTrainer(torch.nn.Module):
                     "Train epoch interrupted by user. Proceeding to the next one."
                 )
             except NanError:
-                logging.error("NaN error encountered during training.", exc_info=True)
+                logging.error(
+                    "NaN error encountered during training, interrupting.",
+                    exc_info=True,
+                )
                 return
-            except Exception:
-                logging.exception("An unexpected error occurred during training.")
-                raise
 
             if self.epoch % self.logger["eval_every_epoch"] == 0:
                 self._evaluate()
