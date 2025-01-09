@@ -201,7 +201,7 @@ class BaseTrainer(torch.nn.Module):
             self._fit()
             self.after_fit()
         except BreakAllEpochs:
-            logging.exception("Training stopped by user.")
+            logging.error("Training stopped by user.")
         if self.logger["wandb"]:
             try:
                 wandb.finish()
