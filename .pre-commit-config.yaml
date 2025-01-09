@@ -11,6 +11,7 @@ repos:
         args:
           - --fix
           - --exclude=examples/
+          - --exclude=benchmarks/
       # Run the formatter.
       - id: ruff-format
         types_or: [ python, pyi ]
