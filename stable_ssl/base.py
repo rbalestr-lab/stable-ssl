@@ -717,11 +717,10 @@ class BaseTrainer(torch.nn.Module):
 
         if self.global_step % self.logger["log_every_step"] == 0:
             bucket = {}
-            if isinstance(returned_loss, dict):
-                for name, value in returned_loss.items():
-                    bucket[f"train/{name}"] = value.item()
-            else:
-                bucket["train/loss"] = loss.item()
+            if not isinstance(returned_loss, dict):
+                returned_loss = dict(loss=returned_loss)
+            for name, value in returned_loss.items():
+                bucket[f"train/{name}"] = value
             bucket["train/lr"] = self.optim["scheduler"].get_last_lr()[0]
             bucket["step"] = self.batch_idx
             bucket["epoch"] = self.epoch
