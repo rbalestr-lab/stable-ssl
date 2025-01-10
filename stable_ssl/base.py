@@ -369,6 +369,12 @@ class BaseTrainer(torch.nn.Module):
         self._cleanup()
         return submitit.helpers.DelayedSubmission(model)
 
+    def clean(self):
+        """Deletes the working directory with logs."""
+        if not self._logger["dump_path"].is_dir():
+            logging.error("Can't clean up properly since folder does not exist.")
+        self._logger["dump_path"].unlink()
+
     @property
     def rank(self):
         if self.world_size > 1:
