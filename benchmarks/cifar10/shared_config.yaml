@@ -1,7 +1,5 @@
 # @package _global_
 defaults:
-  - _self_
-  - method: null
   - override /hydra/launcher: submitit_slurm
 
 trainer:

@@ -1,4 +1,6 @@
 # @package _global_
+defaults:
+  - shared_config
 
 trainer:
   # ===== Base Trainer =====
@@ -6,8 +8,7 @@ trainer:
 
   # ===== loss Parameters =====
   loss:
-    _target_: stable_ssl.NTXEntLoss
-    temperature: 0.5
+    _target_: stable_ssl.BarlowTwinsLoss
 
   # ===== Module Parameters =====
   module:
@@ -30,7 +31,7 @@ trainer:
 
   # ===== Optim Parameters =====
   optim:
-    epochs: 1000
+    epochs: 500
     optimizer:
       _target_: stable_ssl.optimizers.LARS
       _partial_: True
