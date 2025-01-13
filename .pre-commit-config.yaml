@@ -48,12 +48,3 @@ repos:
         args:
           - --skip=logs/**,data/**,*.ipynb
           - --ignore-words-list=socio-economic
-
-  # rstcheck
-  - repo: https://github.com/rstcheck/rstcheck.git
-    rev: v6.2.0
-    hooks:
-      - id: rstcheck
-        additional_dependencies:
-          - tomli
-        files: ^docs/source/.*\.(rst|inc)$
