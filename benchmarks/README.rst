@@ -16,8 +16,8 @@ To execute a benchmark, you can use the following command:
 Parameters
 ~~~~~~~~~~
 
-- **`<dataset>`**: Specify the dataset you are benchmarking (e.g., `cifar10`, `imagenette`, etc.).
-- **`<model>`**: Specify the model or method you are using for the benchmark (e.g., `simclr`, `byol`, etc.).
+- **`<dataset>`**: Specify the dataset you are benchmarking (e.g., ``cifar10``, ``imagenette``, etc.).
+- **`<model>`**: Specify the model or method you are using for the benchmark (e.g., ``simclr``, ``byol``, etc.).
 
 Ensure that you have the appropriate configuration files set up for the dataset and model you are testing.
 
