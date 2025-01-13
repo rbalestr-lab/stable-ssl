@@ -201,12 +201,7 @@ class BaseTrainer(torch.nn.Module):
             self._fit()
             self.after_fit()
         except BreakAllEpochs:
-            logging.exception("Training stopped by user.")
-        if self.logger["wandb"]:
-            try:
-                wandb.finish()
-            except Exception as e:
-                logging.error(f"Encountered error during wandb.finish: {e}")
+            logging.error("Training stopped by user.")
         self._cleanup()
 
     @abstractmethod
@@ -376,6 +371,12 @@ class BaseTrainer(torch.nn.Module):
         logging.info("Cleaning up the current task before submitting a new one.")
         self._cleanup()
         return submitit.helpers.DelayedSubmission(model)
+
+    def clean(self):
+        """Delete the working directory with logs."""
+        if not self._logger["dump_path"].is_dir():
+            logging.error("Can't clean up properly since folder does not exist.")
+        self._logger["dump_path"].unlink()
 
     @property
     def rank(self):
@@ -719,11 +720,10 @@ class BaseTrainer(torch.nn.Module):
 
         if self.global_step % self.logger["log_every_step"] == 0:
             bucket = {}
-            if isinstance(returned_loss, dict):
-                for name, value in returned_loss.items():
-                    bucket[f"train/{name}"] = value.item()
-            else:
-                bucket["train/loss"] = loss.item()
+            if not isinstance(returned_loss, dict):
+                returned_loss = dict(loss=returned_loss)
+            for name, value in returned_loss.items():
+                bucket[f"train/{name}"] = value
             bucket["train/lr"] = self.optim["scheduler"].get_last_lr()[0]
             bucket["step"] = self.batch_idx
             bucket["epoch"] = self.epoch
@@ -911,6 +911,13 @@ class BaseTrainer(torch.nn.Module):
         return bucket
 
     def _cleanup(self):
+        if self.logger["wandb"]:
+            logging.info("Cleaning up Wandb:")
+            try:
+                logging.info("\t- Calling wandb.finish()")
+                wandb.finish()
+            except Exception as e:
+                logging.error(f"Encountered error during wandb.finish: {e}")
         logging.info("Cleaning up process, device status before cleaning:")
         get_gpu_info()
 
