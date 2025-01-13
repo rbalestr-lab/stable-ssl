@@ -1,9 +1,0 @@
-defaults:
-  - cifar10
-
-_num_classes: 100
-base:
-  dataset:
-    _target_: torchvision.datasets.CIFAR100
-  test_out:
-    _target_: torchvision.datasets.CIFAR100

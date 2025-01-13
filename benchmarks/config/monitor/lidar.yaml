@@ -1,9 +1,0 @@
-# @package _global_
-
-trainer:
-  logger:
-    monitor:
-      train:
-        lidar:
-          _target_: stable_ssl.monitors.LiDAR
-          n: 128

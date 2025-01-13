@@ -1,4 +1,11 @@
-_num_classes: 10
+# @package _global_
+defaults:
+  - override /hydra/launcher: submitit_slurm
+
+trainer:
+  # ===== Data Parameters =====
+  data:
+    _num_classes: 10
 _num_samples: 13400
 base:
   _target_: torch.utils.data.DataLoader
@@ -67,3 +74,35 @@ test_out:
             _target_: stable_ssl.utils.str_to_dtype
             _args_: [float32]
           scale: True
+  # ===== Logger Parameters =====
+  logger:
+    eval_every_epoch: 10
+    log_every_step: 100
+    wandb: True
+    metric:
+      test:
+        acc1:
+          _target_: torchmetrics.classification.MulticlassAccuracy
+          num_classes: ${trainer.data._num_classes}
+          top_k: 1
+        acc5:
+          _target_: torchmetrics.classification.MulticlassAccuracy
+          num_classes: ${trainer.data._num_classes}
+          top_k: 5
+  # ===== Hardware Parameters =====
+  hardware:
+    seed: 0
+    float16: true
+    device: "cuda:0"
+    world_size: 1
+
+hydra:
+  job:
+    chdir: False
+  launcher:
+    gpus_per_node: ${trainer.hardware.world_size}
+    tasks_per_node: ${trainer.hardware.world_size}
+    cpus_per_task: ${trainer.data.train.num_workers}
+    partition: gpu
+    timeout_min: 1000
+    max_num_timeout: 5
