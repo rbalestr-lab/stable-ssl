@@ -14,7 +14,7 @@ trainer:
       shuffle: True
       num_workers: 6
       dataset:
-        _target_: torchvision.datasets.CIFAR10
+        _target_: torchvision.datasets.CIFAR100
         root: ~/data
         train: True
         download: True
