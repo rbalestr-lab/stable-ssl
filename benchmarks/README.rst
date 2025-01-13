@@ -1,7 +1,7 @@
 Benchmarks
 ----------
 
-Welcome to the benchmarks! 
+Welcome to the benchmarks!
 
 To launch a benchmark run
 
