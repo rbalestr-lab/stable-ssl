@@ -42,6 +42,9 @@ jobs:
       # Codecov
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v4.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: ${{ github.repository }}
 
   Test-minimal:
     runs-on: ubuntu-latest
@@ -69,5 +72,8 @@ jobs:
       - name: Run Tests without torch
         run: pytest stable_ssl/ --verbose --cov=stable_ssl stable_ssl/ --cov-report term
       # Codecov
-      - name: Upload coverage to Codecov
+      - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v4.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: ${{ github.repository }}
