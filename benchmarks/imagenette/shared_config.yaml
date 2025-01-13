@@ -6,78 +6,136 @@ trainer:
   # ===== Data Parameters =====
   data:
     _num_classes: 10
-_num_samples: 13400
-base:
-  _target_: torch.utils.data.DataLoader
-  batch_size: 256
-  drop_last: True
-  shuffle: True
-  num_workers: ${trainer.hardware.cpus_per_task}
-  dataset:
-    _target_: stable_ssl.data.HuggingFace
-    path: "frgfm/imagenette"
-    name: "160px"
-    split: "train"
-    x: "image"
-    y: "label"
-    trust_remote_code: true
-    transform:
-      _target_: stable_ssl.data.MultiViewSampler
-      transforms:
-        - _target_: torchvision.transforms.v2.Compose
+    _num_train_samples: 13400
+    train:
+      _target_: torch.utils.data.DataLoader
+      batch_size: 256
+      drop_last: True
+      shuffle: True
+      num_workers: 6
+      dataset:
+        _target_: stable_ssl.data.HuggingFaceDataset
+        path: "frgfm/imagenette"
+        name: "160px"
+        split: "train"
+        x: "image"
+        y: "label"
+        trust_remote_code: true
+        transform:
+          _target_: stable_ssl.data.MultiViewSampler
+          transforms:
+            # === First View ===
+            - _target_: torchvision.transforms.v2.Compose
+              transforms:
+                - _target_: torchvision.transforms.v2.RandomResizedCrop
+                  size: 224
+                  scale:
+                    - 0.2
+                    - 1.0
+                - _target_: torchvision.transforms.v2.RandomHorizontalFlip
+                  p: 0.5
+                - _target_: torchvision.transforms.v2.RandomApply
+                  p: 0.8
+                  transforms:
+                    - {
+                        _target_: torchvision.transforms.v2.ColorJitter,
+                        brightness: 0.4,
+                        contrast: 0.4,
+                        saturation: 0.2,
+                        hue: 0.1,
+                      }
+                - _target_: torchvision.transforms.v2.RandomGrayscale
+                  p: 0.2
+                - _target_: stable_ssl.augmentations.GaussianBlur
+                - _target_: torchvision.transforms.v2.ToImage
+                - _target_: torchvision.transforms.v2.ToDtype
+                  dtype:
+                    _target_: stable_ssl.utils.str_to_dtype
+                    _args_: [float32]
+                  scale: True
+                - _target_: torchvision.transforms.v2.Normalize
+                  _args_:
+                    -
+                      - 0.485
+                      - 0.456
+                      - 0.406
+                    -
+                      - 0.229
+                      - 0.224
+                      - 0.225
+            # === Second View ===
+            - _target_: torchvision.transforms.v2.Compose
+              transforms:
+                - _target_: torchvision.transforms.v2.RandomResizedCrop
+                  size: 224
+                  scale:
+                    - 0.2
+                    - 1.0
+                - _target_: torchvision.transforms.v2.RandomHorizontalFlip
+                  p: 0.5
+                - _target_: torchvision.transforms.v2.RandomApply
+                  p: 0.8
+                  transforms:
+                    - {
+                        _target_: torchvision.transforms.v2.ColorJitter,
+                        brightness: 0.4,
+                        contrast: 0.4,
+                        saturation: 0.2,
+                        hue: 0.1,
+                      }
+                - _target_: torchvision.transforms.v2.RandomGrayscale
+                  p: 0.2
+                - _target_: torchvision.transforms.v2.RandomApply
+                  p: 0.1
+                  transforms:
+                    - _target_: stable_ssl.augmentations.GaussianBlur
+                - _target_: torchvision.transforms.v2.RandomSolarize
+                  threshold: 128
+                  p: 0.2
+                - _target_: torchvision.transforms.v2.ToImage
+                - _target_: torchvision.transforms.v2.ToDtype
+                  dtype:
+                    _target_: stable_ssl.utils.str_to_dtype
+                    _args_: [float32]
+                  scale: True
+                - _target_: torchvision.transforms.v2.Normalize
+                  _args_:
+                    -
+                      - 0.485
+                      - 0.456
+                      - 0.406
+                    -
+                      - 0.229
+                      - 0.224
+                      - 0.225
+    test:
+      _target_: torch.utils.data.DataLoader
+      batch_size: 256
+      num_workers: ${trainer.data.train.num_workers}
+      dataset:
+        _target_: stable_ssl.data.HuggingFaceDataset
+        path: "frgfm/imagenette"
+        name: "160px"
+        split: "validation"
+        x: "image"
+        y: "label"
+        trust_remote_code: true
+        transform:
+          _target_: torchvision.transforms.v2.Compose
           transforms:
             - _target_: torchvision.transforms.v2.RGB
-            - _target_: torchvision.transforms.v2.RandomResizedCrop
+            - _target_: torchvision.transforms.v2.Resize
+              size: 256
+            - _target_: torchvision.transforms.v2.CenterCrop
               size: 224
-              scale:
-                - 0.2
-                - 1.0
-            - _target_: torchvision.transforms.v2.RandomHorizontalFlip
-              p: 0.5
-            - _target_: torchvision.transforms.v2.ColorJitter
-              brightness: 0.4
-              contrast: 0.4
-              saturation: 0.2
-              hue: 0.1
-            - _target_: torchvision.transforms.v2.RandomGrayscale
-              p: 0.2
             - _target_: torchvision.transforms.v2.ToImage
             - _target_: torchvision.transforms.v2.ToDtype
               dtype:
                 _target_: stable_ssl.utils.str_to_dtype
                 _args_: [float32]
               scale: True
-        - ${trainer.data.base.dataset.transform.transforms.0}
-test_out:
-  _target_: torch.utils.data.DataLoader
-  batch_size: 256
-  num_workers: ${trainer.hardware.cpus_per_task}
-  dataset:
-    _target_: stable_ssl.data.HuggingFace
-    path: "frgfm/imagenette"
-    name: "160px"
-    split: "validation"
-    x: "image"
-    y: "label"
-    trust_remote_code: true
-    transform:
-      _target_: torchvision.transforms.v2.Compose
-      transforms:
-        - _target_: torchvision.transforms.v2.RGB
-        - _target_: torchvision.transforms.v2.Resize
-          size: 256
-        - _target_: torchvision.transforms.v2.CenterCrop
-          size: 224
-        - _target_: torchvision.transforms.v2.ToImage
-        - _target_: torchvision.transforms.v2.ToDtype
-          dtype:
-            _target_: stable_ssl.utils.str_to_dtype
-            _args_: [float32]
-          scale: True
   # ===== Logger Parameters =====
   logger:
-    eval_every_epoch: 10
-    log_every_step: 100
     wandb: True
     metric:
       test:
