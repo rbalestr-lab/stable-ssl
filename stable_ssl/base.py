@@ -329,6 +329,9 @@ class BaseTrainer(torch.nn.Module):
         # Update the teacher network if there is one.
         for m in self.modules():
             if isinstance(m, TeacherStudentModule):
+                m.update_ema_coefficient(
+                    epoch=self.epoch, total_epochs=self.optim["epochs"]
+                )
                 m.update_teacher()
 
     def before_eval(self):

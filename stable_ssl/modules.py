@@ -198,24 +198,25 @@ class TeacherStudentModule(nn.Module):
                 t.mul_(self.ema_coefficient.to(dtype=ty))
                 t.add_((1.0 - self.ema_coefficient).to(dtype=ty) * s)
 
-    def update_ema_coefficient(self, step: int, total_steps: int):
+    @torch.no_grad
+    def update_ema_coefficient(self, epoch: int, total_epochs: int):
         """Update the EMA coefficient following a cosine schedule.
 
         The EMA coefficient is updated following a cosine schedule:
             ema_coefficient = final_ema_coefficient -
             0.5 * (final_ema_coefficient - base_ema_coefficient)
-            * (1 + cos(step / total_steps * pi))
+            * (1 + cos(epoch / total_epochs * pi))
 
         Parameters
         ----------
-        step : int
-            Current step in the training loop.
-        total_steps : int
-            Total number of steps in the training loop.
+        epoch : int
+            Current epoch in the training loop.
+        total_epochs : int
+            Total number of epochs in the training loop.
         """
         self.ema_coefficient = self.final_ema_coefficient - 0.5 * (
             self.final_ema_coefficient - self.base_ema_coefficient
-        ) * (1 + math.cos(step / total_steps * math.pi))
+        ) * (1 + math.cos(epoch / total_epochs * math.pi))
 
     def forward_student(self, *args, **kwargs):
         """Forward pass through the student network. Gradients will flow normally."""
