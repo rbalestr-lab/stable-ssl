@@ -5,7 +5,7 @@ defaults:
 trainer:
   # ===== Data Parameters =====
   data:
-    _num_classes: 100
+    _num_classes: 10
     _num_train_samples: 50000
     train: # training dataset as indicated by name 'train'
       _target_: torch.utils.data.DataLoader
@@ -14,13 +14,14 @@ trainer:
       shuffle: True
       num_workers: 6
       dataset:
-        _target_: torchvision.datasets.CIFAR100
+        _target_: torchvision.datasets.CIFAR10
         root: ~/data
         train: True
         download: True
         transform:
           _target_: stable_ssl.data.MultiViewSampler
           transforms:
+            # === First View ===
             - _target_: torchvision.transforms.v2.Compose
               transforms:
                 - _target_: torchvision.transforms.v2.RandomResizedCrop
@@ -35,22 +36,50 @@ trainer:
                   transforms:
                     - {
                         _target_: torchvision.transforms.v2.ColorJitter,
-                        brightness: 0.8,
-                        contrast: 0.8,
-                        saturation: 0.8,
-                        hue: 0.2,
+                        brightness: 0.4,
+                        contrast: 0.4,
+                        saturation: 0.2,
+                        hue: 0.1,
                       }
-                - _target_: stable_ssl.augmentations.GaussianBlur
-                  sigma:
-                    - 0.1
-                    - 2.0
+                - _target_: torchvision.transforms.v2.RandomGrayscale
+                  p: 0.2
                 - _target_: torchvision.transforms.v2.ToImage
                 - _target_: torchvision.transforms.v2.ToDtype
                   dtype:
                     _target_: stable_ssl.utils.str_to_dtype
                     _args_: [float32]
                   scale: True
-            - ${trainer.data.train.dataset.transform.transforms.0}
+            # === Second View ===
+            - _target_: torchvision.transforms.v2.Compose
+              transforms:
+                - _target_: torchvision.transforms.v2.RandomResizedCrop
+                  size: 32
+                  scale:
+                    - 0.2
+                    - 1.0
+                - _target_: torchvision.transforms.v2.RandomHorizontalFlip
+                  p: 0.5
+                - _target_: torchvision.transforms.v2.RandomApply
+                  p: 0.8
+                  transforms:
+                    - {
+                        _target_: torchvision.transforms.v2.ColorJitter,
+                        brightness: 0.4,
+                        contrast: 0.4,
+                        saturation: 0.2,
+                        hue: 0.1,
+                      }
+                - _target_: torchvision.transforms.v2.RandomGrayscale
+                  p: 0.2
+                - _target_: torchvision.transforms.v2.RandomSolarize
+                  threshold: 128
+                  p: 0.2
+                - _target_: torchvision.transforms.v2.ToImage
+                - _target_: torchvision.transforms.v2.ToDtype
+                  dtype:
+                    _target_: stable_ssl.utils.str_to_dtype
+                    _args_: [float32]
+                  scale: True
     test: # can be any name
       _target_: torch.utils.data.DataLoader
       batch_size: 256
