@@ -45,7 +45,7 @@ trainer:
                         saturation: 0.8,
                         hue: 0.2,
                       }
-                - _target_: stable_ssl.data.augmentations.GaussianBlur
+                - _target_: stable_ssl.augmentations.GaussianBlur
                   sigma:
                     - 0.1
                     - 2.0
@@ -83,13 +83,11 @@ trainer:
         name: resnet50
         low_resolution: True
         num_classes: null
-      ema_coefficient: 0.999
     projector:
       _target_: stable_ssl.modules.TeacherStudentModule
       student:
         _target_: stable_ssl.modules.MLP
         sizes: [2048, 2048, 128]
-      ema_coefficient: 0.999
     predictor:
       _target_: stable_ssl.modules.MLP
       sizes: [128, 2048, 128]

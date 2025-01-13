@@ -46,7 +46,7 @@ trainer:
                         saturation: 0.8,
                         hue: 0.2,
                       }
-                - _target_: stable_ssl.data.augmentations.GaussianBlur
+                - _target_: stable_ssl.augmentations.GaussianBlur
                   sigma:
                     - 0.1
                     - 2.0

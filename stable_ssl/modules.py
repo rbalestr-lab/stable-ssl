@@ -154,8 +154,8 @@ class TeacherStudentModule(nn.Module):
 
         super().__init__()
         self.student = student
-        self.base_ema_coefficient = base_ema_coefficient
-        self.final_ema_coefficient = final_ema_coefficient
+        self.base_ema_coefficient = torch.Tensor([base_ema_coefficient])[0]
+        self.final_ema_coefficient = torch.Tensor([final_ema_coefficient])[0]
 
         if self.base_ema_coefficient == 0.0 and self.final_ema_coefficient == 0.0:
             # No need to create a teacher network if the EMA coefficient is 0.0.
@@ -169,7 +169,7 @@ class TeacherStudentModule(nn.Module):
                 self.ema_coefficient = torch.zeros(())
                 self.update_teacher()
 
-        self.ema_coefficient = torch.Tensor([base_ema_coefficient])[0]
+        self.ema_coefficient = self.base_ema_coefficient.clone()
 
     @torch.no_grad
     def update_teacher(self):
