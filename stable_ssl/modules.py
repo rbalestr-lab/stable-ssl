@@ -20,7 +20,7 @@ from .utils import log_and_raise
 
 def load_backbone(
     name,
-    num_classes,
+    num_classes=None,
     weights=None,
     low_resolution=False,
     return_feature_dim=False,
@@ -41,6 +41,7 @@ def load_backbone(
     num_classes : int
         Number of classes in the dataset.
         If None, the model is loaded without the classifier.
+        By default None.
     weights : bool, optional
         Whether to load a weights model, by default False.
     low_resolution : bool, optional
@@ -95,8 +96,14 @@ def load_backbone(
 
     if low_resolution:  # reduce resolution, for instance for CIFAR
         if hasattr(model, "conv1"):
+            in_channels = kwargs.get("in_channels", 3)
             model.conv1 = nn.Conv2d(
-                3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False
+                in_channels,
+                64,
+                kernel_size=(3, 3),
+                stride=(1, 1),
+                padding=(1, 1),
+                bias=False,
             )
             model.maxpool = nn.Identity()
         else:

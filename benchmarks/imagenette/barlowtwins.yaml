@@ -19,10 +19,10 @@ trainer:
       num_classes: null
     projector:
       _target_: stable_ssl.modules.MLP
-      sizes: [2048, 2048, 128]
+      sizes: [2048, 2048, 2048]
     projector_classifier:
       _target_: torch.nn.Linear
-      in_features: 128
+      in_features: 2048
       out_features: ${trainer.data._num_classes}
     backbone_classifier:
       _target_: torch.nn.Linear
