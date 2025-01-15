@@ -131,7 +131,6 @@ def test_linear_warmup_three_steps_annealing(dummy_model_optimizer):
     assert lrs[0] < initial_lr, "Warmup did not start below initial LR."
     warmup_end_lr = lrs[peak_step - 1]
     final_lr = lrs[-1]
-    print(lrs)
     assert final_lr < warmup_end_lr, (
         "ThreeStepsAnnealing did not reduce LR by final step."
     )
