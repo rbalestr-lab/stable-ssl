@@ -1,12 +1,11 @@
+stable-ssl
+==========
 
 |Documentation| |Benchmark| |Test Status| |CircleCI| |Pytorch| |Ruff| |License| |WandB|
 
 
 ⚠️ This library is currently in a phase of active development. All features are subject to change without prior notice.
 
-
-stable-ssl
-==========
 
 `stable-ssl`` provides all the boilerplate to quickly get started with AI research, focusing on Self-Supervised Learning (SSL), albeit other applications can certainly build upon ``stable-ssl``.
 At its core, ``stable-ssl`` provides a `BaseTrainer <https://rbalestr-lab.github.io/stable-SSL.github.io/dev/gen_modules/stable_ssl.BaseTrainer.html#stable_ssl.BaseTrainer>`_ class that provides all the essential methods required to train and evaluate your model effectively. This class is intended to be subclassed for specific training needs (see these `trainers <https://rbalestr-lab.github.io/stable-ssl.github.io/dev/trainers.html>`_ as examples).
@@ -59,15 +58,60 @@ Defines the dataset, loading, and augmentation pipelines. Only the dataset calle
 
    <details>
    <summary>Example data YAML (click to reveal)</summary>
-
-   ```yaml
-   data:
-     train:
-       name: "CIFAR10"
-       root: "/path/to/dataset"
-       transform: "default_augmentation"
-   ```
+   <pre><code>
+   trainer:
+     data:
+       _num_classes: 10
+       _num_samples: 50000
+       train:
+         _target_: torch.utils.data.DataLoader
+         batch_size: 256
+         drop_last: True
+         shuffle: True
+         num_workers: ${trainer.hardware.cpus_per_task}
+         dataset:
+           _target_: torchvision.datasets.CIFAR10
+           root: ~/data
+           train: True
+           transform:
+             _target_: stable_ssl.data.MultiViewSampler
+             transforms:
+               - _target_: torchvision.transforms.v2.Compose
+                 transforms:
+                   - _target_: torchvision.transforms.v2.RandomResizedCrop
+                     size: 32
+                     scale:
+                       - 0.2
+                       - 1.0
+                   - _target_: torchvision.transforms.v2.RandomHorizontalFlip
+                     p: 0.5
+                   - _target_: torchvision.transforms.v2.ToImage
+                   - _target_: torchvision.transforms.v2.ToDtype
+                     dtype:
+                       _target_: stable_ssl.utils.str_to_dtype
+                       _args_: [float32]
+                     scale: True
+               - ${trainer.data.base.dataset.transform.transforms.0}
+       test:
+         _target_: torch.utils.data.DataLoader
+         batch_size: 256
+         num_workers: ${trainer.hardware.cpus_per_task}
+         dataset:
+           _target_: torchvision.datasets.CIFAR10
+           train: False
+           root: ~/data
+           transform:
+             _target_: torchvision.transforms.v2.Compose
+             transforms:
+               - _target_: torchvision.transforms.v2.ToImage
+               - _target_: torchvision.transforms.v2.ToDtype
+                 dtype:
+                   _target_: stable_ssl.utils.str_to_dtype
+                   _args_: [float32]
+                 scale: True
+   </code></pre>
    </details>
+
 
 
 Module
