@@ -33,16 +33,16 @@ trainer:
 
   # ===== Optim Parameters =====
   optim:
-    epochs: 50
+    epochs: 10
     optimizer:
       _target_: stable_ssl.optimizers.LARS
       _partial_: True
       lr: 5
       weight_decay: 1e-6
     scheduler:
-      _target_: stable_ssl.schedulers.LinearWarmupCosineAnnealing
+      _target_: torch.optim.lr_scheduler.ConstantLR
       _partial_: True
-      total_steps: ${eval:'100 * ${trainer.data._num_train_samples} // ${trainer.data.train.batch_size}'}
+      factor: 1.0
 
   # ===== Data Parameters =====
   data:
@@ -129,6 +129,7 @@ trainer:
           _target_: torchmetrics.classification.MulticlassAccuracy
           num_classes: ${trainer.data._num_classes}
           top_k: 5
+
   # ===== Hardware Parameters =====
   hardware:
     seed: 0
