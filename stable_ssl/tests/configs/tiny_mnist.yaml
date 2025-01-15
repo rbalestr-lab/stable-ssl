@@ -1,6 +1,6 @@
 # @package _global_
 defaults:
-  - override /hydra/launcher: submitit_slurm
+  - override /hydra/launcher: submitit_local
 
 trainer:
   # ===== Base Trainer =====
@@ -77,8 +77,7 @@ trainer:
               scale: True
   # ===== Logger Parameters =====
   logger:
-    dump_path: "."
-    save_final_model: True
+    save_final_model: true
     eval_every_epoch: 1
     log_every_step: 1
     metric:
@@ -95,16 +94,13 @@ trainer:
   hardware:
     seed: 0
     float16: true
-    device: "cuda:0"
+    device: "cpu"
     world_size: 1
 
 hydra:
   job:
     chdir: False
   launcher:
-    gpus_per_node: ${trainer.hardware.world_size}
     tasks_per_node: ${trainer.hardware.world_size}
     cpus_per_task: ${trainer.data.train.num_workers}
-    partition: gpu
     timeout_min: 1000
-    max_num_timeout: 5

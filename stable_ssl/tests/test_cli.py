@@ -20,7 +20,7 @@ def test_cli_with_config_file(config_file_path):
         "--config-path",
         config_file_path,
         "--config-name",
-        "mini_mnist",
+        "tiny_mnist",
     ]
 
     # Patch sys.argv so the CLI sees our arguments

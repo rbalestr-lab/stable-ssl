@@ -2,10 +2,14 @@ import hydra
 from hydra import compose, initialize
 from omegaconf import OmegaConf
 
+from stable_ssl.reader import jsonl
+
+OmegaConf.register_new_resolver("eval", eval)
+
 
 def test_base_trainer(tmp_path):
     with initialize(version_base="1.2", config_path="configs"):
-        cfg = compose(config_name="tiny_mnist")
+        cfg = compose(config_name="simclr_mnist")
 
         # Write out the config.yaml to simulate Hydra’s usual job folder
         hydra_dir = tmp_path / ".hydra"
@@ -24,8 +28,5 @@ def test_base_trainer(tmp_path):
         trainer.setup()
         trainer.launch()
 
-        logs = list(tmp_path.glob("logs_rank_*.jsonl"))
-        assert len(logs) > 0, "No logs were created!"
-
-        ckpts = list(tmp_path.glob("*.ckpt"))
-        assert len(ckpts) >= 1, "No .ckpt files found in the output!"
+        logs = jsonl(path=tmp_path)
+        assert logs[-1]["test/acc1"] == 0.8585619926452637

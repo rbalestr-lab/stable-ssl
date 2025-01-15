@@ -4,31 +4,45 @@ defaults:
 
 trainer:
   # ===== Base Trainer =====
-  _target_: stable_ssl.SupervisedTrainer
+  _target_: stable_ssl.trainers.JointEmbeddingTrainer
 
   # ===== loss Parameters =====
   loss:
-    _target_: torch.nn.CrossEntropyLoss
+    _target_: stable_ssl.losses.NTXEntLoss
+    temperature: 0.5
 
   # ===== Module Parameters =====
   module:
     backbone:
-      _target_: stable_ssl.modules.Resnet9
-      num_classes: 10
+      _target_: stable_ssl.modules.load_backbone
+      name: resnet9
+      low_resolution: True
+      num_classes: null
       in_channels: 1
+    projector:
+      _target_: stable_ssl.modules.MLP
+      sizes: [1028, 64]
+    projector_classifier:
+      _target_: torch.nn.Linear
+      in_features: 64
+      out_features: ${trainer.data._num_classes}
+    backbone_classifier:
+      _target_: torch.nn.Linear
+      in_features: 1028
+      out_features: ${trainer.data._num_classes}
 
   # ===== Optim Parameters =====
   optim:
-    epochs: 1
+    epochs: 50
     optimizer:
       _target_: stable_ssl.optimizers.LARS
       _partial_: True
       lr: 5
       weight_decay: 1e-6
     scheduler:
-      _target_: torch.optim.lr_scheduler.ConstantLR
+      _target_: stable_ssl.schedulers.LinearWarmupCosineAnnealing
       _partial_: True
-      factor: 1.0
+      total_steps: ${eval:'100 * ${trainer.data._num_train_samples} // ${trainer.data.train.batch_size}'}
 
   # ===== Data Parameters =====
   data:
@@ -48,14 +62,40 @@ trainer:
         y: "label"
         trust_remote_code: true
         transform:
-          _target_: torchvision.transforms.v2.Compose
+          _target_: stable_ssl.data.MultiViewSampler
           transforms:
-            - _target_: torchvision.transforms.v2.ToImage
-            - _target_: torchvision.transforms.v2.ToDtype
-              dtype:
-                _target_: stable_ssl.utils.str_to_dtype
-                _args_: [float32]
-              scale: True
+            # === First View ===
+            - _target_: torchvision.transforms.v2.Compose
+              transforms:
+                - _target_: torchvision.transforms.v2.RandomResizedCrop
+                  size: 28
+                  scale:
+                    - 0.2
+                    - 1.0
+                - _target_: torchvision.transforms.v2.RandomHorizontalFlip
+                  p: 0.5
+                - _target_: torchvision.transforms.v2.ToImage
+                - _target_: torchvision.transforms.v2.ToDtype
+                  dtype:
+                    _target_: stable_ssl.utils.str_to_dtype
+                    _args_: [float32]
+                  scale: True
+            # === Second View ===
+            - _target_: torchvision.transforms.v2.Compose
+              transforms:
+                - _target_: torchvision.transforms.v2.RandomResizedCrop
+                  size: 28
+                  scale:
+                    - 0.2
+                    - 1.0
+                - _target_: torchvision.transforms.v2.RandomHorizontalFlip
+                  p: 0.5
+                - _target_: torchvision.transforms.v2.ToImage
+                - _target_: torchvision.transforms.v2.ToDtype
+                  dtype:
+                    _target_: stable_ssl.utils.str_to_dtype
+                    _args_: [float32]
+                  scale: True
     test: # can be any name
       _target_: torch.utils.data.DataLoader
       batch_size: 256
@@ -77,7 +117,6 @@ trainer:
               scale: True
   # ===== Logger Parameters =====
   logger:
-    dump_path: "."
     eval_every_epoch: 1
     log_every_step: 1
     metric:

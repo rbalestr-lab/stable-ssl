@@ -119,9 +119,9 @@ It is important to note that the multirun flag (``-m`` or ``--multirun``) is **m
 .. |Documentation| image:: https://img.shields.io/badge/Documentation-blue.svg
     :target: https://rbalestr-lab.github.io/stable-SSL.github.io/dev/
 .. |Benchmark| image:: https://img.shields.io/badge/Benchmarks-blue.svg
-    :target: https://github.com/rbalestr-lab/stable-SSL/tree/main/benchmarks
-.. |CircleCI| image:: https://dl.circleci.com/status-badge/img/gh/rbalestr-lab/stable-SSL/tree/main.svg?style=svg
-    :target: https://dl.circleci.com/status-badge/redirect/gh/rbalestr-lab/stable-SSL/tree/main
+    :target: https://github.com/rbalestr-lab/stable-ssl/tree/main/benchmarks
+.. |CircleCI| image:: https://dl.circleci.com/status-badge/img/gh/rbalestr-lab/stable-ssl/tree/main.svg?style=svg
+    :target: https://dl.circleci.com/status-badge/redirect/gh/rbalestr-lab/stable-ssl/tree/main
 .. |Pytorch| image:: https://img.shields.io/badge/PyTorch-ee4c2c?logo=pytorch&logoColor=white
    :target: https://pytorch.org/get-started/locally/
 .. |Ruff| image:: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json
