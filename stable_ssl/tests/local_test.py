@@ -6,9 +6,6 @@ from omegaconf import OmegaConf
 
 from stable_ssl.reader import jsonl
 
-# Register your custom resolver
-OmegaConf.register_new_resolver("eval", eval)
-
 
 @hydra.main(version_base="1.2", config_path="configs", config_name="simclr_mnist")
 def local_test(cfg):
