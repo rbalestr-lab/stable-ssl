@@ -1,5 +1,6 @@
 
 .. include:: ../../README.md
+    :parser: myst_parser
 
 .. toctree::
     :maxdepth: 1

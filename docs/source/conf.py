@@ -36,6 +36,7 @@ extensions = [
     "sphinx.ext.doctest",
     "sphinx_gallery.gen_gallery",
     "sphinxcontrib.bibtex",
+    "myst_parser",
 ]
 
 autosummary_generate = True

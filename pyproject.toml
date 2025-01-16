@@ -58,6 +58,7 @@ doc = [
     "numpydoc",
     "memory_profiler",
     "myst-parser",
+    "myst-parser",
 ]
 
 [tool.ruff]
