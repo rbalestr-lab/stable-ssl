@@ -21,16 +21,18 @@ At its core, `stable-ssl` provides a [BaseTrainer](https://rbalestr-lab.github.i
 ## Build a Configuration File
 
 In `stable-ssl`, the configuration file is structured according to the following categories:
+| **trainer**      | Specifies the trainer class, which is a subclass of `BaseTrainer`.
+| **loss (optional)**| Defines a loss function that can be used in the `compute_loss` method of the trainer.                                                                          |
+                                                                                           |
 
-| **Category**    | **Description**                                                                                                                                                   |
-|------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **trainer**      | Specifies the trainer class, which is a subclass of `BaseTrainer`.                                                                                              |
-| **data**         | Defines the dataset, loading, and augmentation pipelines. The `train` dataset is used for training, and if absent, the model runs in evaluation mode.            |
-| **module**       | Specifies the neural network modules and their architecture, including backbones, projectors, and classifiers.                                                  |
-| **optim**        | Defines the optimization components, including the optimizer, scheduler, and the number of epochs.                                                              |
-| **hardware**     | Specifies the hardware configuration, including the number of GPUs, CPUs, and precision settings.                                                               |
-| **logger**       | Configures model performance monitoring, supporting APIs like WandB and logging settings.                                                                        |
-| **loss (optional)** | Defines a loss function that can be used in the `compute_loss` method of the trainer.                                                                          |
+
+| **Category**     | **Description**                                                                                                                                        |
+|------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **data**         | Defines the dataset, loading, and augmentation pipelines. The `train` dataset is used for training, and if absent, the model runs in evaluation mode.  |
+| **module**       | Specifies the neural network modules and their architecture.                                                                                           |
+| **optim**        | Defines the optimization components, including the optimizer, scheduler, and the number of epochs.                                                     |
+| **hardware**     | Specifies the hardware configuration, including the number of GPUs, CPUs, and precision settings.                                                      |
+| **logger**       | Configures model performance monitoring. APIs like [WandB](https://wandb.ai/home) are supported                                                        |
 
 
 ### trainer
