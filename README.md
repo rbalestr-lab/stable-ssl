@@ -205,7 +205,7 @@ trainer:
 </details>
 
 
-## Launch a run
+## Launch a Run
 
 To launch a run using a configuration file located in a specified folder, simply use the following command:
 
