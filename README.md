@@ -215,6 +215,7 @@ stable-ssl --config-path <config_path> --config-name <config_name>
 
 Replace `<config_path>` with the path to your configuration folder and `<config_name>` with the name of your configuration file.
 
+Useful options include:
 
 <details>
   <summary>Launching in multirun</summary>
@@ -224,16 +225,6 @@ stable-ssl --multirun --config-path <config_path> --config-name <config_name> ++
 ```
 </details>
 
-
-<details>
-  <summary>Launching locally</summary>
-
-```bash
-stable-ssl --config-path <config_path> --config-name <config_name> ++trainer.data.train.batch_size=128,256,512
-```
-</details>
-
-
 <details>
   <summary>Launching on slurm</summary>
 
@@ -242,8 +233,8 @@ stable-ssl --multirun --config-path <config_path> --config-name <config_name> hy
 ```
 </details>
 
-.. note::
-  One must include the ``--multirun`` flag when using a launcher like ``submitit_slurm``.
+> **:bulb: Note**
+> One must include the `--multirun` flag when using a launcher like `submitit_slurm`.
 
 
 ## Installation
