@@ -13,18 +13,17 @@
 
 ``stable-ssl`` streamlines training self-supervised learning models by offering all the essential boilerplate code with minimal hardcoded utilities. Its modular and flexible design supports seamless integration of architectures, loss functions, evaluation metrics, augmentations, and more from any source.
 
-At its core, `stable-ssl` provides a [BaseTrainer](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/gen_modules/stable_ssl.BaseTrainer.html#stable_ssl.BaseTrainer) class that manages job submission, data loading, training, evaluation, logging, monitoring, checkpointing, and requeuing, all customizable via a configuration file. This class is intended to be subclassed for specific training needs (see these [trainers](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/trainers.html) as examples).
+At its core, `stable-ssl` provides a [`BaseTrainer`](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/gen_modules/stable_ssl.BaseTrainer.html#stable_ssl.BaseTrainer) class that manages job submission, data loading, training, evaluation, logging, monitoring, checkpointing, and requeuing, all customizable via a configuration file. This class is intended to be subclassed for specific training needs (see these [trainers](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/trainers.html) as examples).
 
 `stable-ssl` leverages [`Hydra`](https://hydra.cc/) to manage input parameters through configuration files, offering benefits like efficient hyperparameter tuning with `multirun` and smooth integration with job launchers such as `submitit` for Slurm.
 
 
 ## Build a Configuration File
 
-In `stable-ssl`, the configuration file is structured according to the following categories:
-| **trainer**      | Specifies the trainer class, which is a subclass of `BaseTrainer`.
-| **loss (optional)**| Defines a loss function that can be used in the `compute_loss` method of the trainer.                                                                          |
-                                                                                           |
+The first step is to specify a **trainer** class which is a subclass of `BaseTrainer`.
+Optionally, the trainer may require a **loss** function which is then used in the `compute_loss` method of the trainer.
 
+The trainer parameters are then structured according to the following categories:
 
 | **Category**     | **Description**                                                                                                                                        |
 |------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -35,25 +34,8 @@ In `stable-ssl`, the configuration file is structured according to the following
 | **logger**       | Configures model performance monitoring. APIs like [WandB](https://wandb.ai/home) are supported                                                        |
 
 
-### trainer
-
-Specifies the trainer class. It is a subclass of `BaseTrainer`.
-
 <details>
-  <summary>Example</summary>
-
-```yaml
-trainer:
-  _target_: stable_ssl.JointEmbeddingTrainer
-```
-</details>
-
-### data
-
-Defines the dataset, loading, and augmentation pipelines. Only the dataset called `train` is used for training. If there is no dataset named `train`, the model runs in evaluation mode.
-
-<details>
-  <summary>Example</summary>
+  <summary>Config Example : SimCLR CIFAR10</summary>
 
 ```yaml
 data:
@@ -108,126 +90,6 @@ data:
 ```
 </details>
 
-
-### module
-
-Specifies the neural network modules and their architecture.
-
-<details>
-  <summary>Example</summary>
-
-```yaml
-module:
-   backbone:
-      _target_: stable_ssl.modules.load_backbone
-      name: resnet18
-      low_resolution: True
-      num_classes: null
-   projector:
-      _target_: torch.nn.Sequential
-      _args_:
-         - _target_: torch.nn.Linear
-            in_features: 512
-            out_features: 2048
-            bias: False
-         - _target_: torch.nn.BatchNorm1d
-            num_features: ${trainer.module.projector._args_.0.out_features}
-         - _target_: torch.nn.ReLU
-         - _target_: torch.nn.Linear
-            in_features: ${trainer.module.projector._args_.0.out_features}
-            out_features: 128
-            bias: False
-         - _target_: torch.nn.BatchNorm1d
-            num_features: ${trainer.module.projector._args_.3.out_features}
-   projector_classifier:
-      _target_: torch.nn.Linear
-      in_features: 128
-      out_features: ${trainer.data._num_classes}
-   backbone_classifier:
-      _target_: torch.nn.Linear
-      in_features: 512
-      out_features: ${trainer.data._num_classes}
-```
-</details>
-
-### optim
-
-Defines all the components needed for optimization, including the optimizer, scheduler, and the number of epochs.
-
-<details>
-  <summary>Example</summary>
-
-```yaml
-optim:
- epochs: 1000
- optimizer:
-   _target_: stable_ssl.optimizers.LARS
-   _partial_: True
-   lr: 5
-   weight_decay: 1e-6
- scheduler:
-   _target_: stable_ssl.scheduler.LinearWarmupCosineAnnealing
-   _partial_: True
-   total_steps: ${eval:'${trainer.optim.epochs} * ${trainer.data._num_samples} // ${trainer.data.train.batch_size}'}
-```
-</details>
-
-
-### hardware
-
-Specifies the hardware used, including the number of GPUs, CPUs, etc.
-
-<details>
-  <summary>Example</summary>
-
-```yaml
-hardware:
-   seed: 0
-   float16: true
-   device: "cuda:0"
-   world_size: 1
-```
-</details>
-
-### Logger
-
-Configures model performance monitoring. APIs like [WandB](https://wandb.ai/home) are supported.
-
-<details>
-  <summary>Example</summary>
-
-```yaml
-logger:
-   wandb: true
-   base_dir: "./"
-   level: 20
-   checkpoint_frequency: 1
-   log_every_step: 1
-   metric:
-      test:
-         acc1:
-         _target_: torchmetrics.classification.MulticlassAccuracy
-         num_classes: ${trainer.data._num_classes}
-         top_k: 1
-         acc5:
-         _target_: torchmetrics.classification.MulticlassAccuracy
-         num_classes: ${trainer.data._num_classes}
-         top_k: 5
-```
-</details>
-
-### Loss (optional)
-Defines a loss function that can then be used in the `compute_loss` method of the trainer. [Example](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/user_guide.html#loss).
-
-<details>
-  <summary>Example loss YAML (click to reveal)</summary>
-
-```yaml
-loss:
-  name: "NTXEntLoss"
-  temperature: 0.5
-```
-</details>
 
 ## Launch a run
 
