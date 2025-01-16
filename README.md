@@ -18,7 +18,7 @@ At its core, `stable-ssl` provides a [`BaseTrainer`](https://rbalestr-lab.github
 
 ## Build a Configuration File
 
-`stable-ssl` leverages [`Hydra`](https://hydra.cc/) to manage input parameters through configuration files, enabling efficient hyperparameter tuning with ``multirun`` and seamless integration with job launchers like ``submitit`` for Slurm.
+`stable-ssl` uses [`Hydra`](https://hydra.cc/) to manage input parameters through configuration files, enabling efficient hyperparameter tuning with ``multirun`` and seamless integration with job launchers like ``submitit`` for Slurm.
 
 The first step is to specify a **trainer** class which is a subclass of `BaseTrainer`.
 Optionally, the trainer may require a **loss** function which is then used in the `compute_loss` method of the trainer.
