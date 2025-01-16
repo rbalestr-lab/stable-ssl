@@ -31,6 +31,7 @@ Specifies the trainer class. It is a subclass of `BaseTrainer`.
 trainer:
   _target_: stable_ssl.JointEmbeddingTrainer
 ```
+</details>
 
 ### data
 
