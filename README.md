@@ -11,13 +11,13 @@
 
 ⚠️ **This library is currently in a phase of active development. All features are subject to change without prior notice.**
 
-`stable-ssl` provides all the boilerplate to quickly get started with AI research, focusing on Self-Supervised Learning (SSL), though other applications can certainly build upon **stable-ssl**.
+``stable-ssl`` streamlines training self-supervised learning models by offering all the essential boilerplate code with minimal hardcoded utilities. Its modular and flexible design supports seamless integration of architectures, loss functions, evaluation metrics, augmentations, and more from any source.
 
-At its core, `stable-ssl` provides a [BaseTrainer](https://rbalestr-lab.github.io/stable-SSL.github.io/dev/gen_modules/stable_ssl.BaseTrainer.html#stable_ssl.BaseTrainer) class with essential methods to train and evaluate your model. This class is intended to be subclassed for specific training needs (see these [trainers](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/trainers.html) as examples).
+At its core, `stable-ssl` provides a [BaseTrainer](https://rbalestr-lab.github.io/stable-SSL.github.io/dev/gen_modules/stable_ssl.BaseTrainer.html#stable_ssl.BaseTrainer) class with essential methods to train and evaluate your model.
+
+This class is intended to be subclassed for specific training needs (see these [trainers](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/trainers.html) as examples).
 
 We recommend using **configuration files** to define parameters and [Hydra](https://hydra.cc/) to manage those configurations.
-
-**General Idea:** `stable-SSL` offers a highly flexible framework with minimal hardcoded utilities. You can instantiate modules from `stable-SSL`, PyTorch, TorchMetrics, or your own custom classes. This means you can seamlessly integrate custom parts while still leveraging `stable-SSL`’s capabilities.
 
 `stable-ssl` handles:
 - Job submission
@@ -32,8 +32,9 @@ We recommend using **configuration files** to define parameters and [Hydra](http
 All parts can be customized via configuration files. You can swap in your choice of architectures, losses, evaluation metrics, augmentations, etc., from any source.
 
 
-
 ## Launch a run
+
+`stable-ssl` uses `Hydra` (see the [Hydra documentation](https://hydra.cc/)) to manage input parameters via configuration files. These parameters are grouped into the following categories (detailed in the [User Guide](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/user_guide.html)):
 
 To start a run using the `default_config.yaml` configuration file located in the `./configs/` folder, use the following command:
 
@@ -45,9 +46,8 @@ This command utilizes [Hydra](https://hydra.cc/), making it compatible with mult
 
 
 
-## Structure your parameters
+## How to Build a Configuration File
 
-`stable-ssl` uses `Hydra` (see the [Hydra documentation](https://hydra.cc/)) to manage input parameters via configuration files. These parameters are grouped into the following categories (detailed in the [User Guide](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/user_guide.html)):
 
 ### Data
 Defines the dataset, loading, and augmentation pipelines. Only the dataset called `train` is used for training. If there is no dataset named `train`, the model runs in evaluation mode. [Example](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/user_guide.html#data).
