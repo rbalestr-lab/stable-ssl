@@ -13,23 +13,7 @@
 
 ``stable-ssl`` streamlines training self-supervised learning models by offering all the essential boilerplate code with minimal hardcoded utilities. Its modular and flexible design supports seamless integration of architectures, loss functions, evaluation metrics, augmentations, and more from any source.
 
-At its core, `stable-ssl` provides a [BaseTrainer](https://rbalestr-lab.github.io/stable-SSL.github.io/dev/gen_modules/stable_ssl.BaseTrainer.html#stable_ssl.BaseTrainer) class with essential methods to train and evaluate your model.
-
-This class is intended to be subclassed for specific training needs (see these [trainers](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/trainers.html) as examples).
-
-We recommend using **configuration files** to define parameters and [Hydra](https://hydra.cc/) to manage those configurations.
-
-`stable-ssl` handles:
-- Job submission
-- Data loading
-- Optimization
-- Evaluation
-- Logging
-- Monitoring
-- Checkpointing
-- Requeuing
-
-All parts can be customized via configuration files. You can swap in your choice of architectures, losses, evaluation metrics, augmentations, etc., from any source.
+At its core, `stable-ssl` provides a [BaseTrainer](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/gen_modules/stable_ssl.BaseTrainer.html#stable_ssl.BaseTrainer) class that handles job submission, data loading, model training, evaluation, logging, monitoring, checkpointing, and requeuing. Every component is fully customizable through a configuration file. This class is intended to be subclassed for specific training needs (see these [trainers](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/trainers.html) as examples).
 
 
 ## Launch a run
