@@ -42,55 +42,165 @@ The trainer parameters are then structured according to the following categories
   <summary>Config Example : SimCLR CIFAR10</summary>
 
 ```yaml
-data:
-  _num_classes: 10
-  _num_samples: 50000
-  train:
-    _target_: torch.utils.data.DataLoader
-    batch_size: 256
-    drop_last: True
-    shuffle: True
-    num_workers: ${trainer.hardware.cpus_per_task}
-    dataset:
-      _target_: torchvision.datasets.CIFAR10
-      root: ~/data
-      train: True
-      transform:
-        _target_: stable_ssl.data.MultiViewSampler
-        transforms:
-          - _target_: torchvision.transforms.v2.Compose
-            transforms:
-              - _target_: torchvision.transforms.v2.RandomResizedCrop
-                size: 32
-                scale:
-                  - 0.2
-                  - 1.0
-              - _target_: torchvision.transforms.v2.RandomHorizontalFlip
-                p: 0.5
-              - _target_: torchvision.transforms.v2.ToImage
-              - _target_: torchvision.transforms.v2.ToDtype
-                dtype:
-                  _target_: stable_ssl.utils.str_to_dtype
-                  _args_: [float32]
-                scale: True
-          - ${trainer.data.base.dataset.transform.transforms.0}
-  test:
-    _target_: torch.utils.data.DataLoader
-    batch_size: 256
-    num_workers: ${trainer.hardware.cpus_per_task}
-    dataset:
-      _target_: torchvision.datasets.CIFAR10
-      train: False
-      root: ~/data
-      transform:
-        _target_: torchvision.transforms.v2.Compose
-        transforms:
-          - _target_: torchvision.transforms.v2.ToImage
-          - _target_: torchvision.transforms.v2.ToDtype
-            dtype:
-              _target_: stable_ssl.utils.str_to_dtype
-              _args_: [float32]
-            scale: True
+trainer:
+  # ===== Base Trainer =====
+  _target_: stable_ssl.JointEmbeddingTrainer
+
+  # ===== loss Parameters =====
+  loss:
+    _target_: stable_ssl.NTXEntLoss
+    temperature: 0.5
+
+  # ===== Module Parameters =====
+  module:
+    backbone:
+      _target_: stable_ssl.modules.load_backbone
+      name: resnet50
+      low_resolution: True
+      num_classes: null
+    projector:
+      _target_: stable_ssl.modules.MLP
+      sizes: [2048, 2048, 128]
+    projector_classifier:
+      _target_: torch.nn.Linear
+      in_features: 128
+      out_features: ${trainer.data._num_classes}
+    backbone_classifier:
+      _target_: torch.nn.Linear
+      in_features: 2048
+      out_features: ${trainer.data._num_classes}
+
+  # ===== Optim Parameters =====
+  optim:
+    epochs: 1000
+    optimizer:
+      _target_: stable_ssl.optimizers.LARS
+      _partial_: True
+      lr: 5
+      weight_decay: 1e-6
+    scheduler:
+      _target_: stable_ssl.schedulers.LinearWarmupCosineAnnealing
+      _partial_: True
+      total_steps: ${eval:'${trainer.optim.epochs} * ${trainer.data._num_train_samples} // ${trainer.data.train.batch_size}'}
+
+  # ===== Data Parameters =====
+  data:
+    _num_classes: 10
+    _num_train_samples: 50000
+    train: # training dataset as indicated by name 'train'
+      _target_: torch.utils.data.DataLoader
+      batch_size: 256
+      drop_last: True
+      shuffle: True
+      num_workers: 6
+      dataset:
+        _target_: torchvision.datasets.CIFAR10
+        root: ~/data
+        train: True
+        download: True
+        transform:
+          _target_: stable_ssl.data.MultiViewSampler
+          transforms:
+            # === First View ===
+            - _target_: torchvision.transforms.v2.Compose
+              transforms:
+                - _target_: torchvision.transforms.v2.RandomResizedCrop
+                  size: 32
+                  scale:
+                    - 0.2
+                    - 1.0
+                - _target_: torchvision.transforms.v2.RandomHorizontalFlip
+                  p: 0.5
+                - _target_: torchvision.transforms.v2.RandomApply
+                  p: 0.8
+                  transforms:
+                    - {
+                        _target_: torchvision.transforms.v2.ColorJitter,
+                        brightness: 0.4,
+                        contrast: 0.4,
+                        saturation: 0.2,
+                        hue: 0.1,
+                      }
+                - _target_: torchvision.transforms.v2.RandomGrayscale
+                  p: 0.2
+                - _target_: torchvision.transforms.v2.ToImage
+                - _target_: torchvision.transforms.v2.ToDtype
+                  dtype:
+                    _target_: stable_ssl.utils.str_to_dtype
+                    _args_: [float32]
+                  scale: True
+            # === Second View ===
+            - _target_: torchvision.transforms.v2.Compose
+              transforms:
+                - _target_: torchvision.transforms.v2.RandomResizedCrop
+                  size: 32
+                  scale:
+                    - 0.2
+                    - 1.0
+                - _target_: torchvision.transforms.v2.RandomHorizontalFlip
+                  p: 0.5
+                - _target_: torchvision.transforms.v2.RandomApply
+                  p: 0.8
+                  transforms:
+                    - {
+                        _target_: torchvision.transforms.v2.ColorJitter,
+                        brightness: 0.4,
+                        contrast: 0.4,
+                        saturation: 0.2,
+                        hue: 0.1,
+                      }
+                - _target_: torchvision.transforms.v2.RandomGrayscale
+                  p: 0.2
+                - _target_: torchvision.transforms.v2.RandomSolarize
+                  threshold: 128
+                  p: 0.2
+                - _target_: torchvision.transforms.v2.ToImage
+                - _target_: torchvision.transforms.v2.ToDtype
+                  dtype:
+                    _target_: stable_ssl.utils.str_to_dtype
+                    _args_: [float32]
+                  scale: True
+    test: # can be any name
+      _target_: torch.utils.data.DataLoader
+      batch_size: 256
+      num_workers: ${trainer.data.train.num_workers}
+      dataset:
+        _target_: torchvision.datasets.CIFAR10
+        train: False
+        root: ~/data
+        transform:
+          _target_: torchvision.transforms.v2.Compose
+          transforms:
+            - _target_: torchvision.transforms.v2.ToImage
+            - _target_: torchvision.transforms.v2.ToDtype
+              dtype:
+                _target_: stable_ssl.utils.str_to_dtype
+                _args_: [float32]
+              scale: True
+
+  # ===== Logger Parameters =====
+  logger:
+    eval_every_epoch: 10
+    log_every_step: 100
+    wandb: True
+    metric:
+      test:
+        acc1:
+          _target_: torchmetrics.classification.MulticlassAccuracy
+          num_classes: ${trainer.data._num_classes}
+          top_k: 1
+        acc5:
+          _target_: torchmetrics.classification.MulticlassAccuracy
+          num_classes: ${trainer.data._num_classes}
+          top_k: 5
+
+  # ===== Hardware Parameters =====
+  hardware:
+    seed: 0
+    float16: true
+    device: "cuda:0"
+    world_size: 1
+
 ```
 </details>
 
@@ -106,7 +216,34 @@ stable-ssl --config-path <config_path> --config-name <config_name>
 Replace `<config_path>` with the path to your configuration folder and `<config_name>` with the name of your configuration file.
 
 
-This command utilizes [Hydra](https://hydra.cc/), making it compatible with multirun functionality and CLI overrides. It is important to note that the multirun flag (`-m` or `--multirun`) is **mandatory** when using the Slurm launcher.
+<details>
+  <summary>Launching in multirun</summary>
+
+```bash
+stable-ssl --multirun --config-path <config_path> --config-name <config_name> ++trainer.data.train.batch_size=128,256,512
+```
+</details>
+
+
+<details>
+  <summary>Launching locally</summary>
+
+```bash
+stable-ssl --config-path <config_path> --config-name <config_name> ++trainer.data.train.batch_size=128,256,512
+```
+</details>
+
+
+<details>
+  <summary>Launching on slurm</summary>
+
+```bash
+stable-ssl --multirun --config-path <config_path> --config-name <config_name> hydra/launcher=submitit_slurm
+```
+</details>
+
+.. note::
+  One must include the ``--multirun`` flag when using a launcher like ``submitit_slurm``.
 
 
 ## Installation
