@@ -1,5 +1,5 @@
 
-.. include:: ../../README.rst
+.. include:: ../../README.md
 
 .. toctree::
     :maxdepth: 1
@@ -7,7 +7,6 @@
     :caption: Contents:
 
     self
-    user_guide
     releases
     contributing
     bibliography

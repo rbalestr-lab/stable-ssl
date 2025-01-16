@@ -11,14 +11,14 @@
 
 ⚠️ **This library is currently in a phase of active development. All features are subject to change without prior notice.**
 
-``stable-ssl`` streamlines training self-supervised learning models by offering all the essential boilerplate code with minimal hardcoded utilities. Its modular and flexible design supports seamless integration of architectures, loss functions, evaluation metrics, augmentations, and more from any source.
+``stable-ssl`` streamlines training self-supervised learning models by offering all the essential boilerplate code with minimal hardcoded utilities. Its flexible and modular design allows seamless integration of components from external libraries, including architectures, loss functions, evaluation metrics, and augmentations.
 
 At its core, `stable-ssl` provides a [`BaseTrainer`](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/gen_modules/stable_ssl.BaseTrainer.html#stable_ssl.BaseTrainer) class that manages job submission, data loading, training, evaluation, logging, monitoring, checkpointing, and requeuing, all customizable via a configuration file. This class is intended to be subclassed for specific training needs (see these [trainers](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/trainers.html) as examples).
 
-`stable-ssl` leverages [`Hydra`](https://hydra.cc/) to manage input parameters through configuration files, offering benefits like efficient hyperparameter tuning with `multirun` and smooth integration with job launchers such as `submitit` for Slurm.
-
 
 ## Build a Configuration File
+
+`stable-ssl` leverages [`Hydra`](https://hydra.cc/) to manage input parameters through configuration files, enabling efficient hyperparameter tuning with ``multirun`` and seamless integration with job launchers like ``submitit`` for Slurm.
 
 The first step is to specify a **trainer** class which is a subclass of `BaseTrainer`.
 Optionally, the trainer may require a **loss** function which is then used in the `compute_loss` method of the trainer.
@@ -29,7 +29,7 @@ The trainer parameters are then structured according to the following categories
 |------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **data**         | Defines the dataset, loading, and augmentation pipelines. The `train` dataset is used for training, and if absent, the model runs in evaluation mode.  |
 | **module**       | Specifies the neural network modules and their architecture.                                                                                           |
-| **optim**        | Defines the optimization components, including the optimizer, scheduler, and the number of epochs.                                                     |
+| **optim**        | Defines the optimization components, including the optimizer, scheduler, and the number of epochs. See defaults parameters [here](                                                   |
 | **hardware**     | Specifies the hardware configuration, including the number of GPUs, CPUs, and precision settings.                                                      |
 | **logger**       | Configures model performance monitoring. APIs like [WandB](https://wandb.ai/home) are supported                                                        |
 
