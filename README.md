@@ -29,11 +29,13 @@ The trainer parameters are then structured according to the following categories
 |------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **data**         | Defines the dataset, loading, and augmentation pipelines. The `train` dataset is used for training, and if absent, the model runs in evaluation mode.  |
 | **module**       | Specifies the neural network modules and their architecture.                                                                                           |
-| **optim**        | Defines the optimization components, including the optimizer, scheduler, and the number of epochs. See defaults parameters in the [OptimConfig]        |
-| **hardware**     | Specifies the hardware configuration, including the number of GPUs, CPUs, and precision settings.                                                      |
-| **logger**       | Configures model performance monitoring. APIs like [WandB](https://wandb.ai/home) are supported                                                        |
+| **optim**        | Defines the optimization components, including the optimizer, scheduler, and the number of epochs. See defaults parameters in the [OptimConfig].       |
+| **hardware**     | Specifies the hardware configuration, including the number of GPUs, CPUs, and precision settings. See defaults parameters in the [HardwareConfig].     |
+| **logger**       | Configures model performance monitoring. APIs like [WandB](https://wandb.ai/home) are supported. See defaults parameters in the [LoggerConfig].        |
 
 [OptimConfig]: https://rbalestr-lab.github.io/stable-ssl.github.io/dev/api/gen_modules/stable_ssl.config.OptimConfig.html#stable_ssl.config.OptimConfig
+[HardwareConfig]: https://rbalestr-lab.github.io/stable-ssl.github.io/dev/api/gen_modules/stable_ssl.config.HardwareConfig.html#stable_ssl.config.HardwareConfig
+[LoggerConfig]: https://rbalestr-lab.github.io/stable-ssl.github.io/dev/api/gen_modules/stable_ssl.config.LoggerConfig.html#stable_ssl.config.LoggerConfig
 
 
 <details>
