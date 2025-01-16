@@ -33,9 +33,9 @@ The trainer parameters are then structured according to the following categories
 | **hardware**     | Specifies the hardware configuration, including the number of GPUs, CPUs, and precision settings. See defaults parameters in the [`HardwareConfig`].     |
 | **logger**       | Configures model performance monitoring. APIs like [`WandB`](https://wandb.ai/home) are supported. See defaults parameters in the [`LoggerConfig`].        |
 
-[OptimConfig]: https://rbalestr-lab.github.io/stable-ssl.github.io/dev/api/gen_modules/stable_ssl.config.OptimConfig.html#stable_ssl.config.OptimConfig
-[HardwareConfig]: https://rbalestr-lab.github.io/stable-ssl.github.io/dev/api/gen_modules/stable_ssl.config.HardwareConfig.html#stable_ssl.config.HardwareConfig
-[LoggerConfig]: https://rbalestr-lab.github.io/stable-ssl.github.io/dev/api/gen_modules/stable_ssl.config.LoggerConfig.html#stable_ssl.config.LoggerConfig
+[`OptimConfig`]: https://rbalestr-lab.github.io/stable-ssl.github.io/dev/api/gen_modules/stable_ssl.config.OptimConfig.html#stable_ssl.config.OptimConfig
+[`HardwareConfig`]: https://rbalestr-lab.github.io/stable-ssl.github.io/dev/api/gen_modules/stable_ssl.config.HardwareConfig.html#stable_ssl.config.HardwareConfig
+[`LoggerConfig`]: https://rbalestr-lab.github.io/stable-ssl.github.io/dev/api/gen_modules/stable_ssl.config.LoggerConfig.html#stable_ssl.config.LoggerConfig
 
 
 <details>
