@@ -39,11 +39,6 @@ extensions = [
     "myst_parser",
 ]
 
-source_suffix = {
-    ".rst": "reStructuredText",
-    ".md": "markdown",
-}
-
 autosummary_generate = True
 
 copybutton_exclude = ".linenos, .gp"
