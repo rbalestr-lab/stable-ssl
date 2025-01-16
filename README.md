@@ -15,12 +15,23 @@
 
 At its core, `stable-ssl` provides a [BaseTrainer](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/gen_modules/stable_ssl.BaseTrainer.html#stable_ssl.BaseTrainer) class that manages job submission, data loading, training, evaluation, logging, monitoring, checkpointing, and requeuing, all customizable via a configuration file. This class is intended to be subclassed for specific training needs (see these [trainers](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/trainers.html) as examples).
 
-`stable-ssl` leverages [`Hydra`](https://hydra.cc/) to manage input parameters through configuration files, offering benefits like efficient hyperparameter experimentation with `multirun` and smooth integration with job launchers such as `submitit` for Slurm.
+`stable-ssl` leverages [`Hydra`](https://hydra.cc/) to manage input parameters through configuration files, offering benefits like efficient hyperparameter tuning with `multirun` and smooth integration with job launchers such as `submitit` for Slurm.
 
 
 ## Build a Configuration File
 
 In `stable-ssl`, the configuration file is structured according to the following categories:
+
+| **Category**    | **Description**                                                                                                                                                   |
+|------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **trainer**      | Specifies the trainer class, which is a subclass of `BaseTrainer`.                                                                                              |
+| **data**         | Defines the dataset, loading, and augmentation pipelines. The `train` dataset is used for training, and if absent, the model runs in evaluation mode.            |
+| **module**       | Specifies the neural network modules and their architecture, including backbones, projectors, and classifiers.                                                  |
+| **optim**        | Defines the optimization components, including the optimizer, scheduler, and the number of epochs.                                                              |
+| **hardware**     | Specifies the hardware configuration, including the number of GPUs, CPUs, and precision settings.                                                               |
+| **logger**       | Configures model performance monitoring, supporting APIs like WandB and logging settings.                                                                        |
+| **loss (optional)** | Defines a loss function that can be used in the `compute_loss` method of the trainer.                                                                          |
+
 
 ### trainer
 
