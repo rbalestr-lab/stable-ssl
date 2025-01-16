@@ -250,3 +250,11 @@ Or you can also run:
 ```bash
 pip install -U git+https://github.com/rbalestr-lab/stable-ssl
 ```
+
+## Ways You Can Contribute:
+
+- **New Features, Bug Fixes, and Documentation Improvements:**
+  - If you'd like to contribute new features, bug fixes, or improvements to the documentation, please refer to our [contributing guide](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/contributing.html) for detailed instructions on how to get started.
+
+- **Enhancing Performance:**
+  - You can also contribute by adding new methods, datasets, or configurations that improve the current performance in the [benchmark section](https://github.com/rbalestr-lab/stable-ssl/tree/main/benchmarks).
