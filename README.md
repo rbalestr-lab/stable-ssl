@@ -13,7 +13,7 @@
 
 ``stable-ssl`` streamlines training self-supervised learning models by offering all the essential boilerplate code with minimal hardcoded utilities. Its flexible and modular design allows seamless integration of components from external libraries, including architectures, loss functions, evaluation metrics, and augmentations.
 
-At its core, `stable-ssl` provides a [`BaseTrainer`](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/gen_modules/stable_ssl.BaseTrainer.html#stable_ssl.BaseTrainer) class that manages job submission, data loading, training, evaluation, logging, monitoring, checkpointing, and requeuing, all customizable via a configuration file. This class is intended to be subclassed for specific training needs (see these [trainers](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/trainers.html) as examples).
+At its core, `stable-ssl` provides a [`BaseTrainer`](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/gen_modules/stable_ssl.BaseTrainer.html#stable_ssl.BaseTrainer) class that manages job submission, data loading, training, evaluation, logging, monitoring, checkpointing, and requeuing, all customizable via a configuration file. This class is intended to be subclassed for specific training needs (see these [`trainers`](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/trainers.html) as examples).
 
 
 ## Build a Configuration File
@@ -29,9 +29,9 @@ The trainer parameters are then structured according to the following categories
 |------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **data**         | Defines the dataset, loading, and augmentation pipelines. The `train` dataset is used for training, and if absent, the model runs in evaluation mode.  |
 | **module**       | Specifies the neural network modules and their architecture.                                                                                           |
-| **optim**        | Defines the optimization components, including the optimizer, scheduler, and the number of epochs. See defaults parameters in the [OptimConfig].       |
-| **hardware**     | Specifies the hardware configuration, including the number of GPUs, CPUs, and precision settings. See defaults parameters in the [HardwareConfig].     |
-| **logger**       | Configures model performance monitoring. APIs like [WandB](https://wandb.ai/home) are supported. See defaults parameters in the [LoggerConfig].        |
+| **optim**        | Defines the optimization components, including the optimizer, scheduler, and the number of epochs. See defaults parameters in the [`OptimConfig`].       |
+| **hardware**     | Specifies the hardware configuration, including the number of GPUs, CPUs, and precision settings. See defaults parameters in the [`HardwareConfig`].     |
+| **logger**       | Configures model performance monitoring. APIs like [WandB](https://wandb.ai/home) are supported. See defaults parameters in the [`LoggerConfig`].        |
 
 [OptimConfig]: https://rbalestr-lab.github.io/stable-ssl.github.io/dev/api/gen_modules/stable_ssl.config.OptimConfig.html#stable_ssl.config.OptimConfig
 [HardwareConfig]: https://rbalestr-lab.github.io/stable-ssl.github.io/dev/api/gen_modules/stable_ssl.config.HardwareConfig.html#stable_ssl.config.HardwareConfig
@@ -233,7 +233,7 @@ stable-ssl --multirun --config-path <config_path> --config-name <config_name> hy
 ```
 </details>
 
-> **:bulb: Note**
+> **Note:**
 > One must include the `--multirun` flag when using a launcher like `submitit_slurm`.
 
 
