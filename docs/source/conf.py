@@ -17,13 +17,19 @@
 
 # -- Project information -----------------------------------------------------
 
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath("../stable_ssl"))
+
+from stable_ssl.__about__ import __version__  # Import the version from __about__.py
+
 project = "stable-SSL"
 copyright = "2024, stable-SSL team"
 author = "stable-SSL team"
 
 # The full version, including alpha/beta/rc tags
-release = "0.1-dev"
-
+release = __version__  # Set release to the version from __about__.py
 
 # -- General configuration ---------------------------------------------------
 
