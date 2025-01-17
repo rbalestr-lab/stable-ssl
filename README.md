@@ -25,7 +25,7 @@ Optionally, the trainer may require a **loss** function which is then used in th
 
 The trainer parameters are then structured according to the following categories:
 
-| **Category**     | **Description**                                                                                                                                                                         | 
+| **Category**     | **Description**                                                                                                                                                                         |
 |------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **data**         | Defines the dataset, loading, and augmentation pipelines. The `train` dataset is used for training, and if absent, the model runs in evaluation mode. Its structure is fully flexible.  |
 | **module**       | Specifies the neural network modules and their architecture. Its structure is fully flexible.                                                                                           |
