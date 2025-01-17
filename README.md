@@ -218,7 +218,7 @@ Replace `<config_path>` with the path to your configuration folder and `<config_
 Useful options include:
 
 <details>
-  <summary>Launching in multirun</summary>
+  <summary>Launching in multirun (example with batch size validation)</summary>
 
 ```bash
 stable-ssl --multirun --config-path <config_path> --config-name <config_name> ++trainer.data.train.batch_size=128,256,512
