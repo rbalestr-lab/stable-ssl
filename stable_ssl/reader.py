@@ -16,6 +16,7 @@ except ModuleNotFoundError:
         "or an error will be thrown."
     )
 import logging
+import re
 from multiprocessing import Pool
 from pathlib import Path
 
@@ -25,8 +26,6 @@ import omegaconf
 import pandas as pd
 from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
-
-import re
 
 
 def natural_sort(l):
@@ -103,7 +102,8 @@ def wandb_project_to_table(
         column (str): name of the column in configs to use as column
         agg (callable): aggregator if many values are present
 
-    Returns:
+    Returns
+    -------
         DataFrame: the formatted table
     """
     df = pd.DataFrame(configs).T
