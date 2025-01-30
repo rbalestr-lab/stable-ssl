@@ -29,10 +29,12 @@ from tqdm.contrib.logging import logging_redirect_tqdm
 import re
 
 
-def natural_sort(l):
-    convert = lambda text: int(text) if text.isdigit() else text.lower()
-    alphanum_key = lambda key: [convert(c) for c in re.split("([0-9]+)", key)]
-    return sorted(l, key=alphanum_key)
+def alphanum_key(key):
+    return [int(c) if c.isdigit() else c.lower() for c in re.split("([0-9]+)", key)]
+
+
+def natural_sort(values):
+    return sorted(values, key=alphanum_key)
 
 
 def jsonl_project(folder, num_workers=8):
