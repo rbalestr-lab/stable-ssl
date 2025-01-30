@@ -26,6 +26,14 @@ import pandas as pd
 from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
 
+import re
+
+
+def natural_sort(l):
+    convert = lambda text: int(text) if text.isdigit() else text.lower()
+    alphanum_key = lambda key: [convert(c) for c in re.split("([0-9]+)", key)]
+    return sorted(l, key=alphanum_key)
+
 
 def jsonl_project(folder, num_workers=8):
     """Load configs and values from runs in a folder."""
@@ -77,14 +85,51 @@ def config(path):
     return config
 
 
+def wandb_project_to_table(
+    dfs: dict[str : pd.DataFrame],
+    configs: dict[str : pd.DataFrame],
+    value: str,
+    row: str,
+    column: str,
+    agg: callable,
+) -> pd.DataFrame:
+    """Format a pandas DataFrame as a table given the user args.
+
+    Args:
+        dfs (dict): first output of wandb_project
+        configs (dict): second output of wandb_project
+        value (str): name of the column in dfs to use as values
+        row (str): name of the column in configs to use as row
+        column (str): name of the column in configs to use as column
+        agg (callable): aggregator if many values are present
+
+    Returns:
+        DataFrame: the formatted table
+    """
+    df = pd.DataFrame(configs).T
+    rows = natural_sort(df[row].astype(str).unique())
+    columns = natural_sort(df[column].astype(str).unique())
+    output = pd.DataFrame(columns=columns, index=rows)
+    for r in rows:
+        for c in columns:
+            ids = df[
+                (df[row].astype(str) == r) & (df[column].astype(str) == c)
+            ].index.values
+            samples = []
+            for id in ids:
+                samples.append(dfs[id][value])
+            output.loc[r, c] = agg(np.stack(samples))
+    return output
+
+
 def wandb_project(
-    entity,
-    project,
-    min_step=0,
-    max_step=-1,
-    keys=None,
-    num_workers=10,
-    state=["finished"],
+    entity: str,
+    project: str,
+    min_step: int = 0,
+    max_step: int = -1,
+    keys: list = None,
+    num_workers: int = 10,
+    state: list = ["finished"],
 ):
     """Download configs and data from a wandb project."""
     api = wandbapi.Api()
@@ -103,9 +148,11 @@ def wandb_project(
             )
         )
     dfs = {}
-    for r, result in zip(runs, results):
-        dfs[r.name] = result
-    return dfs
+    configs = {}
+    for r, (result, config) in zip(runs, results):
+        dfs[f"{entity}/{project}/{r.id}"] = result
+        configs[f"{entity}/{project}/{r.id}"] = config
+    return dfs, configs
 
 
 def _wandb_run_packed(args):
@@ -149,7 +196,7 @@ def wandb(
     df = pd.DataFrame(data)
     df.set_index("_step", inplace=True)
     # config = flatten_config(run.config)
-    return df
+    return df, run.config
 
 
 def flatten_config(config):
