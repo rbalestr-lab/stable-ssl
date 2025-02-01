@@ -53,6 +53,8 @@ except ModuleNotFoundError:
         "Wandb module is not installed, make sure not to use wandb for logging "
         "or an error will be thrown."
     )
+import functools
+
 from .utils import (
     BreakAllEpochs,
     BreakEpoch,
@@ -62,7 +64,6 @@ from .utils import (
     seed_everything,
     to_device,
 )
-import functools
 
 
 def rsetattr(obj, attr, val):
@@ -464,7 +465,7 @@ class BaseTrainer(torch.nn.Module):
             logging.info(f"\t\t- name: {wandb.run.name}")
             logging.info(f"\t\t- id: {wandb.run.id}")
             if wandb.config:
-                logging.info(f"\t\t- config:")
+                logging.info("\t\t- config:")
                 for key, value in wandb.config.items():
                     # need to handle the fact that our base configs have a _
                     # and users wouldn't provide that
