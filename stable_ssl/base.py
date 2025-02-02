@@ -22,6 +22,7 @@ import numpy as np
 import omegaconf
 import submitit
 import torch
+from tabulate import tabulate
 from tqdm import tqdm
 
 from . import reader
@@ -34,7 +35,6 @@ from .config import (
 )
 from .data import DistributedSamplerWrapper
 from .modules import TeacherStudentModule
-from tabulate import tabulate
 
 try:
     import wandb as wandbapi
