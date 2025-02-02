@@ -448,10 +448,10 @@ class BaseTrainer(torch.nn.Module):
     def _instanciate(self):
         # We start with logger since wandb may override some hparams
         self.logger = hydra.utils.instantiate(self._logger, _convert_="partial")
-        logging.info("Logger:")
-        logging.info(f"\t- Dump path: `{self.logger['dump_path']}`")
+        logging.info("████ Logger ████")
+        logging.info(f"\tDump path: `{self.logger['dump_path']}` ✅")
         if self.logger["wandb"]:
-            logging.info("\t- Wandb:")
+            logging.info("\t𝗪𝗮𝗻𝗱𝗯™")
             # we defer adding the config to later
             # to make sure we use the possibly given
             # sweep config
@@ -460,12 +460,12 @@ class BaseTrainer(torch.nn.Module):
             self.logger["wandb"]["project"] = wandb.run.project
             self.logger["wandb"]["name"] = wandb.run.name
             self.logger["wandb"]["id"] = wandb.run.id
-            logging.info(f"\t\t- entity: {wandb.run.entity}")
-            logging.info(f"\t\t- project: {wandb.run.project}")
-            logging.info(f"\t\t- name: {wandb.run.name}")
-            logging.info(f"\t\t- id: {wandb.run.id}")
-            if wandb.config:
-                logging.info("\t\t- config:")
+            logging.info(f"\t\tentity: {wandb.run.entity} ✅")
+            logging.info(f"\t\tproject: {wandb.run.project} ✅")
+            logging.info(f"\t\tname: {wandb.run.name} ✅")
+            logging.info(f"\t\tid: {wandb.run.id} ✅")
+            if len(wandb.config.keys()):
+                logging.info("\t\ta Wandb™ config is provided, not uploading Hydra's:")
                 for key, value in wandb.config.items():
                     # need to handle the fact that our base configs have a _
                     # and users wouldn't provide that
@@ -483,21 +483,23 @@ class BaseTrainer(torch.nn.Module):
                         if "_" != accessor[0][0]:
                             accessor[0] = "_" + accessor[0]
                     key = ".".join(accessor)
-                    original = rgetattr(self, key)
-                    logging.info(
-                        f"\t\t\t- overriding: {key} from {original} to {value}"
-                    )
-                    rsetattr(self, key, value)
-                    assert rgetattr(self, key) == value
+                    try:
+                        original = rgetattr(self, key)
+                        rsetattr(self, key, value)
+                        assert rgetattr(self, key) == value
+                        logging.info(
+                            f"\t\t\toverriding: {key} from {original} to {value} ✅"
+                        )
+                    except Exception as e:
+                        logging.error(f"❌ Error while trying to override {key} ❌")
+                        raise e
             else:
-                logging.info("\t\t- No sweep config to use")
+                logging.info("\t\tNo Wandb™ config provided, uploading Hydra's")
                 config = collapse_nested_dict(self.get_config())
-                for key, value in config.items():
-                    run.config[key] = value
-                run.update()
+                run.config.update(config)
 
         else:
-            logging.info("\t- JSONL")
+            logging.info("\tJSONL")
 
         seed_everything(self._hardware.get("seed", None))
 
