@@ -34,6 +34,7 @@ from .config import (
 )
 from .data import DistributedSamplerWrapper
 from .modules import TeacherStudentModule
+from tabulate import tabulate
 
 try:
     import wandb as wandbapi
@@ -570,6 +571,7 @@ class BaseTrainer(torch.nn.Module):
 
         # Modules and scaler
         logging.info("Modules:")
+        stats = []
         for name, module in self.module.items():
             # if self.config.model.memory_format == "channels_last":
             #     module.to(memory_format=torch.channels_last)
@@ -578,6 +580,7 @@ class BaseTrainer(torch.nn.Module):
             module.to(self.device)
             num_trainable = 0
             num_nontrainable = 0
+            num_buffer = 0
             for p in module.parameters():
                 if isinstance(p, torch.nn.parameter.UninitializedParameter):
                     n = 1
@@ -587,16 +590,25 @@ class BaseTrainer(torch.nn.Module):
                     num_trainable += n
                 else:
                     num_nontrainable += n
+            for p in module.buffers():
+                if isinstance(p, torch.nn.parameter.UninitializedBuffer):
+                    n = 1
+                else:
+                    n = p.numel()
+                num_buffer += n
             if self.world_size > 1 and num_trainable:
                 module = torch.nn.parallel.DistributedDataParallel(
                     module, device_ids=[self._device]
                 )
             self.module[name] = module
-
-            logging.info(f"\t- {name} with {num_trainable} trainable parameters.")
-            logging.info(
-                f"\t- {name} with {num_nontrainable} non-trainable parameters."
-            )
+            stats.append([name, num_trainable, num_nontrainable, num_buffer])
+        headers = [
+            "Module",
+            "Trainable parameters",
+            "Non Trainable parameters",
+            "Buffers",
+        ]
+        logging.info(f"\n{tabulate(stats, headers, tablefmt='heavy_outline')}")
         self.module = torch.nn.ModuleDict(self.module)
         self._check_modules()
         self.scaler = torch.amp.GradScaler("cuda", enabled=self.hardware["float16"])
