@@ -11,7 +11,7 @@
 
 ⚠️ **This library is currently in a phase of active development. All features are subject to change without prior notice.**
 
-``stable-ssl`` streamlines training self-supervised learning models by offering all the essential boilerplate code with minimal hardcoded utilities. Its flexible and modular design allows seamless integration of components from external libraries, including architectures, loss functions, evaluation metrics, and augmentations.
+``stable-ssl`` streamlines the training and evaluation of deep learning models by offering all the essential boilerplate code with minimal hardcoded utilities. ``stable-ssl`` adopts a flexible and modular design for seamless integration of components from external libraries, including architectures, loss functions, evaluation metrics, and augmentations. The provided utilities are primarily focused on **Self-Supervised Learning**, yet ``stable-ssl`` will save you time and headache regardless of your use-case.
 
 At its core, `stable-ssl` provides a [`BaseTrainer`](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/gen_modules/stable_ssl.BaseTrainer.html#stable_ssl.BaseTrainer) class that manages job submission, data loading, training, evaluation, logging, monitoring, checkpointing, and requeuing, all customizable via a configuration file. This class is intended to be subclassed for specific training needs (see these [`trainers`](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/trainers.html) as examples).
 
