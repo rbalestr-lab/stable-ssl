@@ -22,6 +22,7 @@ import numpy as np
 import omegaconf
 import submitit
 import torch
+from tabulate import tabulate
 from tqdm import tqdm
 
 from . import reader
@@ -53,6 +54,8 @@ except ModuleNotFoundError:
         "Wandb module is not installed, make sure not to use wandb for logging "
         "or an error will be thrown."
     )
+import functools
+
 from .utils import (
     BreakAllEpochs,
     BreakEpoch,
@@ -62,6 +65,29 @@ from .utils import (
     seed_everything,
     to_device,
 )
+
+
+def rsetattr(obj, attr, val):
+    pre, _, post = attr.rpartition(".")
+    parent = rgetattr(obj, pre) if pre else obj
+    if type(parent) is dict:
+        parent[post] = val
+    else:
+        return setattr(parent, post, val)
+
+
+# using wonder's beautiful simplification: https://stackoverflow.com/questions/31174295/getattr-and-setattr-on-nested-objects/31174427?noredirect=1#comment86638618_31174427
+
+
+def _adaptive_getattr(obj, attr):
+    if type(obj) is dict:
+        return obj[attr]
+    else:
+        return getattr(obj, attr)
+
+
+def rgetattr(obj, attr):
+    return functools.reduce(_adaptive_getattr, [obj] + attr.split("."))
 
 
 class BaseTrainer(torch.nn.Module):
@@ -421,6 +447,61 @@ class BaseTrainer(torch.nn.Module):
         self._step = value
 
     def _instanciate(self):
+        # We start with logger since wandb may override some hparams
+        self.logger = hydra.utils.instantiate(self._logger, _convert_="partial")
+        logging.info("████ Logger ████")
+        logging.info(f"\tDump path: `{self.logger['dump_path']}` ✅")
+        if self.logger["wandb"]:
+            logging.info("\t𝗪𝗮𝗻𝗱𝗯™")
+            # we defer adding the config to later
+            # to make sure we use the possibly given
+            # sweep config
+            run = wandb.init(**self.logger["wandb"], resume="allow")
+            self.logger["wandb"]["entity"] = wandb.run.entity
+            self.logger["wandb"]["project"] = wandb.run.project
+            self.logger["wandb"]["name"] = wandb.run.name
+            self.logger["wandb"]["id"] = wandb.run.id
+            logging.info(f"\t\tentity: {wandb.run.entity} ✅")
+            logging.info(f"\t\tproject: {wandb.run.project} ✅")
+            logging.info(f"\t\tname: {wandb.run.name} ✅")
+            logging.info(f"\t\tid: {wandb.run.id} ✅")
+            if len(wandb.config.keys()):
+                logging.info("\t\ta Wandb™ config is provided, not uploading Hydra's:")
+                for key, value in wandb.config.items():
+                    # need to handle the fact that our base configs have a _
+                    # and users wouldn't provide that
+                    accessor = key.split(".")
+                    if accessor[0] == "trainer":
+                        accessor = accessor[1:]
+                    if accessor[0] in [
+                        "data",
+                        "module",
+                        "hardware",
+                        "loss",
+                        "metric",
+                        "optim",
+                    ]:
+                        if "_" != accessor[0][0]:
+                            accessor[0] = "_" + accessor[0]
+                    key = ".".join(accessor)
+                    try:
+                        original = rgetattr(self, key)
+                        rsetattr(self, key, value)
+                        assert rgetattr(self, key) == value
+                        logging.info(
+                            f"\t\t\toverriding: {key} from {original} to {value} ✅"
+                        )
+                    except Exception as e:
+                        logging.error(f"❌ Error while trying to override {key} ❌")
+                        raise e
+            else:
+                logging.info("\t\tNo Wandb™ config provided, uploading Hydra's")
+                config = collapse_nested_dict(self.get_config())
+                run.config.update(config)
+
+        else:
+            logging.info("\tJSONL")
+
         seed_everything(self._hardware.get("seed", None))
 
         self.start_time = time.time()
@@ -428,7 +509,6 @@ class BaseTrainer(torch.nn.Module):
         self.data = hydra.utils.instantiate(self._data, _convert_="object")
         self.module = hydra.utils.instantiate(self._module, _convert_="object")
         self.hardware = hydra.utils.instantiate(self._hardware, _convert_="object")
-        self.logger = hydra.utils.instantiate(self._logger, _convert_="partial")
 
         self._set_device(self.hardware)
 
@@ -437,30 +517,6 @@ class BaseTrainer(torch.nn.Module):
             self.loss = self.loss.to(self._device)
         else:
             self.loss = None
-
-        logging.info("Logger:")
-        logging.info(f"\t- Dump path: `{self.logger['dump_path']}`")
-        if self.logger["wandb"]:
-            logging.info("\t- Wandb:")
-            try:
-                wandb.init(
-                    **self.logger["wandb"],
-                    config=collapse_nested_dict(self.get_config()),
-                    resume="allow",
-                )
-                self.logger["wandb"]["entity"] = wandb.run.entity
-                self.logger["wandb"]["project"] = wandb.run.project
-                self.logger["wandb"]["name"] = wandb.run.name
-                self.logger["wandb"]["id"] = wandb.run.id
-                logging.info(f"\t\t- entity: {wandb.run.entity}")
-                logging.info(f"\t\t- project: {wandb.run.project}")
-                logging.info(f"\t\t- name: {wandb.run.name}")
-                logging.info(f"\t\t- id: {wandb.run.id}")
-            except Exception:
-                logging.exception("Failed to initialize wandb.")
-                raise
-        else:
-            logging.info("\t- JSONL")
 
         # we do metrics before data to allow logging in data
         logging.info("Metrics:")
@@ -515,24 +571,44 @@ class BaseTrainer(torch.nn.Module):
 
         # Modules and scaler
         logging.info("Modules:")
+        stats = []
         for name, module in self.module.items():
             # if self.config.model.memory_format == "channels_last":
             #     module.to(memory_format=torch.channels_last)
             if self.world_size > 1:
                 module = torch.nn.SyncBatchNorm.convert_sync_batchnorm(module)
             module.to(self.device)
-            has_parameters = False
-            if sum(p.numel() for p in module.parameters() if p.requires_grad) > 0:
-                has_parameters = True
-            if self.world_size > 1 and has_parameters:
+            num_trainable = 0
+            num_nontrainable = 0
+            num_buffer = 0
+            for p in module.parameters():
+                if isinstance(p, torch.nn.parameter.UninitializedParameter):
+                    n = 1
+                else:
+                    n = p.numel()
+                if p.requires_grad:
+                    num_trainable += n
+                else:
+                    num_nontrainable += n
+            for p in module.buffers():
+                if isinstance(p, torch.nn.parameter.UninitializedBuffer):
+                    n = 1
+                else:
+                    n = p.numel()
+                num_buffer += n
+            if self.world_size > 1 and num_trainable:
                 module = torch.nn.parallel.DistributedDataParallel(
                     module, device_ids=[self._device]
                 )
             self.module[name] = module
-            trainable = sum(
-                param.numel() for param in module.parameters() if param.requires_grad
-            )
-            logging.info(f"\t- {name} with {trainable} trainable parameters.")
+            stats.append([name, num_trainable, num_nontrainable, num_buffer])
+        headers = [
+            "Module",
+            "Trainable parameters",
+            "Non Trainable parameters",
+            "Buffers",
+        ]
+        logging.info(f"\n{tabulate(stats, headers, tablefmt='heavy_outline')}")
         self.module = torch.nn.ModuleDict(self.module)
         self._check_modules()
         self.scaler = torch.amp.GradScaler("cuda", enabled=self.hardware["float16"])
@@ -798,7 +874,7 @@ class BaseTrainer(torch.nn.Module):
         # Update the log buffer with the new packet.
         packet = packet or {}
         assert "_global_step" not in packet, logging.error(
-            "'_global_step' is reserved but present in log packet."
+            "'_global_step' is reserved but present in packet."
         )
         self._log_buffer.update(packet)
         if not commit or len(self._log_buffer) == 0:
@@ -918,6 +994,7 @@ class BaseTrainer(torch.nn.Module):
                 wandb.finish()
             except Exception as e:
                 logging.error(f"Encountered error during wandb.finish: {e}")
+                raise e
         logging.info("Cleaning up process, device status before cleaning:")
         get_gpu_info()
 

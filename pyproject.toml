@@ -21,6 +21,7 @@ dependencies = [
     "hydra-core",
     "hydra-submitit-launcher",
     "pandas",
+    "tabulate",
     "jsonlines",
     "torchmetrics",
     "scipy",
