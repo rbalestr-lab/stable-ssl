@@ -18,6 +18,8 @@ from .utils import (
     log_and_raise,
     off_diagonal,
     reduce,
+    rgetattr,
+    rsetattr,
     seed_everything,
     str_to_dtype,
     to_device,
@@ -45,4 +47,6 @@ __all__ = [
     "warn_once",
     "compute_global_mean",
     "broadcast",
+    "rsetattr",
+    "rgetattr",
 ]
