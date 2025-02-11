@@ -109,7 +109,7 @@ class NNCLRLoss(torch.nn.Module):
 
         def forward(self, x):
             queue_norm = F.normalize(self.queue, dim=1)
-            similarities = x @ queue_norm.T
+            similarities = torch.matmul(x, queue_norm.T)
 
             nn_idx = similarities.argmax(dim=1)
             return queue_norm[nn_idx]
