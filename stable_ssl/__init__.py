@@ -15,7 +15,13 @@ from .__about__ import (
 )
 from .base import BaseTrainer
 from .config import instanciate_config
-from .losses import BarlowTwinsLoss, NegativeCosineSimilarity, NTXEntLoss, VICRegLoss
+from .losses import (
+    BarlowTwinsLoss,
+    NegativeCosineSimilarity,
+    NNCLRLoss,
+    NTXEntLoss,
+    VICRegLoss,
+)
 from .modules import load_backbone
 from .trainers import JointEmbeddingTrainer, SelfDistillationTrainer, SupervisedTrainer
 
@@ -32,6 +38,7 @@ __all__ = [
     "JointEmbeddingTrainer",
     "SelfDistillationTrainer",
     "NTXEntLoss",
+    "NNCLRLoss",
     "VICRegLoss",
     "BarlowTwinsLoss",
     "NegativeCosineSimilarity",
