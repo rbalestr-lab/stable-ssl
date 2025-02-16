@@ -94,6 +94,7 @@ def wandb_project_to_table(
     row: str,
     column: str,
     agg: callable,
+    filters=None,
 ) -> pd.DataFrame:
     """Format a pandas DataFrame as a table given the user args.
 
@@ -109,7 +110,14 @@ def wandb_project_to_table(
     -------
         DataFrame: the formatted table
     """
+    filters = filters or {}
     df = pd.DataFrame(configs).T
+    for key, value in filters.items():
+        if type(value) not in [tuple, list]:
+            value = [value]
+        s = df.loc[key, :].isin(value)
+        df = df.loc[:, s]
+
     rows = natural_sort(df[row].astype(str).unique())
     columns = natural_sort(df[column].astype(str).unique())
     output = pd.DataFrame(columns=columns, index=rows)
@@ -205,7 +213,8 @@ def wandb(
     ):
         data.append(row)
     df = pd.DataFrame(data)
-    df.set_index("_step", inplace=True)
+    if "_step" in df.columns:
+        df.set_index("_step", inplace=True)
     # config = flatten_config(run.config)
     return df, run.config
 
