@@ -136,7 +136,6 @@ def wandb_project(
     max_step: int = -1,
     keys: list = None,
     num_workers: int = 10,
-    state: list = ["finished"],
 ):
     """Download configs and data from a wandb project."""
     api = wandbapi.Api()
@@ -147,7 +146,6 @@ def wandb_project(
         per_page=per_page,
         include_sweeps=include_sweeps,
     )
-    runs = [r for r in runs if r.state in state]
     logging.info(f"Found {len(runs)} runs for project {project}")
     with Pool(num_workers) as p:
         results = list(
