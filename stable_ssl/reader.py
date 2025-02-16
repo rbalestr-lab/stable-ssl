@@ -110,26 +110,38 @@ def wandb_project_to_table(
     -------
         DataFrame: the formatted table
     """
+    logging.info(f"Creating table from {len(configs)} runs.")
     filters = filters or {}
     df = pd.DataFrame(configs).T
-    for key, value in filters.items():
-        if type(value) not in [tuple, list]:
-            value = [value]
-        s = df.loc[key, :].isin(value)
-        df = df.loc[:, s]
+    for id in df.index.values:
+        assert id in dfs
+    for k, v in filters.items():
+        if type(v) not in [tuple, list]:
+            v = [v]
+        s = df[k].isin(v)
+        df = df.loc[s]
+        logging.info(f"After filtering {k}, {len(df)} runs are left.")
 
     rows = natural_sort(df[row].astype(str).unique())
+    logging.info(f"Found rows: {rows}")
     columns = natural_sort(df[column].astype(str).unique())
+    logging.info(f"Found columns: {columns}")
     output = pd.DataFrame(columns=columns, index=rows)
     for r in rows:
         for c in columns:
-            ids = df[
-                (df[row].astype(str) == r) & (df[column].astype(str) == c)
-            ].index.values
+            cell_runs = (df[row].astype(str) == r) & (df[column].astype(str) == c)
+            n = np.count_nonzero(cell_runs)
             samples = []
-            for id in ids:
-                samples.append(dfs[id][value])
-            output.loc[r, c] = agg(np.stack(samples))
+            logging.info(f"Number of runs for cell ({r}, {c}): {n}")
+            for id in df[cell_runs].index.values:
+                if value not in dfs[id].columns:
+                    logging.info(f"Run {id} missing {value}, skipping....")
+                    continue
+                samples.append(dfs[id][value].values.reshape(-1))
+            if len(samples) == 0:
+                output.loc[r, c] = np.nan
+            else:
+                output.loc[r, c] = agg(np.concatenate(samples))
     return output
 
 
