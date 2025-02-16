@@ -26,6 +26,7 @@ import omegaconf
 import pandas as pd
 from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
+from typing import Optional, Dict, Any
 
 
 def alphanum_key(key):
@@ -127,6 +128,10 @@ def wandb_project_to_table(
 def wandb_project(
     entity: str,
     project: str,
+    filters: Optional[Dict[str, Any]] = None,
+    order: str = "+created_at",
+    per_page: int = 50,
+    include_sweeps: bool = True,
     min_step: int = 0,
     max_step: int = -1,
     keys: list = None,
@@ -135,7 +140,13 @@ def wandb_project(
 ):
     """Download configs and data from a wandb project."""
     api = wandbapi.Api()
-    runs = api.runs(f"{entity}/{project}")
+    runs = api.runs(
+        f"{entity}/{project}",
+        filters=filters,
+        order=order,
+        per_page=per_page,
+        include_sweeps=include_sweeps,
+    )
     runs = [r for r in runs if r.state in state]
     logging.info(f"Found {len(runs)} runs for project {project}")
     with Pool(num_workers) as p:
