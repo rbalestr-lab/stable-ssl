@@ -19,6 +19,7 @@ import logging
 import re
 from multiprocessing import Pool
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 import jsonlines
 import numpy as np
@@ -26,7 +27,6 @@ import omegaconf
 import pandas as pd
 from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
-from typing import Optional, Dict, Any
 
 
 def alphanum_key(key):
