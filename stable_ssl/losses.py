@@ -130,6 +130,7 @@ class NNCLRLoss(torch.nn.Module):
 
         # implement nearest neighbors NN(z_i, Q)
         sim = torch.matmul(self.queue(features), features.T) / self.temperature
+        self.queue.update_queue(z_i)
 
         sim_i_j = torch.diag(sim, N // 2)
         sim_j_i = torch.diag(sim, -N // 2)
