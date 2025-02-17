@@ -132,7 +132,7 @@ class NNCLRLoss(torch.nn.Module):
         self.queue.update_queue(z_i_norm)
 
         # sim = torch.cat([sim_z_i, sim_z_j], 0)
-        sim = 0.5 * (sim_z_i + sim_z_j)
+        sim = 0.5 * torch.add(sim_z_i, sim_z_j)
         N = sim.size(0)
 
         sim_i_j = torch.diag(sim, N // 2)
