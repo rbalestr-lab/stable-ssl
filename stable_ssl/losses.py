@@ -123,17 +123,14 @@ class NNCLRLoss(torch.nn.Module):
         z_i = all_gather(z_i)
         z_j = all_gather(z_j)
 
-        z_i_norm = F.normalize(z_i, dim=1)
-        z_j_norm = F.normalize(z_j, dim=1)
+        z = torch.cat([z_i, z_j], 0)
+        N = z.size(0)
 
-        sim_z_i = torch.matmul(self.queue(z_i_norm), z_i_norm.T) / self.temperature
-        sim_z_j = torch.matmul(self.queue(z_j_norm), z_j_norm.T) / self.temperature
+        features = F.normalize(z, dim=1)
 
-        self.queue.update_queue(z_i_norm)
-
-        # sim = torch.cat([sim_z_i, sim_z_j], 0)
-        sim = 0.5 * torch.add(sim_z_i, sim_z_j)
-        N = sim.size(0)
+        # implement nearest neighbors NN(z_i, Q)
+        sim = torch.matmul(self.queue(features), features.T) / self.temperature
+        self.queue.update_queue(z_i)
 
         sim_i_j = torch.diag(sim, N // 2)
         sim_j_i = torch.diag(sim, -N // 2)
