@@ -44,8 +44,6 @@ trainer:
         _target_: stable_ssl.data.HuggingFaceDataset
         path: "ylecun/mnist"
         split: "train[:1%]"
-        x: "image"
-        y: "label"
         trust_remote_code: true
         transform:
           _target_: torchvision.transforms.v2.Compose
@@ -64,8 +62,6 @@ trainer:
         _target_: stable_ssl.data.HuggingFaceDataset
         path: "ylecun/mnist"
         split: "test[:1%]"
-        x: "image"
-        y: "label"
         transform:
           _target_: torchvision.transforms.v2.Compose
           transforms:
