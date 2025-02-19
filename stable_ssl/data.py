@@ -7,7 +7,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import logging
-from typing import Callable, Iterable, Optional, Union
+from typing import Iterable, Union
 
 import torch
 from datasets import load_dataset
