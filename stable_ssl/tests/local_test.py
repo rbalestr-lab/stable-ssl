@@ -1,8 +1,5 @@
-import hydra
 from hydra import compose, initialize
 from omegaconf import OmegaConf
-
-from stable_ssl.reader import jsonl
 
 
 def test_base_trainer(tmp_path):
