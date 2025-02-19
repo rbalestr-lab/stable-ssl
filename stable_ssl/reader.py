@@ -202,23 +202,19 @@ def wandb(
     if min_step < 0:
         min_step = max_step + min_step
 
-    if keys is None:
-        summary = run.summary
-        # extract names that are not hidden
-        keys = [k for k, v in summary.items() if k[0] != "_" and np.isscalar(v)]
-        # add back the runtime and timestamp and this is useful to users
-        keys += ["_runtime", "_timestamp", "_step"]
-    else:
-        if "_step" not in keys:
-            keys.append("_step")
+    # if keys is None:
+    #     summary = run.summary
+    #     # extract names that are not hidden
+    #     keys = [k for k, v in summary.items() if k[0] != "_" and np.isscalar(v)]
+    #     # add back the runtime and timestamp and this is useful to users
+    #     keys += ["_runtime", "_timestamp", "_step"]
+    # else:
+    if keys is not None and "_step" not in keys:
+        keys.append("_step")
 
     data = []
-    for row_idx, row in tqdm(
-        enumerate(
-            run.scan_history(
-                page_size=10000, keys=keys, min_step=min_step, max_step=max_step
-            )
-        ),
+    for row in tqdm(
+        run.scan_history(keys=keys, min_step=min_step, max_step=max_step),
         total=max_step,
         desc=f"Downloading run: {run.name}",
         disable=_tqdm_disable,

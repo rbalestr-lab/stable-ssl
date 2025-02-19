@@ -81,37 +81,41 @@ class HuggingFaceDataset(torch.utils.data.Dataset):
 
     Parameters
     ----------
-    path: str
-        Path to the dataset (can be a Hugging Face dataset name or a local path).
-    x: str
-        Name of the column to treat as x (input).
-    y: str
-        Name of the column to treat as y (label).
-    transform (optional): callable, default=None
-        Transform to apply on x. By default, no transform is applied (identity transform).
     *args: list
         Additional arguments to pass to `datasets.load_dataset`.
+    rename_columns: dict
+        A mapping of names from the HF dataset to what the dict should contain in this dataset.
+        For example `{"x":"image", "y":"label"}
+    remove_columns: list
+        A mapping of names from the HF dataset to what the dict should contain in this dataset.
+        For example `{"x":"image", "y":"label"}
+    transform: dict[str: callable]
+        Which key to transform
+    add_index: bool
+        Whether to add a key "index" with the datum index
     **kwargs: dict
         Additional keyword arguments to pass to `datasets.load_dataset`.
     """
 
     def __init__(
         self,
-        path: str,
-        x: str,
-        y: str,
-        transform: Optional[Callable] = None,
         *args: list,
+        rename_columns: dict = None,
+        remove_columns: dict = None,
+        transform: dict = None,
+        add_index: bool = False,
         **kwargs: dict,
     ):
-        self.dataset = load_dataset(path, *args, **kwargs)
+        self.add_index = add_index
+        self.transform = transform or {}
+        dataset = load_dataset(*args, **kwargs)
+        if remove_columns is not None:
+            dataset = dataset.remove_columns(remove_columns)
 
-        assert x in self.dataset.column_names, f"Column '{x}' not found in the dataset."
-        assert y in self.dataset.column_names, f"Column '{y}' not found in the dataset."
+        if rename_columns is not None:
+            dataset = dataset.rename_columns(rename_columns)
 
-        self.x = x
-        self.y = y
-        self.transform = transform if transform else lambda x: x
+        self.dataset = dataset
 
     def __len__(self) -> int:
         """Get the length of the dataset."""
@@ -127,15 +131,19 @@ class HuggingFaceDataset(torch.utils.data.Dataset):
 
         Returns
         -------
-        tuple: (transformed x, y)
-            A tuple containing the transformed input (x) and the label (y).
+        dict: (str, data)
+            A dict containing the data sample.
         """
         if isinstance(idx, torch.Tensor) and idx.dim() == 0:
             idx = idx.item()
+        idx = int(idx)
 
-        x = self.dataset[idx][self.x]
-        y = self.dataset[idx][self.y]
-
-        x_transformed = self.transform(x)
-
-        return x_transformed, y
+        sample = self.dataset[idx]
+        for k, t in self.transform.items():
+            sample[k] = t(sample[k])
+        assert type(sample) is dict
+        if self.add_index:
+            if "index" in sample:
+                raise ValueError("Tried to add index in data but already present")
+            sample["index"] = idx
+        return sample
