@@ -1,24 +1,11 @@
-import pytest
 import torch
 
 from stable_ssl.monitors import LiDAR, RankMe
 
 
-@pytest.fixture
-def random_seed() -> None:
-    """Pytest fixture to fix the random seed for reproducibility."""
-    torch.manual_seed(1234)
-
-
-@pytest.fixture
-def device() -> torch.device:
-    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
 # --------------------------------------------------------------------------
 # LIDAR TESTS
 # --------------------------------------------------------------------------
-@pytest.mark.usefixtures("random_seed")
 def test_lidar_smoke(device: torch.device) -> None:
     """Basic smoke test to ensure LiDAR runs without error and returns a float."""
     batch_size, q, d = 4, 2, 8
@@ -32,7 +19,6 @@ def test_lidar_smoke(device: torch.device) -> None:
     assert score > 0, f"LiDAR returned non-positive value: {score}"
 
 
-@pytest.mark.usefixtures("random_seed")
 def test_lidar_identical_embeddings(device: torch.device) -> None:
     """Test LiDAR with identical embeddings.
 
@@ -50,7 +36,6 @@ def test_lidar_identical_embeddings(device: torch.device) -> None:
     assert 0.0 < score < 2.0, f"Unexpected LiDAR for identical embeddings: {score}"
 
 
-@pytest.mark.usefixtures("random_seed")
 def test_lidar_single_class(device: torch.device) -> None:
     """Test LiDAR with a single class.
 
@@ -72,7 +57,6 @@ def test_lidar_single_class(device: torch.device) -> None:
 # --------------------------------------------------------------------------
 # RANKME TESTS
 # --------------------------------------------------------------------------
-@pytest.mark.usefixtures("random_seed")
 def test_rankme_smoke(device: torch.device) -> None:
     """Basic smoke test for RankMe to ensure it runs and returns a float."""
     batch_size, d = 16, 32
@@ -85,7 +69,6 @@ def test_rankme_smoke(device: torch.device) -> None:
     assert score > 0, f"RankMe returned a non-positive value: {score}"
 
 
-@pytest.mark.usefixtures("random_seed")
 def test_rankme_identical_embeddings(device: torch.device) -> None:
     """Test RankMe with identical embeddings.
 
@@ -103,7 +86,6 @@ def test_rankme_identical_embeddings(device: torch.device) -> None:
     assert 0.0 < score < 2.0, f"RankMe unexpected for identical embeddings: {score}"
 
 
-@pytest.mark.usefixtures("random_seed")
 def test_rankme_multi_view(device: torch.device) -> None:
     """Tests feeding a list of encodings for multiple views."""
     batch_size, d = 8, 32

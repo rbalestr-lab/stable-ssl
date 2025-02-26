@@ -26,6 +26,7 @@ dependencies = [
     "torchmetrics",
     "scipy",
     "datasets",
+    "einops"
 ]
 
 dynamic = ["version"]
