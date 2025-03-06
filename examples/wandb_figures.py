@@ -4,18 +4,19 @@ To use, you should set the entity variable to your WandB entity and the project 
 your WandB entity that you want to access runs from.
 
 """
+
 import stable_ssl as ssl
 import re
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-entity= "[YOUR ENTITY HERE]" 
+entity = "[YOUR ENTITY HERE]"
 project = "[YOUR PROJECT HERE]"
 
 # want to retrieve finished runs from wandb
-configs, dfs = ssl.reader.wandb_project(entity=entity,
-                                        project=project,
-                                        filters={"state": "finished"})
+configs, dfs = ssl.reader.wandb_project(
+    entity=entity, project=project, filters={"state": "finished"}
+)
 
 """ Here you would define wanted conditions that you can use to narrow down the WandB runs, if you want to access all your runs
 in the project then you would not define anything here and would remove the first if statement in the for loop """
@@ -29,9 +30,13 @@ for this example, we are dividing the data based on rank and location. We are th
 x-axis and balanced_accuracy on the y-axis"""
 
 # Dictionary to store results
-results = {rank: {loc: {'spurious_proportion': [], 'balanced_accuracy': []} 
-                   for loc in ["random", "end", "beginning"]} 
-           for rank in [0, 2, 32]}
+results = {
+    rank: {
+        loc: {"spurious_proportion": [], "balanced_accuracy": []}
+        for loc in ["random", "end", "beginning"]
+    }
+    for rank in [0, 2, 32]
+}
 
 # Iterate through runs and gather information from WandB
 for run_id, df in tqdm(dfs.items(), desc="Processing runs", unit="run"):
@@ -53,7 +58,6 @@ for run_id, df in tqdm(dfs.items(), desc="Processing runs", unit="run"):
         use_spurious = df.get("use_spurious", None)
         using_list = df.get("use_list_dataset", None)
 
-
         """ This if statement allows us to exclude runs we dont want to plot, you can change it based on your needs """
         # only access if it contains everything wanted
         if (
@@ -72,18 +76,26 @@ for run_id, df in tqdm(dfs.items(), desc="Processing runs", unit="run"):
             # Add the last one to be plotted
             if not balanced_acc.empty:
                 balanced_acc = balanced_acc.iloc[-1]  # Get the final valid accuracy
-                results[lora_rank][spurious_location]['spurious_proportion'].append(spurious_proportion)
-                results[lora_rank][spurious_location]['balanced_accuracy'].append(balanced_acc)
+                results[lora_rank][spurious_location]["spurious_proportion"].append(
+                    spurious_proportion
+                )
+                results[lora_rank][spurious_location]["balanced_accuracy"].append(
+                    balanced_acc
+                )
 
 
 """ Functions used to simplify the plotting process, making it more extensible"""
 
+
 # Sort values for plotting
 def sort_and_unpack(data):
-    if data['spurious_proportion']:
-        sorted_data = sorted(zip(data['spurious_proportion'], data['balanced_accuracy']))
+    if data["spurious_proportion"]:
+        sorted_data = sorted(
+            zip(data["spurious_proportion"], data["balanced_accuracy"])
+        )
         return zip(*sorted_data)
     return [], []
+
 
 # Create figure
 plt.figure(figsize=(20, 14))
@@ -94,16 +106,25 @@ markers = {"random": "s", "end": "d", "beginning": "x"}
 for rank in results:
     for location in results[rank]:
         x, y = sort_and_unpack(results[rank][location])
-        plt.plot(x, y, linestyle=styles[rank], marker=markers[location], 
-                 label=f"{location.capitalize()} (LoRA Rank {rank})")
+        plt.plot(
+            x,
+            y,
+            linestyle=styles[rank],
+            marker=markers[location],
+            label=f"{location.capitalize()} (LoRA Rank {rank})",
+        )
 
 # Label the plot and axis, you can change these to whatever you want/need
 plt.xlabel("Spurious Correlation Proportion", fontsize=14)
 plt.ylabel("Balanced Accuracy on Clean Test Set", fontsize=14)
-plt.title(f"Balanced Accuracy vs Spurious Correlation using {wanted_backbone} on {wanted_dataset}, Spurious Type: Date, From List: {using_list}", fontsize=16)
+plt.title(
+    f"Balanced Accuracy vs Spurious Correlation using {wanted_backbone} on {wanted_dataset}, Spurious Type: Date, From List: {using_list}",
+    fontsize=16,
+)
 plt.legend(fontsize=12)
 plt.grid()
 
 # Save the figure locally, you can name it whatever you want for your needs
-plt.savefig("balanced_accuracy_vs_spurious_correlation.png", dpi=300, bbox_inches="tight")
-
+plt.savefig(
+    "balanced_accuracy_vs_spurious_correlation.png", dpi=300, bbox_inches="tight"
+)
