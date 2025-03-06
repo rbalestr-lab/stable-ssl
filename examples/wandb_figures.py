@@ -10,7 +10,7 @@ import re
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-entity= "[YOUR ENTITY HERE]" 
+entity = "[YOUR ENTITY HERE]"
 project = "[YOUR PROJECT HERE]"
 
 
