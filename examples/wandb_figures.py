@@ -9,24 +9,25 @@ import re
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-entity= "[YOUR ENTITY HERE]" 
+entity= "[YOUR ENTITY HERE]"
 project = "[YOUR PROJECT HERE]"
+
 
 # want to retrieve finished runs from wandb
 configs, dfs = ssl.reader.wandb_project(entity=entity,
                                         project=project,
                                         filters={"state": "finished"})
 
-""" Here you would define wanted conditions that you can use to narrow down the WandB runs, if you want to access all your runs
-in the project then you would not define anything here and would remove the first if statement in the for loop """
+# Here you would define wanted conditions that you can use to narrow down the WandB runs, if you want to access all your runs
+# in the project then you would not define anything here and would remove the first if statement in the for loop
 # access all runs with the wanted dataset and model backbone
 wanted_dataset = "imdb"
 wanted_backbone = "Snowflake/snowflake-arctic-embed-xs"
 
 
-""" This section allows for the users to define the information they want to separate the runs into to later be plotted
-for this example, we are dividing the data based on rank and location. We are the going to plot the spurious_proportion on the
-x-axis and balanced_accuracy on the y-axis"""
+# This section allows for the users to define the information they want to separate the runs into to later be plotted
+# for this example, we are dividing the data based on rank and location. We are the going to plot the spurious_proportion on the
+# x-axis and balanced_accuracy on the y-axis
 
 # Dictionary to store results
 results = {rank: {loc: {'spurious_proportion': [], 'balanced_accuracy': []} 
@@ -54,7 +55,7 @@ for run_id, df in tqdm(dfs.items(), desc="Processing runs", unit="run"):
         using_list = df.get("use_list_dataset", None)
 
 
-        """ This if statement allows us to exclude runs we dont want to plot, you can change it based on your needs """
+        # This if statement allows us to exclude runs we dont want to plot, you can change it based on your needs
         # only access if it contains everything wanted
         if (
             spurious_proportion is not None
@@ -76,8 +77,7 @@ for run_id, df in tqdm(dfs.items(), desc="Processing runs", unit="run"):
                 results[lora_rank][spurious_location]['balanced_accuracy'].append(balanced_acc)
 
 
-""" Functions used to simplify the plotting process, making it more extensible"""
-
+# Functions used to simplify the plotting process, making it more extensible
 # Sort values for plotting
 def sort_and_unpack(data):
     if data['spurious_proportion']:
