@@ -5,7 +5,7 @@ your WandB entity that you want to access runs from.
 
 """
 import stable_ssl as ssl
-import re  
+import re
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
@@ -21,7 +21,7 @@ configs, dfs = ssl.reader.wandb_project(entity=entity,
 in the project then you would not define anything here and would remove the first if statement in the for loop """
 # access all runs with the wanted dataset and model backbone
 wanted_dataset = "imdb"
-wanted_backbone = "Snowflake/snowflake-arctic-embed-xs"   
+wanted_backbone = "Snowflake/snowflake-arctic-embed-xs"
 
 
 """ This section allows for the users to define the information they want to separate the runs into to later be plotted
@@ -42,10 +42,11 @@ for run_id, df in tqdm(dfs.items(), desc="Processing runs", unit="run"):
     run_name = df.get("run_name", None)
 
     # make sure the ones we are using met the conditions for what we want to graph
-    if wanted_dataset.lower() in dataset.lower() and wanted_backbone.lower() in backbone.lower():
-
-
-        # Extract spurious correlation proportion, location, and lora_rank used for a specific run
+    if (
+        wanted_dataset.lower() in dataset.lower()
+        and wanted_backbone.lower() in backbone.lower()
+    ):
+        # Extract spurious correlation proportion, location, and lora_rank used
         spurious_proportion = df.get("spurious_proportion", None)
         spurious_location = df.get("spurious_location", None)
         lora_rank = df.get("lora_rank", None)
@@ -55,10 +56,16 @@ for run_id, df in tqdm(dfs.items(), desc="Processing runs", unit="run"):
 
         """ This if statement allows us to exclude runs we dont want to plot, you can change it based on your needs """
         # only access if it contains everything wanted
-        if spurious_proportion is not None and spurious_location is not None and lora_rank is not None and use_spurious and using_list == None:
-
+        if (
+            spurious_proportion is not None
+            and spurious_location is not None
+            and spurious_proportion >= 0
+            and lora_rank is not None
+            and use_spurious
+            and using_list == None
+        ):
             # Extract balanced accuracy from the run
-            new_df, config = ssl.reader.wandb(entity,project,run_id)
+            new_df, config = ssl.reader.wandb(entity, project, run_id)
             # drop the ones that are NAN
             balanced_acc = new_df["eval/NonSpurious_balanced_accuracy"].dropna()
 
