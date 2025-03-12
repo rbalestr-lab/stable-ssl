@@ -295,51 +295,50 @@ def warn_once(warning: str):
     logging.warning(warning)
 
 
-# TODO: in development as a utility module
-# class SupportQueue(torch.nn.Module):
-#     """Implementation of the support set queue as detailed in the NNCLR paper.
+class SupportQueue(torch.nn.Module):
+    """Implementation of the support set queue as detailed in the NNCLR paper.
 
-#     Implements support set queue and automatically computes NNs.
-#     """
+    Implements support set queue and automatically computes the nearest neighbors in the queue.
 
-#     def __init__(self, queue_size=4096, embed_size=256):
-#         super().__init__()
-#         self.queue_size = queue_size
-#         self.embed_size = embed_size
-#         self.register_buffer(
-#             "queue", tensor=torch.randn(queue_size, embed_size, dtype=torch.float32)
-#         )
-#         self.register_buffer(
-#             "queue_pointer", tensor=torch.zeros(1, dtype=torch.long)
-#         )
+    Parameters
+    ----------
+    queue_size : int, optional
+        The size of the support queue containing nearest neighbors embeddings.
+        Default is 4096.
+    embed_size : int, optional
+        The size of the queue embeddings.
+        Default is 256.
+    """
 
-#     @torch.no_grad()
-#     def update_queue(self, batch: torch.Tensor):
-#         batch_size, _ = batch.shape
-#         pointer = int(self.queue_pointer)
+    def __init__(self, queue_size: int = 4096, embed_size: int = 256):
+        super().__init__()
+        self.queue_size = queue_size
+        self.embed_size = embed_size
+        self.register_buffer(
+            "queue", tensor=torch.randn(queue_size, embed_size, dtype=torch.float32)
+        )
+        self.queue = torch.nn.functional.normalize(self.queue, dim=1)
+        self.register_buffer("queue_pointer", tensor=torch.zeros(1, dtype=torch.long))
 
-#         if pointer + batch_size >= self.queue_size:
-#             self.queue[pointer:, :] = batch[: self.queue_size - pointer].detach()
-#             self.queue_pointer[0] = 0
-#         else:
-#             self.queue[pointer : pointer + batch_size, :] = batch.detach()
-#             self.queue_pointer[0] = pointer + batch_size
+    @torch.no_grad()
+    def update_queue(self, batch: torch.Tensor):
+        """Update the queue in a FIFO manner, replacing old embeddings with new embbedings of size batch_size."""
+        batch_size, _ = batch.shape
+        pointer = int(self.queue_pointer)
 
-#     def forward(self):
-#         pass
+        if pointer + batch_size >= self.queue_size:
+            self.queue[pointer:, :] = batch[: self.queue_size - pointer].detach()
+            self.queue_pointer[0] = 0
+        else:
+            self.queue[pointer : pointer + batch_size, :] = batch.detach()
+            self.queue_pointer[0] = pointer + batch_size
 
+    def forward(self, x):
+        """Retrieve the nearest neighbor embedding in the support queue."""
+        queue_norm = torch.nn.functional.normalize(self.queue, dim=1)
+        similarities = torch.matmul(x, queue_norm.T)
 
-# class NNSupportQueue(SupportQueue):
-#     """Override of the standard support queue implementation with nearest neighbors.
+        nn_idx = similarities.argmax(dim=1)
+        nearest_neighbours = torch.index_select(self.queue, dim=0, index=nn_idx)
 
-#     This is used in NNCLR.
-#     """
-#     def __init__(self, queue_size=4096, embed_size=256):
-#         super().__init__(queue_size, embed_size)
-
-#     def forward(self, x):
-#         queue_norm = torch.nn.functional.normalize(self.queue, dim=1)
-#         similarities = torch.matmul(x, queue_norm.T)
-
-#         nn_idx = similarities.argmax(dim=1)
-#         return queue_norm[nn_idx]
+        return nearest_neighbours

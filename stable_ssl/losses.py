@@ -9,7 +9,7 @@
 import torch
 import torch.nn.functional as F
 
-from stable_ssl.utils import all_gather, all_reduce, off_diagonal
+from stable_ssl.utils import SupportQueue, all_gather, all_reduce, off_diagonal
 
 
 class NTXEntLoss(torch.nn.Module):
@@ -68,82 +68,49 @@ class NTXEntLoss(torch.nn.Module):
 
 
 class NNCLRLoss(torch.nn.Module):
-    """Nearest-neighbor contrastive learning loss.
+    """Nearest-neighbor contrastive learning loss (NNCLR).
 
-    Nearest-neighbor contrastive learning of visual representations (NNCLR).
-
-    Uses NTXEntLoss as a base loss structure but uses nearest-neighbors
-    to calculate the similarity.
-
-    Implementation inspired from https://github.com/lightly-ai/lightly.
+    Parameters
+    ----------
+    temperature : float, optional
+        The temperature scaling factor.
+        Default is 0.5.
+    queue_size : int, optional
+        The size of the support queue containing nearest neighbors embeddings.
+        Default is 4096.
+    embed_size : int, optional
+        The size of the queue embeddings.
+        Default is 256.
     """
 
-    class SupportSet(torch.nn.Module):
-        """Implementation of the support set queue as detailed in the NNCLR paper.
-
-        Implements support set queue and automatically computes NNs.
-        """
-
-        def __init__(self, queue_size=4096, embed_size=256):
-            super().__init__()
-            self.queue_size = queue_size
-            self.embed_size = embed_size
-            self.register_buffer(
-                "queue", tensor=torch.randn(queue_size, embed_size, dtype=torch.float32)
-            )
-            self.register_buffer(
-                "queue_pointer", tensor=torch.zeros(1, dtype=torch.long)
-            )
-
-        @torch.no_grad()
-        def update_queue(self, batch: torch.Tensor):
-            batch_size, _ = batch.shape
-            pointer = int(self.queue_pointer)
-
-            if pointer + batch_size >= self.queue_size:
-                self.queue[pointer:, :] = batch[: self.queue_size - pointer].detach()
-                self.queue_pointer[0] = 0
-            else:
-                self.queue[pointer : pointer + batch_size, :] = batch.detach()
-                self.queue_pointer[0] = pointer + batch_size
-
-        def forward(self, x):
-            queue_norm = F.normalize(self.queue, dim=1)
-            similarities = torch.matmul(x, queue_norm.T)
-
-            nn_idx = similarities.argmax(dim=1)
-            return queue_norm[nn_idx]
-
-    def __init__(self, temperature: float = 0.5, queue_size=4096, embed_size=256):
+    def __init__(
+        self, temperature: float = 0.5, queue_size: int = 4096, embed_size: int = 256
+    ):
         super().__init__()
-        self.temperature = temperature
-        self.queue = self.SupportSet(queue_size=queue_size, embed_size=embed_size)
+        self.NTXEntLoss = NTXEntLoss(temperature=temperature)
+        self.queue = SupportQueue(queue_size=queue_size, embed_size=embed_size)
 
     def forward(self, z_i, z_j):
-        z_i = all_gather(z_i)
-        z_j = all_gather(z_j)
+        """Compute the loss of the NNCLR model.
 
-        z = torch.cat([z_i, z_j], 0)
-        N = z.size(0)
+        Parameters
+        ----------
+        z_i : torch.Tensor
+            Latent representation of the first augmented view of the batch.
+        z_j : torch.Tensor
+            Latent representation of the second augmented view of the batch.
 
-        features = F.normalize(z, dim=1)
+        Returns
+        -------
+        float
+            The computed loss.
+        """
+        z_i_loss = self.NTXEntLoss(self.queue(z_i), z_j)
+        z_j_loss = self.NTXEntLoss(self.queue(z_j), z_i)
 
-        # implement nearest neighbors NN(z_i, Q)
-        sim = torch.matmul(self.queue(features), features.T) / self.temperature
-        self.queue.update_queue(z_i)
+        self.queue.update_queue(F.normalize(z_i, dim=1))
 
-        sim_i_j = torch.diag(sim, N // 2)
-        sim_j_i = torch.diag(sim, -N // 2)
-
-        positive_samples = torch.cat((sim_i_j, sim_j_i), dim=0)
-
-        mask = torch.eye(N, dtype=bool).to(z_i.device)
-        negative_samples = sim[~mask].reshape(N, -1)
-
-        attraction = -positive_samples.mean()
-        repulsion = torch.logsumexp(negative_samples, dim=1).mean()
-
-        return attraction + repulsion
+        return 0.5 * (z_i_loss + z_j_loss)
 
 
 class NegativeCosineSimilarity(torch.nn.Module):
