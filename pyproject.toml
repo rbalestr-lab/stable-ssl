@@ -21,10 +21,12 @@ dependencies = [
     "hydra-core",
     "hydra-submitit-launcher",
     "pandas",
+    "tabulate",
     "jsonlines",
     "torchmetrics",
     "scipy",
     "datasets",
+    "einops"
 ]
 
 dynamic = ["version"]
@@ -58,7 +60,5 @@ doc = [
     "numpydoc",
     "memory_profiler",
     "myst-parser",
+    "myst-parser",
 ]
-
-[tool.ruff]
-version = "0.9.0"

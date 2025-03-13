@@ -1,10 +1,10 @@
 Contributing
 ============
 
-Thank you for your interest in contributing to ``stable-SSL``!
+Thank you for your interest in contributing to ``stable-ssl``!
 This library is a community-driven project, and we greatly appreciate contributions of all kinds.
 
-If you encounter any issues or have suggestions, please open an issue on our `issue tracker <https://github.com/rbalestr-lab/stable-SSL/issues>`_. This allows us to address problems and gather feedback from the community.
+If you encounter any issues or have suggestions, please open an issue on our `issue tracker <https://github.com/rbalestr-lab/stable-ssl/issues>`_. This allows us to address problems and gather feedback from the community.
 
 For those who want to contribute code or documentation, you can submit a pull request. Below, you will find details on how to prepare and submit your pull request effectively.
 
@@ -12,19 +12,19 @@ For those who want to contribute code or documentation, you can submit a pull re
 PR Tutorial
 -----------
 
-The preferred workflow for contributing to ``stable-SSL`` is to fork the
-`main repository <https://github.com/rbalestr-lab/stable-SSL>`_ on
+The preferred workflow for contributing to ``stable-ssl`` is to fork the
+`main repository <https://github.com/rbalestr-lab/stable-ssl>`_ on
 GitHub, clone, and develop on a branch. Steps:
 
-1. Fork the `project repository <https://github.com/rbalestr-lab/stable-SSL>`_
+1. Fork the `project repository <https://github.com/rbalestr-lab/stable-ssl>`_
    by clicking on the 'Fork' button near the top right of the page. This creates
    a copy of the code under your GitHub user account. For more details on
    how to fork a repository see `this guide <https://help.github.com/articles/fork-a-repo/>`_.
 
-2. Clone your fork of the ``stable-SSL`` repo from your GitHub account to your local disk::
+2. Clone your fork of the ``stable-ssl`` repo from your GitHub account to your local disk::
 
-      $ git clone git@github.com:YourLogin/stable-SSL.git
-      $ cd stable-SSL
+      $ git clone git@github.com:YourLogin/stable-ssl.git
+      $ cd stable-ssl
 
 3. Install the package in editable mode with the development dependencies, as well as the pre-commit hooks that will run on every commit::
 
@@ -75,6 +75,6 @@ A ``[WIP]`` PR can serve multiple purposes:
 New contributor tips
 --------------------
 
-A great way to start contributing to ``stable-SSL`` is to pick an item
-from the list of `good first issues <https://github.com/rbalestr-lab/stable-SSL/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22>`_ in the issue tracker. Resolving these issues allows you to start
+A great way to start contributing to ``stable-ssl`` is to pick an item
+from the list of `good first issues <https://github.com/rbalestr-lab/stable-ssl/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22>`_ in the issue tracker. Resolving these issues allows you to start
 contributing to the project without much prior knowledge.

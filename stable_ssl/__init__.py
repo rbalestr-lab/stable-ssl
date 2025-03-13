@@ -23,7 +23,12 @@ from .losses import (
     VICRegLoss,
 )
 from .modules import load_backbone
-from .trainers import JointEmbeddingTrainer, SelfDistillationTrainer, SupervisedTrainer
+from .trainers import (
+    JointEmbeddingPredictiveTrainer,
+    JointEmbeddingTrainer,
+    SelfDistillationTrainer,
+    SupervisedTrainer,
+)
 
 __all__ = [
     "__title__",
@@ -36,6 +41,7 @@ __all__ = [
     "BaseTrainer",
     "SupervisedTrainer",
     "JointEmbeddingTrainer",
+    "JointEmbeddingPredictiveTrainer",
     "SelfDistillationTrainer",
     "NTXEntLoss",
     "NNCLRLoss",
@@ -43,4 +49,5 @@ __all__ = [
     "BarlowTwinsLoss",
     "NegativeCosineSimilarity",
     "instanciate_config",
+    "random_mask",
 ]

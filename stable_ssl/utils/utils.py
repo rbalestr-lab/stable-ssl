@@ -7,6 +7,7 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
+import functools
 import logging
 import os
 import random
@@ -290,9 +291,29 @@ def log_and_raise(exception_class, message):
 
 
 @cache
-def warn_once(warning: str):
+def warn_once(*warnings: str):
     """Cache the warning message to avoid spamming the logs."""
-    logging.warning(warning)
+    logging.warning("".join(warnings))
+
+
+def rsetattr(obj, attr, val):
+    pre, _, post = attr.rpartition(".")
+    parent = rgetattr(obj, pre) if pre else obj
+    if type(parent) is dict:
+        parent[post] = val
+    else:
+        return setattr(parent, post, val)
+
+
+def _adaptive_getattr(obj, attr):
+    if type(obj) is dict:
+        return obj[attr]
+    else:
+        return getattr(obj, attr)
+
+
+def rgetattr(obj, attr):
+    return functools.reduce(_adaptive_getattr, [obj] + attr.split("."))
 
 
 class SupportQueue(torch.nn.Module):

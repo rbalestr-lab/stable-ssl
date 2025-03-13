@@ -11,7 +11,11 @@ from collections import deque
 import torch
 import torch.distributed as dist
 
-from stable_ssl import BaseTrainer, JointEmbeddingTrainer
+from stable_ssl import (
+    BaseTrainer,
+    JointEmbeddingPredictiveTrainer,
+    JointEmbeddingTrainer,
+)
 from stable_ssl.utils import broadcast, gather, reduce, warn_once
 
 
@@ -82,9 +86,11 @@ class RankMe(Monitor):
         return broadcast(torch.tensor([rankme], device=device), src_rank=0).item()
 
     def compute(self, trainer: BaseTrainer) -> float:
-        if not isinstance(trainer, JointEmbeddingTrainer):
+        if not isinstance(
+            trainer, (JointEmbeddingTrainer, JointEmbeddingPredictiveTrainer)
+        ):
             raise NotImplementedError(
-                f"RankMe only implemented for JointEmbeddingTrainer "
+                f"RankMe only implemented for JointEmbeddingTrainer, JointEmbeddingPredictiveTrainer "
                 f"and not yet implemented for type {type(trainer)}"
             )
 
@@ -185,12 +191,14 @@ class LiDAR(Monitor):
         return broadcast(torch.tensor([lidar], device=device), src_rank=0).item()
 
     def compute(self, trainer: BaseTrainer) -> float:
-        if not isinstance(trainer, JointEmbeddingTrainer):
+        if not isinstance(
+            trainer, (JointEmbeddingTrainer, JointEmbeddingPredictiveTrainer)
+        ):
             raise NotImplementedError(
-                f"LiDAR only implemented for JointEmbeddingTrainer "
+                f"LiDAR only implemented for JointEmbeddingTrainer, JointEmbeddingPredictiveTrainer "
                 f"and not yet implemented for type {type(trainer)}"
             )
 
-        trainer: JointEmbeddingTrainer
+        trainer: JointEmbeddingTrainer | JointEmbeddingPredictiveTrainer
         embeddings: list[torch.Tensor] = trainer.latest_embeddings
         return self.lidar(embeddings)

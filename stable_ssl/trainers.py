@@ -210,6 +210,83 @@ class SelfDistillationTrainer(JointEmbeddingTrainer):
         return {"loss_ssl": loss_ssl, **classifier_losses}
 
 
+class JointEmbeddingPredictiveTrainer(BaseTrainer):
+    r"""Base class for training a joint-embedding predictive architecture."""
+
+    required_modules = {
+        "context_encoder": torch.nn.Module,
+        "target_encoder": torch.nn.Module,
+        "predictor": torch.nn.Module,
+    }
+
+    def format_context_target(self):
+        if len(self.batch) == 2:
+            (context, context_transforms), (target, target_transforms) = self.batch
+        else:
+            raise ValueError("JointEmbeddingPredictiveTrainer requires 2 views.")
+        return (context, context_transforms), (target, target_transforms)
+
+    def forward(self, *args, **kwargs):
+        """Forward pass of the context encoder."""
+        return self.module["context_encoder"](*args, **kwargs)
+
+    def forward_target(self, *args, **kwargs):
+        """Forward pass of the target encoder."""
+        return self.module["target_encoder"](*args, **kwargs)
+
+    def forward_predictor(self, *args, **kwargs):
+        """Forward pass of the predictor, that transforms the context latents into the target latents."""
+        return self.module["predictor"](*args, **kwargs)
+
+    def compute_loss(self):
+        """Compute the final loss as the L1 distance between the predicted and target latents."""
+        (
+            (context, context_transformation_parameters),
+            (target, target_transformation_parameters),
+        ) = self.format_context_target()
+
+        context_representations = self.forward(
+            context, context_transformation_parameters
+        )
+        self._latest_representations = context_representations
+
+        target_representations = self.forward_target(
+            target, target_transformation_parameters
+        )
+
+        # NOTE The forward predictor can take some additional arguments, such as the transformation arguments.
+        predicted_representations = self.forward_predictor(
+            context_representations,
+            target_representations,
+            context_transformation_parameters,
+            target_transformation_parameters,
+        )
+        self._latest_embeddings = predicted_representations
+
+        loss = self.loss(predicted_representations, target_representations)
+        return {"loss_ssl": loss}
+
+    @property
+    def latest_embeddings(self):
+        if not hasattr(self, "_latest_embeddings"):
+            return None
+        return self._latest_embeddings
+
+    @latest_embeddings.setter
+    def latest_embeddings(self, value):
+        self._latest_embeddings = value
+
+    @property
+    def latest_representations(self):
+        if not hasattr(self, "_latest_representations"):
+            return None
+        return self._latest_representations
+
+    @latest_representations.setter
+    def latest_representations(self, value):
+        self._latest_representations = value
+
+
 # ===============================
 # Trainers with Specific Losses
 # ===============================

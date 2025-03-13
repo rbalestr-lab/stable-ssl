@@ -1,16 +1,16 @@
 
-.. include:: ../../README.rst
-
 .. toctree::
     :maxdepth: 1
     :hidden:
     :caption: Contents:
 
     self
-    user_guide
     releases
     contributing
     bibliography
+
+.. include:: ../../README.md
+    :parser: myst_parser.sphinx_
 
 .. currentmodule:: stable_ssl
 
@@ -18,10 +18,12 @@
     :maxdepth: 1
     :caption: API
 
-    api/trainers
+    api/base
+    api/config
     api/data
     api/losses
     api/modules
+    api/monitors
     api/optimizers
     api/schedulers
-    api/monitors
+    api/trainers

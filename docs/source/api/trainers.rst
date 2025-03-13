@@ -11,3 +11,4 @@ stable_ssl.trainers
    JointEmbeddingTrainer
    SelfDistillationTrainer
    DINOTrainer
+   JointEmbeddingPredictiveTrainer
