@@ -357,7 +357,8 @@ class SupportQueue(torch.nn.Module):
     def forward(self, x):
         """Retrieve the nearest neighbor embedding in the support queue."""
         queue_norm = torch.nn.functional.normalize(self.queue, dim=1)
-        similarities = torch.matmul(x, queue_norm.T)
+        x_norm = torch.nn.functional.normalize(x, dim=1)
+        similarities = torch.matmul(x_norm, queue_norm.T)
 
         nn_idx = similarities.argmax(dim=1)
         nearest_neighbours = torch.index_select(self.queue, dim=0, index=nn_idx)

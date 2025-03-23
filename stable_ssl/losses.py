@@ -9,6 +9,7 @@
 import torch
 import torch.nn.functional as F
 
+from stable_ssl.modules import MLP
 from stable_ssl.utils import SupportQueue, all_gather, all_reduce, off_diagonal
 
 
@@ -84,11 +85,16 @@ class NNCLRLoss(torch.nn.Module):
     """
 
     def __init__(
-        self, temperature: float = 0.5, queue_size: int = 4096, embed_size: int = 256
+        self,
+        temperature: float = 0.5,
+        queue_size: int = 4096,
+        embed_size: int = 256,
+        sizes: list = [256, 4096, 256],
     ):
         super().__init__()
         self.NTXEntLoss = NTXEntLoss(temperature=temperature)
         self.queue = SupportQueue(queue_size=queue_size, embed_size=embed_size)
+        self.prediction_head = MLP(sizes=sizes)
 
     def forward(self, z_i, z_j):
         """Compute the loss of the NNCLR model.
@@ -105,8 +111,8 @@ class NNCLRLoss(torch.nn.Module):
         float
             The computed loss.
         """
-        z_i_loss = self.NTXEntLoss(self.queue(z_i), z_j)
-        z_j_loss = self.NTXEntLoss(self.queue(z_j), z_i)
+        z_i_loss = self.NTXEntLoss(self.queue(z_i), self.prediction_head(z_j))
+        z_j_loss = self.NTXEntLoss(self.queue(z_j), self.prediction_head(z_i))
 
         self.queue.update_queue(F.normalize(z_i, dim=1))
 
