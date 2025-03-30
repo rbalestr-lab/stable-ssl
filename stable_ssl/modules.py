@@ -362,3 +362,53 @@ class ConvMixer(nn.Module):
             out = b(out)
         out = self.fc(self.pool(out))
         return out
+
+
+class SupportQueueModule(torch.nn.Module):
+    """Implementation of the support set queue as detailed in the NNCLR paper.
+
+    Implements support set queue and automatically computes the nearest neighbors in the queue.
+
+    Parameters
+    ----------
+    queue_size : int, optional
+        The size of the support queue containing nearest neighbors embeddings.
+        Default is 4096.
+    embed_size : int, optional
+        The size of the queue embeddings.
+        Default is 256.
+    """
+
+    def __init__(self, queue_size: int = 4096, embed_size: int = 256):
+        super().__init__()
+        self.queue_size = queue_size
+        self.embed_size = embed_size
+        self.register_buffer(
+            "queue", tensor=torch.randn(queue_size, embed_size, dtype=torch.float32)
+        )
+        self.queue = torch.nn.functional.normalize(self.queue, dim=1)
+        self.register_buffer("queue_pointer", tensor=torch.zeros(1, dtype=torch.long))
+
+    @torch.no_grad()
+    def update_queue(self, batch: torch.Tensor):
+        """Update the queue in a FIFO manner, replacing old embeddings with new embbedings of size batch_size."""
+        batch_size, _ = batch.shape
+        pointer = int(self.queue_pointer)
+
+        if pointer + batch_size >= self.queue_size:
+            self.queue[pointer:, :] = batch[: self.queue_size - pointer].detach()
+            self.queue_pointer[0] = 0
+        else:
+            self.queue[pointer : pointer + batch_size, :] = batch.detach()
+            self.queue_pointer[0] = pointer + batch_size
+
+    def forward(self, x):
+        """Retrieve the nearest neighbor embedding in the support queue."""
+        queue_norm = torch.nn.functional.normalize(self.queue, dim=1)
+        x_norm = torch.nn.functional.normalize(x, dim=1)
+        similarities = torch.matmul(x_norm, queue_norm.T)
+
+        nn_idx = similarities.argmax(dim=1)
+        nearest_neighbours = torch.index_select(self.queue, dim=0, index=nn_idx)
+
+        return nearest_neighbours

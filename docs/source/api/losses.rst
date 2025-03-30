@@ -8,6 +8,7 @@ stable_ssl.losses
    :template: myclass_template.rst
 
    NTXEntLoss
+   NNCLRLoss
    NegativeCosineSimilarity
    VICRegLoss
    BarlowTwinsLoss

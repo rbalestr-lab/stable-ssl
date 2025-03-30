@@ -67,6 +67,47 @@ class NTXEntLoss(torch.nn.Module):
         return attraction + repulsion
 
 
+class NNCLRLoss(torch.nn.Module):
+    """Nearest-neighbor contrastive learning loss (NNCLR).
+
+    Parameters
+    ----------
+    temperature : float, optional
+        The temperature scaling factor.
+        Default is 0.5.
+    queue_size : int, optional
+        The size of the support queue containing nearest neighbors embeddings.
+        Default is 4096.
+    embed_size : int, optional
+        The size of the queue embeddings.
+        Default is 256.
+    """
+
+    def __init__(
+        self,
+        temperature: float = 0.5,
+    ):
+        super().__init__()
+        self.NTXEntLoss = NTXEntLoss(temperature=temperature)
+
+    def forward(self, z_i, z_j):
+        """Compute the loss of the NNCLR model.
+
+        Parameters
+        ----------
+        z_i : torch.Tensor
+            Latent representation of the first augmented view of the batch.
+        z_j : torch.Tensor
+            Latent representation of the second augmented view of the batch.
+
+        Returns
+        -------
+        float
+            The computed loss.
+        """
+        return self.NTXEntLoss(z_i, z_j)
+
+
 class NegativeCosineSimilarity(torch.nn.Module):
     """Negative cosine similarity objective.
 
