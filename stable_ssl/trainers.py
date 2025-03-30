@@ -11,7 +11,7 @@ import torch
 import torch.nn.functional as F
 
 from .base import BaseTrainer
-from .modules import TeacherStudentModule
+from .modules import SupportQueueModule, TeacherStudentModule
 from .utils import compute_global_mean, log_and_raise
 
 # ==========================================
@@ -409,6 +409,63 @@ class DINOTrainer(SelfDistillationTrainer):
 
         classifier_losses = self.compute_loss_classifiers(
             representations_teacher, embeddings_teacher, labels
+        )
+
+        return {"loss_ssl": loss_ssl, **classifier_losses}
+
+
+class NNCLRTrainer(JointEmbeddingTrainer):
+    r"""NNCLR SSL model."""
+
+    required_modules = {
+        "backbone": torch.nn.Module,
+        "projector": torch.nn.Module,
+        "backbone_classifier": torch.nn.Module,
+        "projector_classifier": torch.nn.Module,
+        "support_queue": SupportQueueModule,
+    }
+
+    def compute_loss(self):
+        """Compute final loss as sum of SSL loss and classifier losses."""
+        if self.loss is None:
+            log_and_raise(
+                ValueError,
+                f"When using the trainer {self.__class__.__name__}, "
+                "one needs to either provide a loss function in the config "
+                "or implement a custom `compute_loss` method.",
+            )
+
+        views, labels = self.format_views_labels()
+        representations = [self.module["backbone"](view) for view in views]
+        self._latest_representations = representations
+
+        embeddings = [self.module["projector"](rep) for rep in representations]
+        self._latest_embeddings = embeddings
+
+        # We can use a predictor module in NNCLR, shown to improve performance
+        if "predictor" in self.module:
+            embeddings_predictor = [
+                self.module["predictor"](embed) for embed in embeddings
+            ]
+
+            loss_ssl = 0.5 * (
+                self.loss(
+                    self.module["support_queue"](embeddings[0]), embeddings_predictor[1]
+                )
+                + self.loss(
+                    self.module["support_queue"](embeddings[1]), embeddings_predictor[0]
+                )
+            )
+        else:
+            loss_ssl = 0.5 * (
+                self.loss(self.module["support_queue"](embeddings[0]), embeddings[1])
+                + self.loss(self.module["support_queue"](embeddings[1]), embeddings[0])
+            )
+
+        self.module["support_queue"].update_queue(F.normalize(embeddings[0], dim=1))
+
+        classifier_losses = self.compute_loss_classifiers(
+            representations, embeddings, labels
         )
 
         return {"loss_ssl": loss_ssl, **classifier_losses}
