@@ -8,7 +8,6 @@
 from .exceptions import BreakAllEpochs, BreakEpoch, BreakStep, NanError
 from .utils import (
     GatherLayer,
-    SupportQueue,
     all_gather,
     all_reduce,
     broadcast,
@@ -50,5 +49,4 @@ __all__ = [
     "broadcast",
     "rsetattr",
     "rgetattr",
-    "SupportQueue",
 ]
