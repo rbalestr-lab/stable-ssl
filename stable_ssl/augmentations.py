@@ -1,13 +1,11 @@
 import inspect
 import logging
 from dataclasses import dataclass
-from io import BytesIO
 from typing import Optional, Tuple
 
 import numpy as np
 import torch
-from PIL import Image, ImageFilter
-from scipy.ndimage import zoom as scizoom
+from PIL import ImageFilter
 from torchvision.transforms import v2
 from torchvision.transforms.functional import InterpolationMode
 
@@ -134,6 +132,7 @@ class TransformConfig:
 
     def __call__(self, x):
         return self._transform(x)
+
 
 class GaussianBlur(torch.nn.Module):
     """Apply Gaussian blur to an image.
