@@ -109,7 +109,7 @@ trainer:
           num_classes: ${trainer.data._num_classes}
           top_k: 1
         acc5:
-          _target_: torchmetrics.classification.MulticlassAccuracy
+          _target_: torchmetrics.regression.MeanSquaredError
           num_classes: ${trainer.data._num_classes}
           top_k: 5
   # ===== Hardware Parameters =====

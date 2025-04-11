@@ -36,14 +36,6 @@ from .config import (
 from .data import DistributedSamplerWrapper
 from .modules import TeacherStudentModule
 
-try:
-    import wandb as wandbapi
-except ModuleNotFoundError:
-    logging.warning(
-        "Wandb module is not installed, make sure to not use wandb for logging "
-        "or an error will be thrown."
-    )
-
 if TYPE_CHECKING:
     from .monitors import Monitor
 
@@ -54,7 +46,6 @@ except ModuleNotFoundError:
         "Wandb module is not installed, make sure not to use wandb for logging "
         "or an error will be thrown."
     )
-import functools
 
 from .utils import (
     BreakAllEpochs,
@@ -62,32 +53,11 @@ from .utils import (
     NanError,
     get_gpu_info,
     log_and_raise,
+    rgetattr,
+    rsetattr,
     seed_everything,
     to_device,
 )
-
-
-def rsetattr(obj, attr, val):
-    pre, _, post = attr.rpartition(".")
-    parent = rgetattr(obj, pre) if pre else obj
-    if type(parent) is dict:
-        parent[post] = val
-    else:
-        return setattr(parent, post, val)
-
-
-# using wonder's beautiful simplification: https://stackoverflow.com/questions/31174295/getattr-and-setattr-on-nested-objects/31174427?noredirect=1#comment86638618_31174427
-
-
-def _adaptive_getattr(obj, attr):
-    if type(obj) is dict:
-        return obj[attr]
-    else:
-        return getattr(obj, attr)
-
-
-def rgetattr(obj, attr):
-    return functools.reduce(_adaptive_getattr, [obj] + attr.split("."))
 
 
 class BaseTrainer(torch.nn.Module):
@@ -280,7 +250,7 @@ class BaseTrainer(torch.nn.Module):
 
     @property
     def wandb_run(self):
-        api = wandbapi.Api()
+        api = wandb.Api()
         entity = self.logger["wandb"]["entity"]
         project = self.logger["wandb"]["project"]
         id = self.logger["wandb"]["id"]

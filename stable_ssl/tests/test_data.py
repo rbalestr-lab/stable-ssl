@@ -19,13 +19,10 @@ def test_multiview_sampler():
 def test_huggingface_dataset():
     hf_dataset = HuggingFaceDataset(
         path="mnist",
-        x="image",
-        y="label",
         split="train[:1000]",
     )
 
     assert len(hf_dataset) == 1000
     sample = hf_dataset[0]
-    assert isinstance(sample, tuple)
+    assert isinstance(sample, dict)
     assert len(sample) == 2
-    assert isinstance(sample[1], int)

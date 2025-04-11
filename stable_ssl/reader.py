@@ -19,6 +19,7 @@ import logging
 import re
 from multiprocessing import Pool
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 import jsonlines
 import numpy as np
@@ -93,6 +94,7 @@ def wandb_project_to_table(
     row: str,
     column: str,
     agg: callable,
+    filters=None,
 ) -> pd.DataFrame:
     """Format a pandas DataFrame as a table given the user args.
 
@@ -108,35 +110,62 @@ def wandb_project_to_table(
     -------
         DataFrame: the formatted table
     """
+    logging.info(f"Creating table from {len(configs)} runs.")
+    filters = filters or {}
     df = pd.DataFrame(configs).T
+    for id in df.index.values:
+        assert id in dfs
+    for k, v in filters.items():
+        if type(v) not in [tuple, list]:
+            v = [v]
+        s = df[k].isin(v)
+        df = df.loc[s]
+        logging.info(f"After filtering {k}, {len(df)} runs are left.")
+
     rows = natural_sort(df[row].astype(str).unique())
+    logging.info(f"Found rows: {rows}")
     columns = natural_sort(df[column].astype(str).unique())
+    logging.info(f"Found columns: {columns}")
     output = pd.DataFrame(columns=columns, index=rows)
     for r in rows:
         for c in columns:
-            ids = df[
-                (df[row].astype(str) == r) & (df[column].astype(str) == c)
-            ].index.values
+            cell_runs = (df[row].astype(str) == r) & (df[column].astype(str) == c)
+            n = np.count_nonzero(cell_runs)
             samples = []
-            for id in ids:
-                samples.append(dfs[id][value])
-            output.loc[r, c] = agg(np.stack(samples))
+            logging.info(f"Number of runs for cell ({r}, {c}): {n}")
+            for id in df[cell_runs].index.values:
+                if value not in dfs[id].columns:
+                    logging.info(f"Run {id} missing {value}, skipping....")
+                    continue
+                samples.append(dfs[id][value].values.reshape(-1))
+            if len(samples) == 0:
+                output.loc[r, c] = np.nan
+            else:
+                output.loc[r, c] = agg(np.concatenate(samples))
     return output
 
 
 def wandb_project(
     entity: str,
     project: str,
+    filters: Optional[Dict[str, Any]] = None,
+    order: str = "+created_at",
+    per_page: int = 50,
+    include_sweeps: bool = True,
     min_step: int = 0,
     max_step: int = -1,
     keys: list = None,
     num_workers: int = 10,
-    state: list = ["finished"],
 ):
     """Download configs and data from a wandb project."""
     api = wandbapi.Api()
-    runs = api.runs(f"{entity}/{project}")
-    runs = [r for r in runs if r.state in state]
+    runs = api.runs(
+        f"{entity}/{project}",
+        filters=filters,
+        order=order,
+        per_page=per_page,
+        include_sweeps=include_sweeps,
+    )
     logging.info(f"Found {len(runs)} runs for project {project}")
     with Pool(num_workers) as p:
         results = list(
@@ -173,30 +202,27 @@ def wandb(
     if min_step < 0:
         min_step = max_step + min_step
 
-    if keys is None:
-        summary = run.summary
-        # extract names that are not hidden
-        keys = [k for k, v in summary.items() if k[0] != "_" and np.isscalar(v)]
-        # add back the runtime and timestamp and this is useful to users
-        keys += ["_runtime", "_timestamp", "_step"]
-    else:
-        if "_step" not in keys:
-            keys.append("_step")
+    # if keys is None:
+    #     summary = run.summary
+    #     # extract names that are not hidden
+    #     keys = [k for k, v in summary.items() if k[0] != "_" and np.isscalar(v)]
+    #     # add back the runtime and timestamp and this is useful to users
+    #     keys += ["_runtime", "_timestamp", "_step"]
+    # else:
+    if keys is not None and "_step" not in keys:
+        keys.append("_step")
 
     data = []
-    for row_idx, row in tqdm(
-        enumerate(
-            run.scan_history(
-                page_size=10000, keys=keys, min_step=min_step, max_step=max_step
-            )
-        ),
+    for row in tqdm(
+        run.scan_history(keys=keys, min_step=min_step, max_step=max_step),
         total=max_step,
         desc=f"Downloading run: {run.name}",
         disable=_tqdm_disable,
     ):
         data.append(row)
     df = pd.DataFrame(data)
-    df.set_index("_step", inplace=True)
+    if "_step" in df.columns:
+        df.set_index("_step", inplace=True)
     # config = flatten_config(run.config)
     return df, run.config
 

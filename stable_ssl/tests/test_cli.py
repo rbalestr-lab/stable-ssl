@@ -1,16 +1,7 @@
-import os
 import sys
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from stable_ssl.cli import entry
-
-
-@pytest.fixture
-def config_file_path():
-    """Return the absolute path to the `mini_mnist.yaml` file."""
-    return os.path.join(os.path.dirname(__file__), "configs")
 
 
 def test_cli_with_config_file(config_file_path):
