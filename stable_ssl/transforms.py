@@ -1,166 +1,11 @@
 import math
-from functools import cache
-from typing import Union
+from typing import Optional, Union
 
 import torch
 from einops import rearrange
 from torch import nn
 
 from stable_ssl.utils import warn_once
-
-
-#### NOTE All of these are slightly modified versions of what's in the JEPA repo.
-def get_3d_sincos_pos_embed(
-    embed_dim,
-    grid_height,
-    grid_width,
-    grid_depth,
-    cls_token=False,
-    uniform_power=False,  # weights pos embeddings differently for temporal dimension vs spatial dimensions
-):
-    """
-    Generate 3D sinusoidal positional embeddings for a 3D grid (depth, height, width).
-
-    This function creates positional encodings for 3D data by generating sine and cosine
-    embeddings for each dimension (depth, height, width) and concatenating them.
-
-    Parameters
-    ----------
-        embed_dim (int): Dimension of the output embeddings.
-        grid_height (int): Height of the 3D grid.
-        grid_width (int): Width of the 3D grid.
-        grid_depth (int): Depth (temporal dimension) of the 3D grid.
-        cls_token (bool, optional): Whether to prepend a zero embedding for a classification token.
-                                   Defaults to False.
-        uniform_power (bool, optional): Distribution of embedding dimensions across spatial/temporal dimensions.
-                                      If False, temporal dimension gets half the embedding dimensions.
-                                      If True, dimensions are distributed equally. Defaults to False.
-
-    Returns
-    -------
-        torch.Tensor: Positional embeddings of shape [grid_depth*grid_height*grid_width, embed_dim] without cls_token
-                     or [1+grid_depth*grid_height*grid_width, embed_dim] with cls_token.
-    """
-    grid_d = torch.arange(grid_depth, dtype=torch.float)
-    grid_h = torch.arange(grid_height, dtype=torch.float)
-    grid_w = torch.arange(grid_width, dtype=torch.float)
-    grid_h, grid_d, grid_w = torch.meshgrid(
-        grid_h, grid_d, grid_w, indexing="ij"
-    )  # order of meshgrid is very important for indexing as [d,h,w]
-
-    if not uniform_power:
-        h_embed_dim = embed_dim // 4
-        w_embed_dim = embed_dim // 4
-        d_embed_dim = embed_dim // 2
-    else:
-        h_embed_dim = w_embed_dim = d_embed_dim = int(
-            torch.ceil(torch.tensor(embed_dim / 6)) * 2
-        )
-
-    emb_h = get_1d_sincos_pos_embed_from_grid(h_embed_dim, grid_h)  # (T*H*W, D1)
-    emb_w = get_1d_sincos_pos_embed_from_grid(w_embed_dim, grid_w)  # (T*H*W, D2)
-    emb_d = get_1d_sincos_pos_embed_from_grid(d_embed_dim, grid_d)  # (T*H*W, D3)
-    pos_embed = torch.cat([emb_d, emb_h, emb_w], dim=1)
-    pos_embed = pos_embed[:, :embed_dim]
-    if cls_token:
-        pos_embed = torch.cat([torch.zeros(1, embed_dim), pos_embed], dim=0)
-    return pos_embed
-
-
-def get_2d_sincos_pos_embed(embed_dim: int, grid_h: int, grid_w: int, cls_token=False):
-    """
-    Generate 2D sinusoidal positional embeddings for a 2D grid (height, width).
-
-    This function creates positional encodings for 2D data by generating sine and cosine
-    embeddings for each dimension (height, width) and concatenating them.
-
-    Parameters
-    ----------
-        embed_dim (int): Dimension of the output embeddings.
-        grid_h (int): Height of the 2D grid.
-        grid_w (int): Width of the 2D grid.
-        cls_token (bool, optional): Whether to prepend a zero embedding for a classification token.
-                                   Defaults to False.
-
-    Returns
-    -------
-        torch.Tensor: Positional embeddings of shape [grid_h*grid_w, embed_dim] without cls_token
-                     or [1+grid_h*grid_w, embed_dim] with cls_token.
-    """
-    grid_h = torch.arange(grid_h, dtype=torch.float)
-    grid_w = torch.arange(grid_w, dtype=torch.float)
-    grid_w, grid_h = torch.meshgrid(
-        grid_w, grid_h, indexing="ij"
-    )  # order of meshgrid is very important for indexing as [h, w]
-
-    emb_h = get_1d_sincos_pos_embed_from_grid(embed_dim // 2, grid_h)  # (H*W, D/2)
-    emb_w = get_1d_sincos_pos_embed_from_grid(embed_dim // 2, grid_w)  # (H*W, D/2)
-    pos_embed = torch.cat([emb_h, emb_w], dim=1)  # (H*W, D)
-    if cls_token:
-        pos_embed = torch.cat([torch.zeros(1, embed_dim), pos_embed], dim=0)
-    return pos_embed
-
-
-def get_1d_sincos_pos_embed(embed_dim, grid_size, cls_token=False):
-    """
-    Generate 1D sinusoidal positional embeddings for a sequence of positions.
-
-    This function creates positional encodings for a 1D sequence by generating
-    sine and cosine embeddings for each position.
-
-    Parameters
-    ----------
-        embed_dim (int): Dimension of the output embeddings.
-        grid_size (int): Length of the sequence.
-        cls_token (bool, optional): Whether to prepend a zero embedding for a classification token.
-                                   Defaults to False.
-
-    Returns
-    -------
-        torch.Tensor: Positional embeddings of shape [grid_size, embed_dim] without cls_token
-                     or [1+grid_size, embed_dim] with cls_token.
-    """
-    grid = torch.arange(grid_size, dtype=torch.float)
-    pos_embed = get_1d_sincos_pos_embed_from_grid(embed_dim, grid)
-    if cls_token:
-        pos_embed = torch.cat([torch.zeros(1, embed_dim), pos_embed], dim=0)
-    return pos_embed
-
-
-def get_1d_sincos_pos_embed_from_grid(embed_dim, pos):
-    """
-    Generate 1D sinusoidal positional embeddings from a grid of positions.
-
-    This is the core function that implements sinusoidal position encoding according to the formula:
-    PE(pos, 2i) = sin(pos / 10000^(2i/embed_dim))
-    PE(pos, 2i+1) = cos(pos / 10000^(2i/embed_dim))
-
-    Parameters
-    ----------
-        embed_dim (int): Dimension of the output embeddings. Must be divisible by 2.
-        pos (torch.Tensor): A tensor of positions to be encoded of shape (M,).
-
-    Returns
-    -------
-        torch.Tensor: Sinusoidal embeddings of shape (M, embed_dim).
-
-    Raises
-    ------
-        AssertionError: If embed_dim is not divisible by 2.
-    """
-    assert embed_dim % 2 == 0
-    omega = torch.arange(embed_dim // 2, dtype=torch.float)
-    omega /= embed_dim / 2.0
-    omega = 1.0 / 10000**omega  # (D/2,)
-
-    pos = pos.reshape(-1)  # (M,)
-    out = torch.einsum("m,d->md", pos, omega)  # (M, D/2), outer product
-
-    emb_sin = torch.sin(out)  # (M, D/2)
-    emb_cos = torch.cos(out)  # (M, D/2)
-
-    emb = torch.cat([emb_sin, emb_cos], dim=1)  # (M, D)
-    return emb
 
 
 class Patchify2D(nn.Module):
@@ -172,8 +17,6 @@ class Patchify2D(nn.Module):
         Size of patches to extract. Can be either:
         - An integer for square patches (patch_size x patch_size)
         - A tuple of (height, width) for rectangular patches
-    positional_encoding : nn.Module, default=PositionalEncoding()
-        Positional encoding to apply to the patches
 
     Returns
     -------
@@ -187,7 +30,6 @@ class Patchify2D(nn.Module):
     def __init__(
         self,
         patch_size: Union[int, tuple[int, int]] = 16,
-        use_pos_embed: bool = True,
     ):
         super().__init__()
         if isinstance(patch_size, tuple):
@@ -197,16 +39,11 @@ class Patchify2D(nn.Module):
             self.patch_size = (patch_size,) * 2
 
         self.unfold = nn.Unfold(kernel_size=self.patch_size, stride=self.patch_size)
-        self.use_pos_embed = use_pos_embed
 
-    @cache
-    def get_pos_embed(self, embed_dim: int, grid_h: int, grid_w: int) -> torch.Tensor:
-        # NOTE Converting this to and from numpy could be slow but this is just a PoC for now
-        sincos = get_2d_sincos_pos_embed(embed_dim, grid_h, grid_w, cls_token=False)
-        return sincos
+    def __call__(self, input: dict) -> dict:
+        assert "image" in input
 
-    # TODO Change this to hwc if unfold allows for it to make it similar to 3d patchify
-    def __call__(self, image_hwc: torch.Tensor) -> torch.Tensor:
+        image_hwc: torch.Tensor = input["image"]
         H, W, C = image_hwc.shape
 
         grid_height = H // self.patch_size[0]
@@ -219,22 +56,13 @@ class Patchify2D(nn.Module):
         # so we permute in this method
         image_patched_flat: torch.Tensor = self.unfold(image_hwc.permute(2, 0, 1)).T
 
-        if self.use_pos_embed:
-            # NOTE Since positional embeddings are lazily created based on the patched shape
-            # and not the input shape, we don't ever need to interpolate them
-            D = image_patched_flat.shape[-1]
-            pos_embed = self.get_pos_embed(
-                embed_dim=D, grid_h=grid_height, grid_w=grid_width
-            )
-            image_patched_flat += pos_embed
-
         # NOTE Unflatten patches to recover original shape
         image_patched_hwd: torch.Tensor = rearrange(
             image_patched_flat, "(gh gw) d -> gh gw d", gh=grid_height, gw=grid_width
         )
         # 224,224,3 16,16
         # 14, 14, (16*16*3)
-        return image_patched_hwd
+        return {**input, "patched_image": image_patched_hwd}
 
 
 class Patchify3D(nn.Module):
@@ -252,8 +80,6 @@ class Patchify3D(nn.Module):
         - A tuple of (height, width) for rectangular patches
     tubelet_size : int, default=2
         Number of consecutive frames to group into each tubelet
-    positional_encoding : nn.Module, default=PositionalEncoding()
-        Positional encoding to apply to the patches
 
     Returns
     -------
@@ -268,7 +94,8 @@ class Patchify3D(nn.Module):
         self,
         patch_size: Union[int, tuple[int, int]] = 16,
         tubelet_size: int = 2,
-        use_pos_embed: bool = True,
+        *,
+        video_key: str = "video",
     ):
         super().__init__()
         if isinstance(patch_size, tuple):
@@ -279,23 +106,11 @@ class Patchify3D(nn.Module):
 
         self.tubelet_size = tubelet_size
         self.unfold = nn.Unfold(kernel_size=self.patch_size, stride=self.patch_size)
-        self.use_pos_embed = use_pos_embed
+        self.video_key = video_key
 
-    @cache
-    def get_pos_embed(
-        self, embed_dim: int, grid_h: int, grid_w: int, grid_t: int
-    ) -> torch.Tensor:
-        # NOTE Converting this to and from numpy could be slow but this is just a PoC for now
-        sincos = get_3d_sincos_pos_embed(
-            embed_dim, grid_h, grid_w, grid_t, cls_token=False
-        )
-        # sincos = torch.from_numpy(sincos).float()
-        # NOTE Will this preserve the values of the positional embeddings
-        # NOTE How can I check this? Means over th
-        sincos = rearrange(sincos, "(gh gw t) d -> t d (gh gw)", gh=grid_h, gw=grid_w)
-        return sincos
-
-    def __call__(self, video_thwc: torch.Tensor) -> torch.Tensor:
+    def __call__(self, input: dict) -> dict:
+        assert self.video_key in input
+        video_thwc: torch.Tensor = input[self.video_key]
         T, H, W, C = video_thwc.shape
 
         timesteps: int = T // self.tubelet_size
@@ -309,12 +124,6 @@ class Patchify3D(nn.Module):
         )
 
         video_patched_flattened: torch.Tensor = self.unfold(video_tubed)
-        if self.use_pos_embed:
-            D = video_patched_flattened.shape[1]
-            pos_embed = self.get_pos_embed(
-                embed_dim=D, grid_h=grid_h, grid_w=grid_w, grid_t=timesteps
-            )
-            video_patched_flattened += pos_embed
 
         video_patched_thwc: torch.Tensor = rearrange(
             video_patched_flattened,
@@ -326,7 +135,11 @@ class Patchify3D(nn.Module):
             ph=self.patch_size[0],
             pw=self.patch_size[1],
         )
-        return video_patched_thwc
+
+        return {
+            **input,
+            "patched_video": video_patched_thwc,
+        }
 
 
 class TubeMask:
@@ -361,6 +174,8 @@ class TubeMask:
         self,
         ratio: float,
         patch_size: Union[tuple[int, int], int],
+        *,
+        input_key: Optional[str] = None,
     ):
         super(TubeMask, self).__init__()
         self.ratio = ratio
@@ -368,6 +183,10 @@ class TubeMask:
             self.patch_size = (patch_size,) * 2
         else:
             self.patch_size = patch_size
+        # NOTE: When either alias is passed in explicitly by the user,
+        # we should not include any fallback logic, so that we don't silently use
+        # a default alias that is not what the user expects.
+        self.input_key = input_key
 
     def sample_spatial_mask(
         self, ratio: float, num_spatial_patches: int
@@ -399,7 +218,7 @@ class TubeMask:
         mask_keep = torch.nonzero(mask).squeeze()
         return mask_keep, mask_discard
 
-    def __call__(self, video_thwc: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    def __call__(self, input: dict) -> dict:
         """Apply tube masking to input video.
 
         Parameters
@@ -417,6 +236,19 @@ class TubeMask:
             Kept patches and masked patches
             Both have shape [T, N, C] where N varies based on ratio
         """
+        # TODO: Turn this to its own validation function
+        if self.input_key:
+            assert self.input_key in input, (
+                f"TubeMask requires '{self.input_key}' key in input dict, as it was specified! Received {input.keys()}"
+            )
+            video_thwc: torch.Tensor = input[self.input_key]
+        else:
+            video_thwc: torch.Tensor = input.get("video", input.get("image"))
+            if video_thwc is None:
+                raise ValueError(
+                    f"TubeMask requires either 'video' or 'image' key in input dict! Received {input.keys()}"
+                )
+
         if is_image := bool(video_thwc.dim() == 3):
             warn_once(
                 f"Received image-like input with shape {video_thwc.shape}, ",
@@ -446,16 +278,21 @@ class TubeMask:
             video_flattened_grid, dim=1, index=mask_discard
         )
 
+        # TODO Add unit test for alias - detect whether we adjust dict keys based on input dims
+        alias = self.input_key or "video"
+
         if is_image:
             masked_video_keep = masked_video_keep.squeeze(0)
             masked_video_discard = masked_video_discard.squeeze(0)
+            alias = self.input_key or "image"
 
-        return (
-            masked_video_keep.clone(),
-            mask_keep.clone(),
-            masked_video_discard.clone(),
-            mask_discard.clone(),
-        )
+        return {
+            **input,
+            f"masked_{alias}_keep": masked_video_keep.clone(),
+            "mask_keep": mask_keep.clone(),
+            f"masked_{alias}_discard": masked_video_discard.clone(),
+            "mask_discard": mask_discard.clone(),
+        }
 
 
 class MultiBlock3DMask:
@@ -488,6 +325,8 @@ class MultiBlock3DMask:
         num_blocks: int = 1,
         max_temporal_keep: float = 1.0,
         patch_size: Union[tuple[int, int], int] = (16, 16),
+        *,
+        input_key: Optional[str] = None,
     ):
         if isinstance(patch_size, int):
             self.patch_size = (patch_size,) * 2
@@ -499,6 +338,7 @@ class MultiBlock3DMask:
         self.aspect_ratio = aspect_ratio
         self.num_blocks = num_blocks
         self.max_temporal_keep = max_temporal_keep
+        self.input_key = input_key
 
     def _sample_block_size(
         self,
@@ -551,7 +391,7 @@ class MultiBlock3DMask:
 
         return mask
 
-    def __call__(self, video_thwc: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    def __call__(self, input: dict) -> dict:
         """Apply masking to input video. An image tensor can be passed as well, in which case the mask will interpret it as a single frame.
 
         Parameters
@@ -564,6 +404,18 @@ class MultiBlock3DMask:
         tuple[torch.Tensor, torch.Tensor]
             Kept patches [T, N_kept, C] and masked patches [T, N_masked, C]
         """
+        if self.input_key:
+            assert self.input_key in input, (
+                f"MultiBlock3D requires '{self.input_key}' key in input dict, as it was specified! Received {input.keys()}"
+            )
+            video_thwc: torch.Tensor = input[self.input_key]
+        else:
+            video_thwc: torch.Tensor = input.get("video", input.get("image"))
+            if video_thwc is None:
+                raise ValueError(
+                    f"MultiBlock3D requires either 'video' or 'image' key in input dict! Received {input.keys()}"
+                )
+        # TODO: Turn this to its own validation function
         # NOTE Add temporal dimension for image
         if is_image := bool(video_thwc.ndim == 3):
             video_thwc = video_thwc.unsqueeze(0)
@@ -591,14 +443,18 @@ class MultiBlock3DMask:
         masked_video_keep = video_flat[mask_keep].reshape(T, -1, C)
         masked_video_discard = video_flat[mask_discard].reshape(T, -1, C)
 
+        # TODO Add unit test for alias - detect whether we adjust dict keys based on input dims
+        alias = self.input_key or "video"
         # remove temporal dimension for image
         if is_image:
             masked_video_keep = masked_video_keep.squeeze(0)
             masked_video_discard = masked_video_discard.squeeze(0)
+            alias = self.input_key or "image"
 
-        return (
-            masked_video_keep.clone(),
-            mask_keep.clone(),
-            masked_video_discard.clone(),
-            mask_discard.clone(),
-        )
+        return {
+            **input,
+            f"masked_{alias}_keep": masked_video_keep.clone(),
+            "mask_keep": mask_keep.clone(),
+            f"masked_{alias}_discard": masked_video_discard.clone(),
+            "mask_discard": mask_discard.clone(),
+        }
