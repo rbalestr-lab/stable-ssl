@@ -1,13 +1,13 @@
+from .convmixer import ConvMixer
 from .mlp import MLP
 from .resnet9 import Resnet9
 from .utils import (
-    from_timm,
-    from_torchvision,
     EvalOnly,
     TeacherStudentModule,
+    from_timm,
+    from_torchvision,
     set_embedding_dim,
 )
-from .convmixer import ConvMixer
 
 __all__ = [
     MLP,

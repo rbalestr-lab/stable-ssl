@@ -1,8 +1,9 @@
+from pathlib import Path
 from typing import Union
+
 import torch
 from lightning.pytorch import Callback, LightningModule
 from loguru import logger as logging
-from pathlib import Path
 
 
 class OnlineWriter(Callback):

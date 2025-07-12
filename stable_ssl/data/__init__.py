@@ -1,12 +1,11 @@
+from . import dataset, transforms
 from .collate import Collator
-from . import transforms
-from . import dataset
 from .module import DataModule
-from .sampler import SupervisedBatchSampler, RandomBatchSampler, RepeatedRandomSampler
+from .sampler import RandomBatchSampler, RepeatedRandomSampler, SupervisedBatchSampler
 from .utils import (
+    Categorical,
     ExponentialMixtureNoiseModel,
     ExponentialNormalNoiseModel,
-    Categorical,
     HFDataset,
     fold_views,
 )

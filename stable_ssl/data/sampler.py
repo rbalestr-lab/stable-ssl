@@ -1,10 +1,9 @@
-import torch
-import numpy as np
-from typing import Iterator, List, Union, Iterable, Optional
-from .utils import HFDataset
-import random
-import torch.distributed as dist
 import math
+from typing import Iterable, Iterator, List, Union
+
+import numpy as np
+import torch
+import torch.distributed as dist
 
 
 def _check_integer(v, name):
@@ -149,9 +148,15 @@ class SupervisedBatchSampler(torch.utils.data.Sampler[List[int]]):
             its size would be less than ``batch_size``
 
     Example:
-        >>> list(BatchSampler(SequentialSampler(range(10)), batch_size=3, drop_last=False))
+        >>> list(
+        ...     BatchSampler(
+        ...         SequentialSampler(range(10)), batch_size=3, drop_last=False
+        ...     )
+        ... )
         [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9]]
-        >>> list(BatchSampler(SequentialSampler(range(10)), batch_size=3, drop_last=True))
+        >>> list(
+        ...     BatchSampler(SequentialSampler(range(10)), batch_size=3, drop_last=True)
+        ... )
         [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
     """
 
@@ -220,9 +225,15 @@ class RandomBatchSampler(torch.utils.data.Sampler[List[int]]):
             its size would be less than ``batch_size``
 
     Example:
-        >>> list(BatchSampler(SequentialSampler(range(10)), batch_size=3, drop_last=False))
+        >>> list(
+        ...     BatchSampler(
+        ...         SequentialSampler(range(10)), batch_size=3, drop_last=False
+        ...     )
+        ... )
         [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9]]
-        >>> list(BatchSampler(SequentialSampler(range(10)), batch_size=3, drop_last=True))
+        >>> list(
+        ...     BatchSampler(SequentialSampler(range(10)), batch_size=3, drop_last=True)
+        ... )
         [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
     """
 

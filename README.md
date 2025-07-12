@@ -19,13 +19,13 @@ To reach flexibility, scalability and stability, we rely on battle-tested third 
 
 ## Log log log, monitor monitor monitor!
 
-The key to SSL research is to log and monitor everything. This is what we bring to a new level with `stable-ssl` by providing extremely rich logging and numerous callbacks that can be added and combined in any way you like within your trainer such as `stable_ssl.callbacks.OnlineProbe`, `stable_ssl.callbacks.OnlineKNN`, `stable_ssl.callbacks.RankMe`, `stable_ssl.callbacks.LiDAR`, `stable_ssl.callbacks.OnlineWriter`, and so on. 
+The key to SSL research is to log and monitor everything. This is what we bring to a new level with `stable-ssl` by providing extremely rich logging and numerous callbacks that can be added and combined in any way you like within your trainer such as `stable_ssl.callbacks.OnlineProbe`, `stable_ssl.callbacks.OnlineKNN`, `stable_ssl.callbacks.RankMe`, `stable_ssl.callbacks.LiDAR`, `stable_ssl.callbacks.OnlineWriter`, and so on.
 
 ## Core Structure
 
 `stable-ssl` only requires you to get familiar with 3 components:
 
-1. **data**: the dataset should be a huggingface dataset e.g. 
+1. **data**: the dataset should be a huggingface dataset e.g.
     ```
     import stable_ssl as ssl
     train_dataset = ssl.data.HFDataset(
@@ -40,7 +40,7 @@ The key to SSL research is to log and monitor everything. This is what we bring 
     datamodule = ssl.data.DataModule(train=train_dataset, val=val_dataset, ...)
     ```
     to ensure precise logging and easy debugging.
-2. **module, models, forward**: the overall orchestration leverages `ssl.Module` which inherits from `lightning.LightningModule`. We provide all the basic required utilites (optimizer/scheduler creation etc). So the only required implementation for the user is the `forward` method, for example a supervised learning run would define 
+2. **module, models, forward**: the overall orchestration leverages `ssl.Module` which inherits from `lightning.LightningModule`. We provide all the basic required utilites (optimizer/scheduler creation etc). So the only required implementation for the user is the `forward` method, for example a supervised learning run would define
     ```
     def forward(self, batch, stage):
         batch["embedding"] = self.backbone(batch["image"])["logits"]
@@ -191,7 +191,7 @@ import optimalssl as ossl
 
 The library is not yet available on PyPI. You can install it from the source code, as follows.
 
-1. <details><summary>conda (optional)</summary> 
+1. <details><summary>conda (optional)</summary>
 
     First use your favorite environment manager and install your favorite pytorch version, we provide an example with conda
     ```
@@ -221,7 +221,7 @@ The library is not yet available on PyPI. You can install it from the source cod
 4. LATEX support in Matplotlib (optional)
 
     1.  <details>
-        <summary>Install the LaTex font (Computer Modern)</summary> 
+        <summary>Install the LaTex font (Computer Modern)</summary>
 
         - we provide the ttf files [in the repo](assets/cm-unicode-0.7.0%202/) to make things simple
         - create your local folder (if not present) and copy the ttf files there
@@ -240,12 +240,12 @@ The library is not yet available on PyPI. You can install it from the source cod
 
 
     2. <details>
-        <summary>Install the Tex compiler (optional, if not available on your system)</summary> 
-        
+        <summary>Install the Tex compiler (optional, if not available on your system)</summary>
+
         - install texlive locally following https://tug.org/texlive/quickinstall.html#running where you can use `-texdir your_path` to install to a local path (so you don't need sudo priviledges)
         - follow the instructions at the end of the installation to edit the PATH variables, you can edit that variable for a conda environment with `conda env config vars set PATH=$PATH`
         - make sure inside the conde environment that you point to the right binaries e.g. `whereis latex` and `whereis mktexfmt`
-        - If at some point there is an error that the file `latex.fmt` is not found. You can generate it with 
+        - If at some point there is an error that the file `latex.fmt` is not found. You can generate it with
           - `pdftex -ini   -jobname=latex -progname=latex -translate-file=cp227.tcx *latex.ini`
           - or (unsure) `fmtutil-sys --all`
         </details>

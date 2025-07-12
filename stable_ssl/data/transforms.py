@@ -1,20 +1,19 @@
-import torch
+from contextlib import contextmanager
+from itertools import islice
+from random import getstate, setstate
+from random import seed as rseed
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+
 import numpy as np
+import torch
+from PIL import ImageFilter
 from torchvision.transforms import v2
-from typing import Any, Dict, List, Optional, Union, Sequence, Tuple
+from torchvision.transforms.functional import InterpolationMode
 from torchvision.transforms.v2 import functional as F
 from torchvision.transforms.v2._utils import query_chw
 
-from contextlib import contextmanager
-from random import getstate, setstate
-from random import seed as rseed
-from PIL import ImageFilter
-from itertools import islice
-from torchvision.transforms.functional import InterpolationMode
-
 
 class Transform(v2.Transform):
-
     def get_name(self, x):
         base = self.name
         assert "_" not in base
@@ -127,7 +126,6 @@ class PILGaussianBlur(Transform):
             sigma (Sequence[float]): range to sample the radius of the gaussian blur filter.
                 Defaults to [0.1, 2.0].
         """
-
         if sigma is None:
             sigma = [0.1, 2.0]
 
@@ -142,10 +140,10 @@ class PILGaussianBlur(Transform):
         Args:
             img (Image): an image in the PIL.Image format.
 
-        Returns:
+        Returns
+        -------
             Image: blurred image.
         """
-
         if self.p < 1 and torch.rand(1) >= self.p:
             x[self.get_name(x)] = torch.zeros((1,))
             return x
@@ -221,7 +219,6 @@ class RGB(Transform, v2.RGB):
 
 
 class Resize(Transform, v2.Resize):
-
     def __init__(
         self,
         size,
@@ -296,7 +293,6 @@ class RandomRotation(Transform, v2.RandomRotation):
 
 
 class RandomChannelPermutation(Transform, v2.RandomChannelPermutation):
-
     def __init__(self, source: str = "image", target: str = "image"):
         super().__init__()
         self.source = source
@@ -558,7 +554,6 @@ class ControlledTransform(Transform):
 
 
 class Conditional(Transform):
-
     def __init__(self, transform, condition_key, apply_on_true=True):
         super().__init__()
         self._transform = transform
@@ -577,7 +572,6 @@ class Conditional(Transform):
 
 
 class AdditiveGaussian(Transform):
-
     BYPASS_VALUE = False
 
     def __init__(self, sigma, p=1):

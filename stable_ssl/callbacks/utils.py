@@ -1,5 +1,5 @@
-import torchmetrics
 import torch
+import torchmetrics
 
 
 class EarlyStopping(torch.nn.Module):
@@ -15,7 +15,6 @@ class EarlyStopping(torch.nn.Module):
         self.register_buffer("history", torch.zeros(patience))
 
     def should_stop(self, metric, step):
-
         if self.metric_name is None:
             assert type(metric) is not dict
         else:

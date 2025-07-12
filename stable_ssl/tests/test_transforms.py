@@ -1,13 +1,14 @@
-import torch
+import itertools
+import time
+
+import numpy as np
 import optimalssl as ossl
-from torchvision.transforms import v2
 import optimalssl.data.transforms as ot
 import pytest
-from torchvision.datasets import CIFAR10
+import torch
 from torch.utils.data import DataLoader, Subset
-import time
-import numpy as np
-import itertools
+from torchvision.datasets import CIFAR10
+from torchvision.transforms import v2
 
 
 def test_collator():

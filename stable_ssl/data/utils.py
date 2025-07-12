@@ -1,7 +1,8 @@
-import torch
-from typing import Union
 import logging
+from typing import Union
+
 import lightning as pl
+import torch
 
 
 class HFDataset(torch.utils.data.Dataset):
@@ -9,7 +10,6 @@ class HFDataset(torch.utils.data.Dataset):
         self, *args, transform=None, rename_columns=None, remove_columns=None, **kwargs
     ):
         import datasets
-        import os
 
         if (
             torch.distributed.is_initialized()
@@ -25,7 +25,7 @@ class HFDataset(torch.utils.data.Dataset):
             time.sleep(s)
         if "storage_options" not in kwargs:
             logging.warning(
-                "You didn't pass a storage option" "we are adding one to avoid timeout"
+                "You didn't pass a storage optionwe are adding one to avoid timeout"
             )
             from aiohttp import ClientTimeout
 

@@ -1,15 +1,12 @@
-from typing import Optional, Tuple, Union
+import types
+from typing import Union
 
+import numpy as np
 import torch
 from lightning.pytorch import Callback, LightningModule, Trainer
-from lightning.pytorch.accelerators import Accelerator
-from torch import Tensor
-from torch.nn import functional as F  # noqa: N812
-from ..utils import UnsortedQueue
-
 from loguru import logger as logging
-import types
-import numpy as np
+
+from ..utils import UnsortedQueue
 from .utils import format_metrics_as_dict
 
 
@@ -116,7 +113,7 @@ class OnlineKNN(Callback):
         logging.info(f"Setting up callback ({self.NAME})")
         logging.info(f"\t- {input=}")
         logging.info(f"\t- {target=}")
-        logging.info(f"\t- caching modules into `_callbacks_modules`")
+        logging.info("\t- caching modules into `_callbacks_modules`")
         if name in pl_module._callbacks_modules:
             raise ValueError(f"{name=} already used in callbacks")
         if type(features_dim) in [list, tuple]:
@@ -147,13 +144,13 @@ class OnlineKNN(Callback):
         logging.info(
             f"`_callbacks_modules` now contains ({list(pl_module._callbacks_modules.keys())})"
         )
-        logging.info(f"\t- caching metrics into `_callbacks_metrics`")
+        logging.info("\t- caching metrics into `_callbacks_metrics`")
         pl_module._callbacks_metrics[name] = format_metrics_as_dict(metrics)
 
-        logging.info(f"\t- wrapping the `training_step`")
+        logging.info("\t- wrapping the `training_step`")
         fn = wrap_training_step(pl_module.training_step, target, input, name)
         pl_module.training_step = types.MethodType(fn, pl_module)
-        logging.info(f"\t- wrapping the `validation_step`")
+        logging.info("\t- wrapping the `validation_step`")
         fn = wrap_validation_step(
             pl_module.validation_step, target, input, name, k, temperature
         )

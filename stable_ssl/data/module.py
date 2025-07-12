@@ -1,20 +1,19 @@
-import lightning as pl
-from torch.utils.data import DataLoader, Dataset
-from typing import Iterable
-import torch
-import hydra
-from omegaconf import OmegaConf, DictConfig
 import copy
 import inspect
+from typing import Iterable, Optional, Union
 
+import hydra
+import lightning as pl
+import torch
 from loguru import logger as logging
-from typing import Union, Optional
-from .utils import HFDataset
+from omegaconf import DictConfig, OmegaConf
+from torch.utils.data import DataLoader, Dataset
+
 from .sampler import RepeatedRandomSampler
+from .utils import HFDataset
 
 
 class DictFormat(Dataset):
-
     def __init__(self, dataset: Iterable, names: Iterable):
         """
         Arguments:
@@ -121,7 +120,7 @@ class DataModule(pl.LightningDataModule):
             logging.info(f"\t● length: {len(d)}")
             logging.info(f"\t● columns: {d.column_names}")
         else:
-            logging.info(f"\t● setup was done by user")
+            logging.info("\t● setup was done by user")
 
     def _get_loader_kwargs(self, config, dataset):
         kwargs = dict()

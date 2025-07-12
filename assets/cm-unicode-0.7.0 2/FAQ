@@ -6,7 +6,7 @@ How to add new glyphs to existing scripts?
    adjusted by fontforge preferences. For such simple batch editions it
    has not to build everything from scratch. You can create simple
    fontforge script, for example:
-   
+
 #!/usr/local/bin/fontforge
 fontname=$1
 Open(fontname+".sfd")
@@ -15,7 +15,7 @@ SetPref("AccentCenterLowest",0)
 SetPref("CharCenterHighest",0)
 Select("imacron")
 BuildAccented()
-Save(fontname+"-my.sfd")                                                               
+Save(fontname+"-my.sfd")
 Close()
 Quit()
 
@@ -37,14 +37,14 @@ $fontforge -script aaa.ff `basename cmunrm.sfd .sfd`
 
    If you are dissatisfied by the quality of glyph created by the
    fontforge or you created totally new glyph:
-   
+
    Create new font with glyphs will be added to cm-unicode and their
    dependencies, when these glyphs contain references.
-   
+
    Save this font with additions with filename containing some prefix
    and cm-unicode suffix (basename of sfd file from
    cm-unicode-*-sfd.tar.bz2 without initial "cmun"), e. g.: aaarm.sfd
-   
+
    And send me these sfd files.
 
 How to print using opentype fonts from KDE 3.5?

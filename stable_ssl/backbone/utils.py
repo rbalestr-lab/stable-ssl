@@ -1,10 +1,11 @@
-import torchvision
-from torch import nn
-from loguru import logger as logging
-from typing import Union, Optional
+from typing import Optional, Union
+
 import torch
-from transformers import TimmWrapperModel
+import torchvision
+from loguru import logger as logging
 from timm.layers.classifier import ClassifierHead
+from torch import nn
+from transformers import TimmWrapperModel
 
 
 class EvalOnly(nn.Module):
@@ -232,7 +233,6 @@ def set_embedding_dim(
     expected_input_shape: Optional[Union[tuple, list]] = None,
     expected_output_shape: Optional[Union[tuple, list]] = None,
 ):
-
     if isinstance(module, TimmWrapperModel):
         module = module.timm_model
 

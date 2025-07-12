@@ -1,12 +1,9 @@
 def test_dictconfig():
-
-    import optimalssl as ossl
-    from torchvision.transforms import v2
-    import torch
     import logging
-    from omegaconf import DictConfig, OmegaConf
-    from PIL import Image
+
     import lightning as pl
+    import optimalssl as ossl
+    from omegaconf import OmegaConf
 
     logging.basicConfig(level=logging.INFO)
 
@@ -48,14 +45,10 @@ def test_dictconfig():
 
 
 def test_datamodule():
-
-    import optimalssl as ossl
-    from torchvision.transforms import v2
-    import torch
     import logging
-    from omegaconf import DictConfig, OmegaConf
-    from PIL import Image
+
     import lightning as pl
+    import optimalssl as ossl
 
     logging.basicConfig(level=logging.INFO)
 
@@ -81,11 +74,11 @@ def test_datamodule():
 
 
 def test_dataloader():
+    import logging
 
+    import lightning as pl
     import optimalssl as ossl
     import torch
-    import logging
-    import lightning as pl
 
     logging.basicConfig(level=logging.INFO)
 

@@ -1,20 +1,21 @@
-import torch
-from torchvision.transforms import v2
-from multiprocessing import Pool
-import tqdm
-import matplotlib.pyplot as plt
-from matplotlib.collections import LineCollection
-import matplotlib.lines as lines
-from matplotlib.patches import Rectangle
-from typing import Union, Optional, Iterable
-import numpy as np
-from omegaconf import open_dict, OmegaConf
-import hydra
-from hydra.core.hydra_config import HydraConfig
+import functools
 import inspect
+from multiprocessing import Pool
+from typing import Iterable, Optional, Union
+
+import hydra
+import matplotlib.lines as lines
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
 import torch.distributed as dist
 import torch.distributed.nn
-import functools
+import tqdm
+from hydra.core.hydra_config import HydraConfig
+from matplotlib.collections import LineCollection
+from matplotlib.patches import Rectangle
+from omegaconf import OmegaConf, open_dict
+from torchvision.transforms import v2
 
 
 def get_required_fn_parameters(fn):
@@ -511,7 +512,6 @@ def _plot_square(fig, x0, y0, x1, y1):
 
 
 def visualize_images_graph(x, G, zoom_on=8):
-
     fig, ax = plt.subplots(1, 1, figsize=(8, 5))
     ax.set_axis_off()
 
@@ -589,7 +589,7 @@ def visualize_images_graph(x, G, zoom_on=8):
         fig.text(
             i * 1 / zoom_on + 0.5 / zoom_on,
             1.003,
-            rf"$x_{i+1}$",
+            rf"$x_{i + 1}$",
             horizontalalignment="center",
             verticalalignment="top",
             fontsize=12,

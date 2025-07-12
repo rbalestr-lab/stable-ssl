@@ -1,6 +1,5 @@
-import torch
-from torch.optim.lr_scheduler import _LRScheduler
 import math
+
 import numpy as np
 from torch.optim.lr_scheduler import (
     CosineAnnealingLR,
@@ -8,6 +7,7 @@ from torch.optim.lr_scheduler import (
     LinearLR,
     MultiStepLR,
     SequentialLR,
+    _LRScheduler,
 )
 
 

@@ -1,11 +1,11 @@
-from .probe import OnlineProbe
-from .knn import OnlineKNN
 from .checkpoint_sklearn import SklearnCheckpoint
-from .trainer_info import TrainerInfo, LoggingCallback, ModuleSummary
+from .knn import OnlineKNN
+from .lidar import LiDAR
+from .probe import OnlineProbe
+from .rankme import RankMe
+from .trainer_info import LoggingCallback, ModuleSummary, TrainerInfo
 from .utils import EarlyStopping
 from .writer import OnlineWriter
-from .rankme import RankMe
-from .lidar import LiDAR
 
 __all__ = [
     OnlineProbe,

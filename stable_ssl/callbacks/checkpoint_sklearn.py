@@ -1,18 +1,16 @@
 from typing import Optional
-from lightning.pytorch import Callback, LightningModule, Trainer
-from torch.nn import functional as F  # noqa: N812
-from loguru import logger as logging
-from tabulate import tabulate
-from sklearn.base import RegressorMixin, ClassifierMixin
+
 import numpy as np
+from lightning.pytorch import Callback, LightningModule, Trainer
+from loguru import logger as logging
+from sklearn.base import ClassifierMixin, RegressorMixin
+from tabulate import tabulate
 
 
 class SklearnCheckpoint(Callback):
-
     def setup(
         self, trainer: Trainer, pl_module: LightningModule, stage: Optional[str] = None
     ) -> None:
-
         sklearn_modules = _get_sklearn_modules(pl_module)
         stats = []
         for name, module in sklearn_modules.items():
@@ -23,7 +21,7 @@ class SklearnCheckpoint(Callback):
 
     def on_save_checkpoint(self, trainer, pl_module, checkpoint):
         # Modify the checkpoint dictionary before saving
-        print(f"\tChecking for non PyTorch modules to save... 🔧", flush=True)
+        print("\tChecking for non PyTorch modules to save... 🔧", flush=True)
         modules = _get_sklearn_modules(pl_module)
         for name, module in modules.items():
             if name in checkpoint:
@@ -35,7 +33,7 @@ class SklearnCheckpoint(Callback):
 
     def on_load_checkpoint(self, trainer, pl_module, checkpoint):
         # Access and use data from the loaded checkpoint
-        print(f"\tChecking for non PyTorch modules to load... 🔧", flush=True)
+        print("\tChecking for non PyTorch modules to load... 🔧", flush=True)
         for name, item in checkpoint.items():
             if isinstance(item, RegressorMixin) or isinstance(item, ClassifierMixin):
                 setattr(pl_module, name, item)

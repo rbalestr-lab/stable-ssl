@@ -1,22 +1,21 @@
-import torch
-import lightning as pl
-import wandb
-import torch
-import wandb
-from tabulate import tabulate
 import re
-import torchmetrics
-from functools import partial
 import types
-from .utils import get_required_fn_parameters
+from functools import partial
+
+import lightning as pl
+import torch
+import torchmetrics
 from loguru import logger as logging
+from tabulate import tabulate
+
+from .utils import get_required_fn_parameters
 
 
 class Module(pl.LightningModule):
     def __init__(self, *args, forward: callable, hparams: dict = None, **kwargs):
         super().__init__()
-        logging.info(f"Configuring module! 🔧")
-        logging.info(f"Setting `automatic_optimization` to False! 🔧")
+        logging.info("Configuring module! 🔧")
+        logging.info("Setting `automatic_optimization` to False! 🔧")
         self.automatic_optimization = False
         self._callbacks_modules = torch.nn.ModuleDict()
         self._callbacks_metrics = torch.nn.ModuleDict()
@@ -24,11 +23,11 @@ class Module(pl.LightningModule):
         if len(args) > 0:
             raise ValueError("takes no args! this is to simplify logging")
         if hparams is None:
-            logging.warning(f"No hparams given, none will be logged!")
+            logging.warning("No hparams given, none will be logged!")
         else:
-            logging.info(f"Saving user's hparams!")
+            logging.info("Saving user's hparams!")
             self.save_hyperparameters(hparams)
-        logging.warning(f"Using forward method from user")
+        logging.warning("Using forward method from user")
         setattr(self, "forward", types.MethodType(forward, self))
         for key, value in kwargs.items():
             logging.info(f"Setting `self.{key}` with {type(value)} from user")
@@ -123,7 +122,7 @@ class Module(pl.LightningModule):
             raise ValueError
 
     def configure_optimizers(self):
-        logging.info(f"`configure_optimizers` (main) 🔧")
+        logging.info("`configure_optimizers` (main) 🔧")
         if not hasattr(self, "optim"):
             logging.info(
                 "No optimizer specified, using default AdamW and no scheduler!"
@@ -145,11 +144,11 @@ class Module(pl.LightningModule):
             logging.info(
                 f"\t\t- optimizer {opt_name}: with trainable parameters, {sched_name} sched. ✅"
             )
-            logging.info(f"Configuring optimizers, done!  ✅")
+            logging.info("Configuring optimizers, done!  ✅")
             return opt, [{"scheduler": sched, "interval": "step"}]
         elif not isinstance(self.optim, dict):
             logging.info(
-                f"\toptimizer specified by type (type(optimizer))..."
+                "\toptimizer specified by type (type(optimizer))..."
                 "we need a torch.optim.Optimizer type or dict!"
             )
             raise ValueError
@@ -175,5 +174,5 @@ class Module(pl.LightningModule):
             logging.info(
                 f"\t\t- optimizer {name}: {len(params)} parameters, {sched_name} sched. ✅"
             )
-        logging.info(f"Configuring optimizers, done!  ✅")
+        logging.info("Configuring optimizers, done!  ✅")
         return optimizer, scheduler

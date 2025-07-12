@@ -11,7 +11,6 @@ import torch
 import torch.nn.functional as F
 from loguru import logger as logging
 
-
 from .utils import all_gather, all_reduce
 
 

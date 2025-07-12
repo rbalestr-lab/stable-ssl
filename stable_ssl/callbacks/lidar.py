@@ -1,8 +1,10 @@
+import types
 from typing import Iterable
+
 import torch
 from loguru import logger as logging
+
 from .queue import OnlineQueue
-import types
 
 
 def wrap_validation_step(fn, name):
@@ -14,7 +16,6 @@ def wrap_validation_step(fn, name):
         embeddings = getattr(self, f"_cached_{name}_X")
         encoding = self.all_gather(embeddings).flatten(0, 1)
         if self.trainer.global_rank == 0:
-
             class_means = embeddings.mean(dim=1)
             grand_mean_local = class_means.mean(dim=0)
 
@@ -74,6 +75,6 @@ class LiDAR(OnlineQueue):
             shapes=[target_shape],
             dtypes=[torch.float],
         )
-        logging.info(f"\t- wrapping the `validation_step`")
+        logging.info("\t- wrapping the `validation_step`")
         fn = wrap_validation_step(pl_module.validation_step, target, input, name)
         pl_module.validation_step = types.MethodType(fn, pl_module)

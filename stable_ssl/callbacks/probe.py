@@ -1,18 +1,16 @@
-from typing import Union, Dict, Optional, Sequence
+import types
+from functools import partial
+from typing import Optional, Union
 
 import torch
-from lightning.pytorch import Callback, LightningModule
-from torch.nn import functional as F
-
-from loguru import logger as logging
-from ..utils import get_required_fn_parameters
-import types
-from hydra.utils import instantiate
-from ..optim import LARS
-from functools import partial
 import torchmetrics
-from .utils import format_metrics_as_dict
-from .utils import EarlyStopping
+from hydra.utils import instantiate
+from lightning.pytorch import Callback, LightningModule
+from loguru import logger as logging
+
+from ..optim import LARS
+from ..utils import get_required_fn_parameters
+from .utils import EarlyStopping, format_metrics_as_dict
 
 
 def add_optimizer_scheduler(fn, optimizer, scheduler, name):
@@ -123,7 +121,7 @@ class OnlineProbe(Callback):
         logging.info(f"Setting up callback ({name=})")
         logging.info(f"\t- {input=}")
         logging.info(f"\t- {target=}")
-        logging.info(f"\t- caching modules into `_callbacks_modules`")
+        logging.info("\t- caching modules into `_callbacks_modules`")
         self.accumulate_grad_batches = accumulate_grad_batches
         if name in pl_module._callbacks_modules:
             raise ValueError(f"{name=} already used in callbacks")
@@ -138,17 +136,17 @@ class OnlineProbe(Callback):
             f"`_callbacks_modules` now contains ({list(pl_module._callbacks_modules.keys())})"
         )
 
-        logging.info(f"\t- caching metrics into `_callbacks_metrics`")
+        logging.info("\t- caching metrics into `_callbacks_metrics`")
         metrics = format_metrics_as_dict(metrics)
         print(metrics)
         pl_module._callbacks_metrics[name] = metrics
         for k in pl_module._callbacks_metrics[name].keys():
             logging.info(f"\t\t- {k}")
 
-        logging.info(f"\t- overriding base pl_module `configure_optimizers`")
+        logging.info("\t- overriding base pl_module `configure_optimizers`")
         if optimizer is None:
             logging.warning(
-                f"\t- No optimizer given to OnlineProbe, using default's LARS"
+                "\t- No optimizer given to OnlineProbe, using default's LARS"
             )
             optimizer = partial(
                 LARS,
@@ -159,7 +157,7 @@ class OnlineProbe(Callback):
                 weight_decay=0,
             )
         if scheduler is None:
-            logging.warning(f"\t- No scheduler given to OnlineProbe, using constant")
+            logging.warning("\t- No scheduler given to OnlineProbe, using constant")
             scheduler = partial(torch.optim.lr_scheduler.ConstantLR, factor=1)
         if get_required_fn_parameters(optimizer) != ["params"]:
             names = get_required_fn_parameters(optimizer)
@@ -168,7 +166,7 @@ class OnlineProbe(Callback):
                 f"`params` left as arg, current has {names}"
             )
 
-        logging.info(f"\t- wrapping the `configure_optimizers`")
+        logging.info("\t- wrapping the `configure_optimizers`")
         fn = add_optimizer_scheduler(
             pl_module.configure_optimizers,
             optimizer=optimizer,
@@ -177,11 +175,11 @@ class OnlineProbe(Callback):
         )
         pl_module.configure_optimizers = types.MethodType(fn, pl_module)
 
-        logging.info(f"\t- wrapping the `training_step`")
+        logging.info("\t- wrapping the `training_step`")
         fn = wrap_forward(pl_module.forward, target, input, name, loss_fn)
         pl_module.forward = types.MethodType(fn, pl_module)
 
-        logging.info(f"\t- wrapping the `validation_step`")
+        logging.info("\t- wrapping the `validation_step`")
         # fn = wrap_validation_step(pl_module.validation_step, target, input, name)
         pl_module.validation_step = types.MethodType(fn, pl_module)
         self.name = name

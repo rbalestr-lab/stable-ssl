@@ -1,21 +1,21 @@
-import hydra
-import lightning as pl
-from typing import Any, Union
-from pathlib import Path
-from omegaconf import open_dict, OmegaConf, DictConfig
-import hydra
-import wandb
-import pandas as pd
-import json
 import copy
-from lightning.pytorch.utilities.rank_zero import rank_zero_only
-from datetime import timedelta
+import json
 import signal
-import submitit
-import lightning
-from .utils import get_required_fn_parameters
+from datetime import timedelta
+from pathlib import Path
 from typing import Union
+
+import hydra
+import lightning
+import lightning as pl
+import pandas as pd
+import submitit
+import wandb
+from lightning.pytorch.utilities.rank_zero import rank_zero_only
 from loguru import logger as logging
+from omegaconf import DictConfig, OmegaConf, open_dict
+
+from .utils import get_required_fn_parameters
 
 
 class Manager(submitit.helpers.Checkpointable):
@@ -27,7 +27,8 @@ class Manager(submitit.helpers.Checkpointable):
         seed (int, optional): _description_. Defaults to None.
         ckpt_path (str, optional): _description_. Defaults to None.
 
-    Raises:
+    Raises
+    ------
         ValueError: _description_
         ValueError: _description_
         ValueError: _description_
@@ -41,7 +42,6 @@ class Manager(submitit.helpers.Checkpointable):
         seed: int = None,
         ckpt_path: str = "last",
     ):
-
         # This is the state that will be saved by `checkpoint`
         # we do deepcopy in case the user changes things after
         # padding the dicts (since it will be a copy by reference)
@@ -54,10 +54,10 @@ class Manager(submitit.helpers.Checkpointable):
             trainer = OmegaConf.create(trainer)
         if type(trainer) is DictConfig:
             self.trainer: DictConfig = copy.deepcopy(trainer)
-            logging.debug(f"\t● trainer config saved ✅")
+            logging.debug("\t● trainer config saved ✅")
         elif isinstance(trainer, pl.Trainer):
             self.trainer = trainer
-            logging.debug(f"\t● trainer already instanciated ✅")
+            logging.debug("\t● trainer already instanciated ✅")
         else:
             raise ValueError(
                 f"`trainer` must be a dict, DictConfig or pl.Trainer, not {type(trainer)}"
@@ -67,10 +67,10 @@ class Manager(submitit.helpers.Checkpointable):
             module = OmegaConf.create(module)
         if type(module) is DictConfig:
             self.module: DictConfig = copy.deepcopy(module)
-            logging.debug(f"\t● module config saved ✅")
+            logging.debug("\t● module config saved ✅")
         elif isinstance(module, pl.LightningModule):
             self.module = module
-            logging.debug(f"\t● module already instanciated ✅")
+            logging.debug("\t● module already instanciated ✅")
         else:
             raise ValueError(
                 f"`module` must be a dict, DictConfig or pl.LightningModule, not {type(module)}"
@@ -80,10 +80,10 @@ class Manager(submitit.helpers.Checkpointable):
             data = OmegaConf.create(data)
         if type(data) is DictConfig:
             self.data: DictConfig = copy.deepcopy(data)
-            logging.debug(f"\t● data config saved ✅")
+            logging.debug("\t● data config saved ✅")
         elif isinstance(data, pl.LightningDataModule):
             self.data = data
-            logging.debug(f"\t● data already instanciated ✅")
+            logging.debug("\t● data already instanciated ✅")
         else:
             raise ValueError(
                 f"`data` must be a dict, DictConfig or pl.LightningDataModule, not {type(data)}"
@@ -134,7 +134,7 @@ class Manager(submitit.helpers.Checkpointable):
             logging.warning("📈📈📈 No logger used! 📈📈📈")
             return
 
-        if not "wandb" in self.trainer.logger._target_.lower():
+        if "wandb" not in self.trainer.logger._target_.lower():
             return
         logging.info("📈📈📈 Using Wandb 📈📈📈")
         exp = self._trainer.logger.experiment
@@ -144,7 +144,7 @@ class Manager(submitit.helpers.Checkpointable):
                 cfg_value = self.trainer.logger.get(name, None)
                 w_value = getattr(exp, name)
                 if cfg_value == w_value:
-                    logging.info(f"{prefix}{name} ({cfg_value})" f" left as-is ✅")
+                    logging.info(f"{prefix}{name} ({cfg_value}) left as-is ✅")
                     continue
                 self.override.append(f"++manager.trainer.logger.{name}={w_value}")
                 logging.info(f"{prefix}{name} ({cfg_value}) updated to {w_value} ✅")
@@ -178,7 +178,7 @@ class Manager(submitit.helpers.Checkpointable):
                 last_config = json.load(f)
             # at most last_config has an extra `ckpt_path`
             exp.config.update(last_config)
-            logging.info(f"\t\treloaded!")
+            logging.info("\t\treloaded!")
         elif len(wandb.config.keys()):
             logging.info("\t\ta Wandb™ config is provided, not uploading Hydra's:")
             # TODO: make Wandb parameters the trainer one
@@ -210,7 +210,7 @@ class Manager(submitit.helpers.Checkpointable):
             #         logging.error(f"❌ Error while trying to override {key} ❌")
             #         raise e
         else:
-            logging.info(f"\tWandb's config is empty, using Hydra's 📤")
+            logging.info("\tWandb's config is empty, using Hydra's 📤")
             config = dict(
                 trainer=OmegaConf.to_container(self.trainer, resolve=True),
                 module=OmegaConf.to_container(self.module, resolve=True),
@@ -219,7 +219,7 @@ class Manager(submitit.helpers.Checkpointable):
             config = pd.json_normalize(config, sep=".")
             config = config.to_dict(orient="records")[0]
             while True:
-                logging.info(f"\t\tflattening one level of Hydra's config) 📤")
+                logging.info("\t\tflattening one level of Hydra's config) 📤")
                 valid = True
                 for k in list(config.keys()):
                     if type(config[k]) is list:
@@ -240,12 +240,12 @@ class Manager(submitit.helpers.Checkpointable):
     @property
     def instantiated_module(self):
         if not isinstance(self.module, pl.LightningModule):
-            logging.info(f"\t● instantiating pl_module...")
+            logging.info("\t● instantiating pl_module...")
             # with self._trainer.init_module():
             self._instantiated_module = hydra.utils.instantiate(
                 self.module, _convert_="object"
             )
-            logging.info(f"\t● module instantiated ✅")
+            logging.info("\t● module instantiated ✅")
         else:
             self._instantiated_module = self.module
         return self._instantiated_module
@@ -256,7 +256,7 @@ class Manager(submitit.helpers.Checkpointable):
             self._instantiated_data = hydra.utils.instantiate(
                 self.data, _convert_="object", _recursive_=False
             )
-            logging.info(f"\t● data instantiated ✅")
+            logging.info("\t● data instantiated ✅")
         else:
             self._instantiated_data = self.data
         return self._instantiated_data
@@ -284,7 +284,7 @@ class Manager(submitit.helpers.Checkpointable):
             self._trainer = self.trainer
         else:
             if "callbacks" in self.trainer:
-                logging.info(f"\t● instantiating callbacks...")
+                logging.info("\t● instantiating callbacks...")
                 callbacks = hydra.utils.instantiate(
                     self.trainer.callbacks, _convert_="object"
                 )
@@ -293,7 +293,7 @@ class Manager(submitit.helpers.Checkpointable):
                         continue
                     assert ["pl_module"] == get_required_fn_parameters(callback)
                     callbacks[i] = callback(pl_module=self.instantiated_module)
-                logging.info(f"\t● callbacks instantiated ✅")
+                logging.info("\t● callbacks instantiated ✅")
                 del self.trainer.callbacks
 
             else:
@@ -306,11 +306,11 @@ class Manager(submitit.helpers.Checkpointable):
             self._trainer = self._trainer(callbacks=callbacks)
             if not isinstance(self._trainer, pl.Trainer):
                 raise ValueError("`trainer` should be a Trainer")
-            logging.info(f"\t● trainer instantiated ✅")
+            logging.info("\t● trainer instantiated ✅")
         self.init_and_sync_wandb()
-        logging.info(f"\t● logger updated accordingly ✅")
+        logging.info("\t● logger updated accordingly ✅")
 
-        logging.info(f"\t● 👂👂👂 SIGNALS HANDLERS 👂👂👂")
+        logging.info("\t● 👂👂👂 SIGNALS HANDLERS 👂👂👂")
         logging.info(f"\t\t- SIGUSR1: `{signal.getsignal(signal.SIGUSR1)}`")
         logging.info(f"\t\t- SIGUSR2: `{signal.getsignal(signal.SIGUSR2)}`")
         logging.info(f"\t\t- SIGCONT: `{signal.getsignal(signal.SIGCONT)}`")
@@ -322,9 +322,6 @@ class Manager(submitit.helpers.Checkpointable):
         # https://github.com/facebookresearch/hydra/issues/2042
         # https://github.com/facebookincubator/submitit/blob/main/submitit/core/job_environment.py#L212
         fn = signal.getsignal(signal.SIGUSR2)
-        from hydra_plugins.hydra_submitit_launcher.submitit_launcher import (
-            BaseSubmititLauncher,
-        )
 
         if hasattr(fn, "__self__"):
             self._hydra_self = fn.__self__._delayed.function.checkpoint.__self__
@@ -394,7 +391,7 @@ class Manager(submitit.helpers.Checkpointable):
         #             ckpt_path = None
         # if ckpt_path is None:
         #     logging.error(f"\t\t● No checkpoint found! ❌")
-        logging.info(f"\t● 📞📞📞 CALLBACKS 📞📞📞")
+        logging.info("\t● 📞📞📞 CALLBACKS 📞📞📞")
         for c in self._trainer.checkpoint_callbacks:
             logging.info(c)
         for c in self._trainer.early_stopping_callbacks:
@@ -409,7 +406,7 @@ class Manager(submitit.helpers.Checkpointable):
         self._dump_wandb_data()
 
     def validate(self):
-        logging.info(f"📣📣📣 CALLING trainer.validate 📣📣📣")
+        logging.info("📣📣📣 CALLING trainer.validate 📣📣📣")
 
         self._trainer.validate(
             self.instantiated_module, datamodule=self.instantiated_data
@@ -417,7 +414,7 @@ class Manager(submitit.helpers.Checkpointable):
         self._dump_wandb_data()
 
     def predict(self):
-        logging.info(f"📣📣📣 CALLING trainer.predict 📣📣📣")
+        logging.info("📣📣📣 CALLING trainer.predict 📣📣📣")
 
         self._trainer.predict(
             self.instantiated_module, datamodule=self.instantiated_data
@@ -425,7 +422,7 @@ class Manager(submitit.helpers.Checkpointable):
         self._dump_wandb_data()
 
     def test(self):
-        logging.info(f"📣📣📣 CALLING trainer.test 📣📣📣")
+        logging.info("📣📣📣 CALLING trainer.test 📣📣📣")
 
         self._trainer.test(self.instantiated_module, datamodule=self.instantiated_data)
         self._dump_wandb_data()
@@ -474,7 +471,7 @@ class Manager(submitit.helpers.Checkpointable):
 
     def save_checkpoint(self, path=None):
         # TODO: figure out how to flush logging in subprocess
-        print(f"Entering checkpoint method", flush=True)
+        print("Entering checkpoint method", flush=True)
         if path is None:
             path = (Path() / "checkpoint.ckpt").resolve()
             print(f"\t● saving checkpoint to local path {path} ⏳", flush=True)
@@ -484,12 +481,11 @@ class Manager(submitit.helpers.Checkpointable):
                 path.parent.mkdir(parents=True)
             print(f"\t● saving checkpoint to user's path {path} ⏳", flush=True)
         self._trainer.save_checkpoint(str(path))
-        print(f"\t● checkpoint saved ✅", flush=True)
+        print("\t● checkpoint saved ✅", flush=True)
         self._upload_checkpoint_for_requeue(path)
 
     @rank_zero_only
     def _upload_checkpoint_for_requeue(self, ckpt_path):
-
         # if "ckpt_path" in wandb.run.config:
         #     ckpt_path = Path(wandb.run.config["ckpt_path"])
         #     print(f"\t● `ckpt_path` already in config, updating it!", flush=True)
@@ -499,19 +495,19 @@ class Manager(submitit.helpers.Checkpointable):
         #     print(f"\t● `ckpt_path` set to {ckpt_path}!", flush=True)
 
         if not wandb.run.offline:
-            print(f"\t● Wandb used and online:", flush=True)
+            print("\t● Wandb used and online:", flush=True)
             artifact = wandb.Artifact("requeue_checkpoint", "model")
             artifact.add_file(str(ckpt_path))
             artifact.ttl = timedelta(days=30)
-            print(f"\t\t● artifact created ✅", flush=True)
+            print("\t\t● artifact created ✅", flush=True)
             wandb.run.log_artifact(artifact)
-            print(f"\t\t● artifact logged ✅", flush=True)
+            print("\t\t● artifact logged ✅", flush=True)
             ckpt_path.unlink()
-            print(f"\t\t● local checkpoint deleted ✅", flush=True)
+            print("\t\t● local checkpoint deleted ✅", flush=True)
         else:
-            print(f"\t● Wandb used and offline:", flush=True)
+            print("\t● Wandb used and offline:", flush=True)
             wandb.run.config.update({"ckpt_path": str(ckpt_path.resolve())})
-            print(f"\t● `ckpt_path` added to Wandb config ✅", flush=True)
+            print("\t● `ckpt_path` added to Wandb config ✅", flush=True)
         # for offline case
         self._dump_wandb_data()
 

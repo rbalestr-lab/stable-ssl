@@ -1,10 +1,11 @@
-import torch
-from torch.utils.data import Dataset
 from contextlib import contextmanager
 from random import getstate, setstate
 from random import seed as rseed
-import numpy as np
 from typing import Iterable
+
+import numpy as np
+import torch
+from torch.utils.data import Dataset
 
 
 def set_seed(seeds):
@@ -44,7 +45,6 @@ def random_seed(seed):
 
 
 class DictFormat(Dataset):
-
     def __init__(self, dataset: Iterable):
         """
         Arguments:

@@ -3,9 +3,9 @@ import pytest
 
 @pytest.mark.parametrize("n_views", [1, 2, 4])
 def test_repeated_sampler(n_views):
+    import logging
 
     import optimalssl as ossl
-    import logging
     from omegaconf import OmegaConf
 
     logging.basicConfig(level=logging.INFO)
@@ -100,10 +100,9 @@ def test_repeated_sampler(n_views):
 
 
 def test_trainer_info():
-
+    import lightning as pl
     import optimalssl as ossl
     import torch
-    import lightning as pl
     from optimalssl.data import transforms
 
     train_transform = transforms.ToImage()

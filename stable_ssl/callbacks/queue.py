@@ -1,9 +1,11 @@
-from typing import Optional, Tuple, Union, Iterable
+import types
+from typing import Iterable, Union
+
 import torch
 from lightning.pytorch import Callback, LightningModule, Trainer
-from ..utils import UnsortedQueue
 from loguru import logger as logging
-import types
+
+from ..utils import UnsortedQueue
 
 
 def wrap_training_step(fn, name):
@@ -42,7 +44,7 @@ class OnlineQueue(Callback):
         logging.info(f"\t- {to_save=}")
         logging.info(f"\t- {dims=}")
         logging.info(f"\t- {dtypes=}")
-        logging.info(f"\t- caching modules into `_callbacks_modules`")
+        logging.info("\t- caching modules into `_callbacks_modules`")
         if name in pl_module._callbacks_modules:
             raise ValueError(f"{name=} already used in callbacks")
         pl_module._callbacks_modules[name] = torch.nn.ModuleDict(
@@ -54,7 +56,7 @@ class OnlineQueue(Callback):
         logging.info(
             f"`_callbacks_modules` now contains ({list(pl_module._callbacks_modules.keys())})"
         )
-        logging.info(f"\t- wrapping the `training_step`")
+        logging.info("\t- wrapping the `training_step`")
         fn = wrap_training_step(pl_module.training_step, name)
         pl_module.training_step = types.MethodType(fn, pl_module)
         self.name = name

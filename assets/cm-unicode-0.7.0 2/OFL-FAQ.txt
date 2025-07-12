@@ -108,14 +108,14 @@ This file provides detailed information on the <FontFamilyName> font software. T
 - Corrected minor typos in the documentation
 - Fixed position of combining inverted breve below (U+032F)
 - Added OpenType/Graphite smart code for Armenian
-- Added Armenian glyphs (U+0531 -> U+0587) 
+- Added Armenian glyphs (U+0531 -> U+0587)
 - Released as "<NewFontFamilyName>"
 
 1 Jan 2005 (Joe Smith) <FontFamilyName> Version 1.0
 - Initial release of font "<FontFamilyName>"
 
 3.4  Acknowledgements
-(Here is where contributors can be acknowledged. 
+(Here is where contributors can be acknowledged.
 
 If you make modifications be sure to add your name (N), email (E), web-address (W) and description (D). This list is sorted by last name in alphabetical order.)
 
@@ -185,10 +185,10 @@ We give permission to publish unofficial translations into other languages provi
 "This is an unofficial translation of the SIL Open Font License into $language. It was not published by SIL International, and does not legally state the distribution terms for fonts that use the OFL. A release under the OFL is only valid when using the original English text.
 
 However, we recognize that this unofficial translation will help users and designers not familiar with English to understand the SIL OFL better and make it easier to use and release font families under this collaborative font design model. We encourage designers who consider releasing their creation under the OFL to read the FAQ in their own language if it is available.
- 
+
 Please go to http://scripts.sil.org/OFL for the official version of the license and the accompanying FAQ."
 
-- keep your unofficial translation current and update it at our request if needed, for example if there is any ambiguity which could lead to confusion.  
+- keep your unofficial translation current and update it at our request if needed, for example if there is any ambiguity which could lead to confusion.
 
 If you start such a unofficial translation effort of the OFL and its accompanying FAQ please let us know, thank you.
 
@@ -221,5 +221,3 @@ If you want to release your fonts under the OFL, you only need to do the followi
 
 
 That's all. If you have any more questions please get in touch with us.
-
-

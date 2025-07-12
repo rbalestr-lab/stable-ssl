@@ -1,12 +1,11 @@
+from queue import Queue
+
 import matplotlib.pyplot as plt
 import numpy as np
-import random
-from queue import Queue
 
 
 class Maze:
     def __init__(self, straightness, turns, traps):
-
         self.start = np.random.randn(2)
         self.start /= np.max(np.abs(self.start))
         self.end = self.start.copy()
@@ -39,10 +38,10 @@ class Maze:
             segment_start: A numpy array of shape (2,) representing the starting point of the segment.
             segment_end: A numpy array of shape (2,) representing the ending point of the segment.
 
-        Returns:
+        Returns
+        -------
             The shortest distance between the point and the line segment.
         """
-
         # Calculate the vector of the segment
         segment_vector = segment_end - segment_start
 

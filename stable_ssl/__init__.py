@@ -2,6 +2,9 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import logging
+
+from . import backbone, callbacks, data, losses, module, optim, static, utils
 from .__about__ import (
     __author__,
     __license__,
@@ -10,17 +13,8 @@ from .__about__ import (
     __url__,
     __version__,
 )
-from . import utils
-from . import data
-from . import module
-from . import backbone
-from . import callbacks
-from . import optim
-from . import losses
-from .module import Module
 from .manager import Manager
-from . import static
-import logging
+from .module import Module
 
 try:
     import lightning
@@ -43,8 +37,8 @@ __all__ = [
     Module,
 ]
 import sys
+
 from loguru import logger
-import sys
 
 logger.remove()
 logger.add(

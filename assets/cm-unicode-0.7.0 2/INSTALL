@@ -9,7 +9,7 @@ tar xzvf cm_unicode-VERSION-pfb.tar.gz
 cd cm-unicode-VERSION
 
 where VERSION is version number of this font pack.
-Then create cm-unicode/ directory at the place, where your X stores fonts, for example 
+Then create cm-unicode/ directory at the place, where your X stores fonts, for example
 /usr/share/fonts :
 
 mkdir -p /usr/share/fonts/cm-unicode
@@ -30,15 +30,15 @@ mkfontscale # if you are using XFree86-4.3 or later or recent X.Org
 mkfontdir
 
 Currently mkfontscale and mkfontdir may produce errors, so copy
-fonts.dir and fonts.scale files supplied into 
+fonts.dir and fonts.scale files supplied into
 /usr/share/fonts/cm-unicode/
 
-Then add  
-FontPath     "/usr/share/fonts/cm-unicode/"  
+Then add
+FontPath     "/usr/share/fonts/cm-unicode/"
 to "Files" Section of /etc/X11/xorg.conf (/etc/X11/XF86Config). On the
 next run X.Org (XFree86) will load these  fonts.
 
-If you are using fontconfig (X.Org, XFree86-4.3, may be installed on 
+If you are using fontconfig (X.Org, XFree86-4.3, may be installed on
 XFree86-4.2) you should add a line
 <dir>/usr/share/fonts/cm-unicode</dir>
 to /etc/fonts/fonts.conf or better to /etc/fonts/local.conf then run
@@ -46,7 +46,7 @@ to /etc/fonts/fonts.conf or better to /etc/fonts/local.conf then run
 fc-cache
 
 
-Installation for ghostscript 
+Installation for ghostscript
 ----------------------------
 (Optional, modern versions of ghostscript retreive information from fontconfig)
 
@@ -59,7 +59,7 @@ cd /usr/share/ghostscript/fonts
 ln -s /usr/share/fonts/cm-unicode/*.afm .
 ln -s /usr/share/fonts/cm-unicode/*.pfb .
 
-Then go to the ghostscript library directory, for example 
+Then go to the ghostscript library directory, for example
 
 cd /usr/share/ghostscript/?.??/lib
 

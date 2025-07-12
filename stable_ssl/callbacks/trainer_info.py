@@ -1,14 +1,14 @@
+import lightning.pytorch as pl
+import torch
 from lightning.pytorch import Callback
 from loguru import logger as logging
-import lightning.pytorch as pl
-from pytorch_lightning.utilities import rank_zero_only
 from prettytable import PrettyTable
-import torch
+from pytorch_lightning.utilities import rank_zero_only
+
 from ..data.module import DataModule
 
 
 class ModuleSummary(pl.Callback):
-
     @rank_zero_only
     def setup(self, trainer, pl_module, stage):
         N = "\033[0m"
@@ -58,7 +58,6 @@ class ModuleSummary(pl.Callback):
 
 
 class LoggingCallback(pl.Callback):
-
     @rank_zero_only
     def on_validation_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
         N = "\033[0m"
@@ -77,9 +76,8 @@ class LoggingCallback(pl.Callback):
 
 
 class TrainerInfo(Callback):
-
     def setup(self, trainer, pl_module, stage):
-        logging.info(f"\t linking trainer to DataModule! 🔧")
+        logging.info("\t linking trainer to DataModule! 🔧")
         if not isinstance(trainer.datamodule, DataModule):
             logging.warning("Using a custom DataModule, won't have extra info!")
             return

@@ -1,8 +1,10 @@
+import types
 from typing import Iterable
+
 import torch
 from loguru import logger as logging
+
 from .queue import OnlineQueue
-import types
 
 
 def wrap_validation_step(fn, name):
@@ -43,6 +45,6 @@ class RankMe(OnlineQueue):
             dims=[target_shape],
             dtypes=[torch.float],
         )
-        logging.info(f"\t- wrapping the `validation_step`")
+        logging.info("\t- wrapping the `validation_step`")
         fn = wrap_validation_step(pl_module.validation_step, name)
         pl_module.validation_step = types.MethodType(fn, pl_module)
