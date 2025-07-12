@@ -1,4 +1,5 @@
 """SSL losses."""
+
 #
 # Author: Hugues Van Assel <vanasselhugues@gmail.com>
 #         Randall Balestriero <randallbalestriero@gmail.com>
@@ -8,8 +9,17 @@
 
 import torch
 import torch.nn.functional as F
+from loguru import logger as logging
 
-from stable_ssl.utils import all_gather, all_reduce, off_diagonal
+
+from .utils import all_gather, all_reduce
+
+
+def off_diagonal(x):
+    """Return a flattened view of the off-diagonal elements of a square matrix."""
+    n, m = x.shape
+    assert n == m, logging.error("Input tensor must be square.")
+    return x.flatten()[:-1].view(n - 1, n + 1)[:, 1:].flatten()
 
 
 class NTXEntLoss(torch.nn.Module):
@@ -44,8 +54,8 @@ class NTXEntLoss(torch.nn.Module):
         float
             The computed contrastive loss.
         """
-        z_i = all_gather(z_i)
-        z_j = all_gather(z_j)
+        z_i = torch.cat(all_gather(z_i), 0)
+        z_j = torch.cat(all_gather(z_j), 0)
 
         z = torch.cat([z_i, z_j], 0)
         N = z.size(0)
