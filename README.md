@@ -202,7 +202,7 @@ The library is not yet available on PyPI. You can install it from the source cod
     ```
     conda create -n my_env python=3.11
     ```
-    with your environment name (here `my_env`) and your favorite Python version (here, `3.11`). Once completed, make sure to activate your environment (`conda activate my_env`) before proceding to the next steps!
+    with your environment name (here `my_env`) and your favorite Python version (here, `3.11`). Once completed, make sure to activate your environment (`conda activate my_env`) before proceeding to the next steps!
   </details>
 
 2. Pytorch and our library (we recommend using `uv` for quicker package management):
@@ -242,7 +242,7 @@ The library is not yet available on PyPI. You can install it from the source cod
     2. <details>
         <summary>Install the Tex compiler (optional, if not available on your system)</summary>
 
-        - install texlive locally following https://tug.org/texlive/quickinstall.html#running where you can use `-texdir your_path` to install to a local path (so you don't need sudo priviledges)
+        - install texlive locally following https://tug.org/texlive/quickinstall.html#running where you can use `-texdir your_path` to install to a local path (so you don't need sudo privileges)
         - follow the instructions at the end of the installation to edit the PATH variables, you can edit that variable for a conda environment with `conda env config vars set PATH=$PATH`
         - make sure inside the conde environment that you point to the right binaries e.g. `whereis latex` and `whereis mktexfmt`
         - If at some point there is an error that the file `latex.fmt` is not found. You can generate it with

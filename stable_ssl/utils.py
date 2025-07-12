@@ -113,6 +113,7 @@ class MyReLU(torch.autograd.Function):
     @staticmethod
     def backward(ctx, grad_output):
         """
+
         In the backward pass we receive a Tensor containing the gradient of the loss
         with respect to the output, and we need to compute the gradient of the loss
         with respect to the input.
@@ -124,6 +125,11 @@ class MyReLU(torch.autograd.Function):
 
 
 class OrderedCovariance(torch.autograd.Function):
+    """
+
+    Custom covariance operator.
+    """
+
     @staticmethod
     def forward(ctx, X):
         C = (X.T @ X).fill_diagonal_(0)
