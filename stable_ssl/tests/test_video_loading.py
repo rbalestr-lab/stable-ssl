@@ -1,11 +1,11 @@
 def test_clip_extract():
-    import optimalssl
+    import stable_ssl
 
-    dataset = optimalssl.data.HFDataset(
+    dataset = stable_ssl.data.HFDataset(
         path="shivalikasingh/video-demo",
         split="train",
         trust_remote_code=True,
-        transform=optimalssl.data.transforms.RandomContiguousTemporalSampler(
+        transform=stable_ssl.data.transforms.RandomContiguousTemporalSampler(
             source="video", target="frames", num_frames=10
         ),
     )
@@ -18,18 +18,18 @@ def test_clip_extract():
 
 
 def test_clip_dataset():
-    import optimalssl
+    import stable_ssl
     import torch
 
-    dataset = optimalssl.data.HFDataset(
+    dataset = stable_ssl.data.HFDataset(
         path="shivalikasingh/video-demo",
         split="train",
         trust_remote_code=True,
-        transform=optimalssl.data.transforms.Compose(
-            optimalssl.data.transforms.RandomContiguousTemporalSampler(
+        transform=stable_ssl.data.transforms.Compose(
+            stable_ssl.data.transforms.RandomContiguousTemporalSampler(
                 source="video", target="video", num_frames=10
             ),
-            optimalssl.data.transforms.Resize(
+            stable_ssl.data.transforms.Resize(
                 (128, 128), source="video", target="video"
             ),
         ),
@@ -44,22 +44,22 @@ def test_clip_dataset():
 
 
 def test_embedding_from_image():
-    import optimalssl
+    import stable_ssl
     import torch
     import torchvision
 
-    dataset = optimalssl.data.HFDataset(
+    dataset = stable_ssl.data.HFDataset(
         path="shivalikasingh/video-demo",
         split="train",
         trust_remote_code=True,
-        transform=optimalssl.data.transforms.Compose(
-            optimalssl.data.transforms.RandomContiguousTemporalSampler(
+        transform=stable_ssl.data.transforms.Compose(
+            stable_ssl.data.transforms.RandomContiguousTemporalSampler(
                 source="video", target="video", num_frames=10
             ),
-            optimalssl.data.transforms.Resize(
+            stable_ssl.data.transforms.Resize(
                 (128, 128), source="video", target="video"
             ),
-            optimalssl.data.transforms.ToImage(
+            stable_ssl.data.transforms.ToImage(
                 scale=False,
                 mean=[0, 0, 0],
                 std=[255, 255, 255],
@@ -70,7 +70,7 @@ def test_embedding_from_image():
     )
     dataset = torch.utils.data.ConcatDataset([dataset for _ in range(10)])
     loader = torch.utils.data.DataLoader(dataset, batch_size=4, shuffle=True)
-    embedding = optimalssl.utils.ImageToVideoEncoder(torchvision.models.resnet18())
+    embedding = stable_ssl.utils.ImageToVideoEncoder(torchvision.models.resnet18())
     for data in loader:
         features = embedding(data["video"])
         assert features.shape == (4, 10, 1000)

@@ -1,9 +1,9 @@
 def test_probing():
     import lightning as pl
-    import optimalssl as ossl
+    import stable_ssl as ossl
     import torch
     import torchmetrics
-    from optimalssl.data import transforms
+    from stable_ssl.data import transforms
     from transformers import AutoModelForImageClassification
 
     # without transform

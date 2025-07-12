@@ -5,7 +5,7 @@ import pytest
 def test_repeated_sampler(n_views):
     import logging
 
-    import optimalssl as ossl
+    import stable_ssl as ossl
     from omegaconf import OmegaConf
 
     logging.basicConfig(level=logging.INFO)
@@ -14,15 +14,15 @@ def test_repeated_sampler(n_views):
     train = OmegaConf.create(
         {
             "dataset": {
-                "_target_": "optimalssl.data.HFDataset",
+                "_target_": "stable_ssl.data.HFDataset",
                 "path": "ylecun/mnist",
                 "split": "train[:128]",
                 "transform": {
-                    "_target_": "optimalssl.data.transforms.ToImage",
+                    "_target_": "stable_ssl.data.transforms.ToImage",
                 },
             },
             "sampler": {
-                "_target_": "optimalssl.data.sampler.RepeatedRandomSampler",
+                "_target_": "stable_ssl.data.sampler.RepeatedRandomSampler",
                 "n_views": n_views,
                 "data_source_or_len": 128,
             },
@@ -32,15 +32,15 @@ def test_repeated_sampler(n_views):
     test = OmegaConf.create(
         {
             "dataset": {
-                "_target_": "optimalssl.data.HFDataset",
+                "_target_": "stable_ssl.data.HFDataset",
                 "path": "ylecun/mnist",
                 "split": "test[:128]",
                 "transform": {
-                    "_target_": "optimalssl.data.transforms.ToImage",
+                    "_target_": "stable_ssl.data.transforms.ToImage",
                 },
             },
             "sampler": {
-                "_target_": "optimalssl.data.sampler.RepeatedRandomSampler",
+                "_target_": "stable_ssl.data.sampler.RepeatedRandomSampler",
                 "n_views": n_views,
                 "data_source_or_len": 128,
             },
@@ -101,9 +101,9 @@ def test_repeated_sampler(n_views):
 
 def test_trainer_info():
     import lightning as pl
-    import optimalssl as ossl
+    import stable_ssl as ossl
     import torch
-    from optimalssl.data import transforms
+    from stable_ssl.data import transforms
 
     train_transform = transforms.ToImage()
     train_dataset = ossl.data.HFDataset(

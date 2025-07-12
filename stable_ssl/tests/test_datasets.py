@@ -1,5 +1,5 @@
 def test_hf_datasets():
-    import optimalssl as ossl
+    import stable_ssl as ossl
     import torch
     from torchvision.transforms import v2
 
@@ -23,7 +23,7 @@ def test_hf_datasets():
 
 
 def test_hf_dataloaders():
-    import optimalssl as ossl
+    import stable_ssl as ossl
     import torch
     from torchvision.transforms import v2
 
@@ -45,7 +45,7 @@ def test_hf_dataloaders():
 def test_datamodule():
     import logging
 
-    import optimalssl as ossl
+    import stable_ssl as ossl
     import torch
     from omegaconf import OmegaConf
 
@@ -55,7 +55,7 @@ def test_datamodule():
     train = OmegaConf.create(
         {
             "dataset": {
-                "_target_": "optimalssl.data.HFDataset",
+                "_target_": "stable_ssl.data.HFDataset",
                 "path": "ylecun/mnist",
                 "split": "train",
             },
@@ -66,11 +66,11 @@ def test_datamodule():
     test = OmegaConf.create(
         {
             "dataset": {
-                "_target_": "optimalssl.data.HFDataset",
+                "_target_": "stable_ssl.data.HFDataset",
                 "path": "ylecun/mnist",
                 "split": "test",
                 "transform": {
-                    "_target_": "optimalssl.data.transforms.ToImage",
+                    "_target_": "stable_ssl.data.transforms.ToImage",
                 },
             },
             "batch_size": 20,

@@ -4,10 +4,10 @@ import shutil
 
 def test_simple_writer():
     import lightning as pl
-    import optimalssl as ossl
+    import stable_ssl as ossl
     import torch
     import torchmetrics
-    from optimalssl.data import transforms
+    from stable_ssl.data import transforms
     from transformers import AutoConfig, AutoModelForImageClassification
 
     # without transform
@@ -98,9 +98,9 @@ def test_simple_writer():
     num_written_files = len(os.listdir("./tmp/"))
     shutil.rmtree("./tmp/")
 
-    assert num_written_files == 2 * len(train), (
-        f"Expected {2 * len(train)} files, but found {num_written_files} files."
-    )
+    assert num_written_files == 2 * len(
+        train
+    ), f"Expected {2 * len(train)} files, but found {num_written_files} files."
 
 
 if __name__ == "__main__":

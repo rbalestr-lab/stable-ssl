@@ -2,7 +2,7 @@ def test_dictconfig():
     import logging
 
     import lightning as pl
-    import optimalssl as ossl
+    import stable_ssl as ossl
     from omegaconf import OmegaConf
 
     logging.basicConfig(level=logging.INFO)
@@ -10,14 +10,14 @@ def test_dictconfig():
     # without transform
     data = OmegaConf.create(
         {
-            "_target_": "optimalssl.data.DataModule",
+            "_target_": "stable_ssl.data.DataModule",
             "train": {
                 "dataset": {
-                    "_target_": "optimalssl.data.HFDataset",
+                    "_target_": "stable_ssl.data.HFDataset",
                     "path": "ylecun/mnist",
                     "split": "test",
                     "transform": {
-                        "_target_": "optimalssl.data.transforms.ToImage",
+                        "_target_": "stable_ssl.data.transforms.ToImage",
                     },
                 },
                 "batch_size": 20,
@@ -27,11 +27,11 @@ def test_dictconfig():
             },
             "test": {
                 "dataset": {
-                    "_target_": "optimalssl.data.HFDataset",
+                    "_target_": "stable_ssl.data.HFDataset",
                     "path": "ylecun/mnist",
                     "split": "test",
                     "transform": {
-                        "_target_": "optimalssl.data.transforms.ToImage",
+                        "_target_": "stable_ssl.data.transforms.ToImage",
                     },
                 },
                 "batch_size": 20,
@@ -48,7 +48,7 @@ def test_datamodule():
     import logging
 
     import lightning as pl
-    import optimalssl as ossl
+    import stable_ssl as ossl
 
     logging.basicConfig(level=logging.INFO)
 
@@ -77,7 +77,7 @@ def test_dataloader():
     import logging
 
     import lightning as pl
-    import optimalssl as ossl
+    import stable_ssl as ossl
     import torch
 
     logging.basicConfig(level=logging.INFO)

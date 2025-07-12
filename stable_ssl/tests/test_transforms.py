@@ -2,8 +2,8 @@ import itertools
 import time
 
 import numpy as np
-import optimalssl as ossl
-import optimalssl.data.transforms as ot
+import stable_ssl as ossl
+import stable_ssl.data.transforms as ot
 import pytest
 import torch
 from torch.utils.data import DataLoader, Subset
