@@ -79,8 +79,8 @@ The key to SSL research is to log and monitor everything. This is what we bring 
 
 <details>
   <summary>Minimal Example : SimCLR INET10</summary>
-```
-import optimalssl as ossl
+    ```
+    import optimalssl as ossl
     import torch
     from transformers import AutoModelForImageClassification, AutoConfig
     import lightning as pl
@@ -184,7 +184,7 @@ import optimalssl as ossl
     manager = ossl.Manager(trainer=trainer, module=module, data=data)
     manager()
     ```
-    </details>
+</details>
 
 
 ## Installation
