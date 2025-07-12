@@ -57,7 +57,7 @@ class Manager(submitit.helpers.Checkpointable):
             logging.debug("\t● trainer config saved ✅")
         elif isinstance(trainer, pl.Trainer):
             self.trainer = trainer
-            logging.debug("\t● trainer already instanciated ✅")
+            logging.debug("\t● trainer already instantiated ✅")
         else:
             raise ValueError(
                 f"`trainer` must be a dict, DictConfig or pl.Trainer, not {type(trainer)}"
@@ -70,7 +70,7 @@ class Manager(submitit.helpers.Checkpointable):
             logging.debug("\t● module config saved ✅")
         elif isinstance(module, pl.LightningModule):
             self.module = module
-            logging.debug("\t● module already instanciated ✅")
+            logging.debug("\t● module already instantiated ✅")
         else:
             raise ValueError(
                 f"`module` must be a dict, DictConfig or pl.LightningModule, not {type(module)}"
@@ -83,7 +83,7 @@ class Manager(submitit.helpers.Checkpointable):
             logging.debug("\t● data config saved ✅")
         elif isinstance(data, pl.LightningDataModule):
             self.data = data
-            logging.debug("\t● data already instanciated ✅")
+            logging.debug("\t● data already instantiated ✅")
         else:
             raise ValueError(
                 f"`data` must be a dict, DictConfig or pl.LightningDataModule, not {type(data)}"

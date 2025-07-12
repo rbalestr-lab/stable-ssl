@@ -71,9 +71,9 @@ class DataModule(pl.LightningDataModule):
         if isinstance(conf, DataLoader):
             return conf
         elif isinstance(conf["dataset"], HFDataset):
-            logging.info(f"\t● {stage} already has an instanciated dataset! ✅")
+            logging.info(f"\t● {stage} already has an instantiated dataset! ✅")
         elif type(conf) is dict:
-            logging.info(f"\t● {stage} has `dict` type and no instanciated dataset!")
+            logging.info(f"\t● {stage} has `dict` type and no instantiated dataset!")
             conf = OmegaConf.create(conf)
             logging.info(f"\t● {stage} created `DictConfig`! ✅")
         elif type(conf) is not DictConfig:

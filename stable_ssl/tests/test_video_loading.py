@@ -18,8 +18,9 @@ def test_clip_extract():
 
 
 def test_clip_dataset():
-    import stable_ssl
     import torch
+
+    import stable_ssl
 
     dataset = stable_ssl.data.HFDataset(
         path="shivalikasingh/video-demo",
@@ -44,9 +45,10 @@ def test_clip_dataset():
 
 
 def test_embedding_from_image():
-    import stable_ssl
     import torch
     import torchvision
+
+    import stable_ssl
 
     dataset = stable_ssl.data.HFDataset(
         path="shivalikasingh/video-demo",

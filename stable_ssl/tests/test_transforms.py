@@ -2,13 +2,14 @@ import itertools
 import time
 
 import numpy as np
-import stable_ssl as ossl
-import stable_ssl.data.transforms as ot
 import pytest
 import torch
 from torch.utils.data import DataLoader, Subset
 from torchvision.datasets import CIFAR10
 from torchvision.transforms import v2
+
+import stable_ssl as ossl
+import stable_ssl.data.transforms as transforms
 
 
 def test_collator():
@@ -18,19 +19,23 @@ def test_collator():
 @pytest.mark.parametrize(
     "our_transform,true_transform",
     [
-        (ot.GaussianBlur(3), v2.GaussianBlur(3)),
-        (ot.RandomChannelPermutation(), v2.RandomChannelPermutation()),
-        (ot.RandomHorizontalFlip(0.5), v2.RandomHorizontalFlip(0.5)),
-        (ot.RandomGrayscale(0.5), v2.RandomGrayscale(0.5)),
-        (ot.ColorJitter(0.8, 0.4, 0.4, 0.4), v2.ColorJitter(0.8, 0.4, 0.4, 0.4)),
-        (ot.RandomResizedCrop((32, 32)), v2.RandomResizedCrop((32, 32))),
-        (ot.RandomSolarize(0.5, 0.2), v2.RandomSolarize(0.5, 0.2)),
-        (ot.RandomRotation(90), v2.RandomRotation(90)),
+        (transforms.GaussianBlur(3), v2.GaussianBlur(3)),
+        (transforms.RandomChannelPermutation(), v2.RandomChannelPermutation()),
+        (transforms.RandomHorizontalFlip(0.5), v2.RandomHorizontalFlip(0.5)),
+        (transforms.RandomGrayscale(0.5), v2.RandomGrayscale(0.5)),
+        (
+            transforms.ColorJitter(0.8, 0.4, 0.4, 0.4),
+            v2.ColorJitter(0.8, 0.4, 0.4, 0.4),
+        ),
+        (transforms.RandomResizedCrop((32, 32)), v2.RandomResizedCrop((32, 32))),
+        (transforms.RandomSolarize(0.5, 0.2), v2.RandomSolarize(0.5, 0.2)),
+        (transforms.RandomRotation(90), v2.RandomRotation(90)),
     ],
 )
 def test_controlled_transforms(our_transform, true_transform):
-    transform = ot.Compose(
-        ot.ControlledTransform(transform=our_transform, seed_offset=0), ot.ToImage()
+    transform = transforms.Compose(
+        transforms.ControlledTransform(transform=our_transform, seed_offset=0),
+        transforms.ToImage(),
     )
     our_dataset = ossl.data.dataset.DictFormat(CIFAR10("~/data", download=True))
     our_dataset = ossl.data.dataset.AddTransform(our_dataset, transform)
@@ -51,22 +56,25 @@ def test_controlled_transforms(our_transform, true_transform):
 @pytest.mark.parametrize(
     "our_transform,true_transform",
     [
-        (ot.GaussianBlur(3), v2.GaussianBlur(3)),
-        (ot.RandomChannelPermutation(), v2.RandomChannelPermutation()),
-        (ot.RandomHorizontalFlip(0.5), v2.RandomHorizontalFlip(0.5)),
-        (ot.RandomGrayscale(0.5), v2.RandomGrayscale(0.5)),
-        (ot.RandomCrop(8), v2.RandomCrop(8)),
-        (ot.ColorJitter(0.8, 0.4, 0.4, 0.4), v2.ColorJitter(0.8, 0.4, 0.4, 0.4)),
-        (ot.RandomResizedCrop((32, 32)), v2.RandomResizedCrop((32, 32))),
-        (ot.CenterCrop(16), v2.CenterCrop(16)),
-        (ot.Resize(16), v2.Resize(16)),
-        (ot.RandomSolarize(0.5, 0.2), v2.RandomSolarize(0.5, 0.2)),
-        (ot.RGB(), v2.RGB()),
-        (ot.RandomRotation(90), v2.RandomRotation(90)),
+        (transforms.GaussianBlur(3), v2.GaussianBlur(3)),
+        (transforms.RandomChannelPermutation(), v2.RandomChannelPermutation()),
+        (transforms.RandomHorizontalFlip(0.5), v2.RandomHorizontalFlip(0.5)),
+        (transforms.RandomGrayscale(0.5), v2.RandomGrayscale(0.5)),
+        (transforms.RandomCrop(8), v2.RandomCrop(8)),
+        (
+            transforms.ColorJitter(0.8, 0.4, 0.4, 0.4),
+            v2.ColorJitter(0.8, 0.4, 0.4, 0.4),
+        ),
+        (transforms.RandomResizedCrop((32, 32)), v2.RandomResizedCrop((32, 32))),
+        (transforms.CenterCrop(16), v2.CenterCrop(16)),
+        (transforms.Resize(16), v2.Resize(16)),
+        (transforms.RandomSolarize(0.5, 0.2), v2.RandomSolarize(0.5, 0.2)),
+        (transforms.RGB(), v2.RGB()),
+        (transforms.RandomRotation(90), v2.RandomRotation(90)),
     ],
 )
 def test_transforms_batch(our_transform, true_transform):
-    transform = ot.Compose(our_transform, ot.ToImage())
+    transform = transforms.Compose(our_transform, transforms.ToImage())
     ours = ossl.data.dataset.DictFormat(CIFAR10("~/data", download=True))
     ours = ossl.data.dataset.AddTransform(ours, transform)
     ours = DataLoader(ours, batch_size=64, shuffle=False)
@@ -85,9 +93,9 @@ def test_transforms_batch(our_transform, true_transform):
     assert "image" in batch
     # THE RGB transform is the exception of not adding an entry
     if (
-        not isinstance(our_transform, ot.RGB)
-        and not isinstance(our_transform, ot.CenterCrop)
-        and not isinstance(our_transform, ot.Resize)
+        not isinstance(our_transform, transforms.RGB)
+        and not isinstance(our_transform, transforms.CenterCrop)
+        and not isinstance(our_transform, transforms.Resize)
     ):
         assert our_transform.__class__.__name__ in batch
     assert batch["label"].eq(y).all().item()
@@ -98,17 +106,17 @@ def test_transforms_batch(our_transform, true_transform):
     "our_transform,proba",
     itertools.product(
         [
-            ot.GaussianBlur(3, sigma=(1, 2)),
-            ot.RandomSolarize(128),
-            ot.RandomGrayscale(),
-            ot.ColorJitter(0.5, 0.5, 0.5, 0.5),
+            transforms.GaussianBlur(3, sigma=(1, 2)),
+            transforms.RandomSolarize(128),
+            transforms.RandomGrayscale(),
+            transforms.ColorJitter(0.5, 0.5, 0.5, 0.5),
         ],
         [0, 0.1, 0.9, 1],
     ),
 )
 def test_proba(our_transform, proba):
     our_transform.p = proba
-    transforms = ot.Compose(our_transform, ot.ToImage())
+    transforms = transforms.Compose(our_transform, transforms.ToImage())
     our_dataset = ossl.data.dataset.DictFormat(
         Subset(CIFAR10("~/data", download=True), range(2000))
     )
@@ -129,25 +137,25 @@ def test_proba(our_transform, proba):
 @pytest.mark.parametrize(
     "our_transform,true_transform,controlled",
     [
-        (ot.GaussianBlur(3), v2.GaussianBlur(3), False),
-        (ot.GaussianBlur(3), v2.GaussianBlur(3), True),
-        (ot.RandomHorizontalFlip(), v2.RandomHorizontalFlip(), False),
-        (ot.RandomHorizontalFlip(), v2.RandomHorizontalFlip(), True),
-        (ot.RandomGrayscale(), v2.RandomGrayscale(), False),
-        (ot.RandomGrayscale(), v2.RandomGrayscale(), True),
-        (ot.RandomSolarize(128), v2.RandomSolarize(128), False),
-        (ot.RandomSolarize(128), v2.RandomSolarize(128), True),
-        (ot.RandomResizedCrop((32, 32)), v2.RandomResizedCrop((32, 32)), False),
-        (ot.RandomResizedCrop((32, 32)), v2.RandomResizedCrop((32, 32)), True),
+        (transforms.GaussianBlur(3), v2.GaussianBlur(3), False),
+        (transforms.GaussianBlur(3), v2.GaussianBlur(3), True),
+        (transforms.RandomHorizontalFlip(), v2.RandomHorizontalFlip(), False),
+        (transforms.RandomHorizontalFlip(), v2.RandomHorizontalFlip(), True),
+        (transforms.RandomGrayscale(), v2.RandomGrayscale(), False),
+        (transforms.RandomGrayscale(), v2.RandomGrayscale(), True),
+        (transforms.RandomSolarize(128), v2.RandomSolarize(128), False),
+        (transforms.RandomSolarize(128), v2.RandomSolarize(128), True),
+        (transforms.RandomResizedCrop((32, 32)), v2.RandomResizedCrop((32, 32)), False),
+        (transforms.RandomResizedCrop((32, 32)), v2.RandomResizedCrop((32, 32)), True),
     ],
 )
 def test_timing(our_transform, true_transform, controlled):
-    transforms = ot.Compose(our_transform, ot.ToImage())
+    transforms = transforms.Compose(our_transform, transforms.ToImage())
     our_dataset = ossl.data.dataset.DictFormat(
         Subset(CIFAR10("~/data", download=True), range(256))
     )
     if controlled:
-        transforms = ot.ControlledTransform(transform=transforms, seed_offset=0)
+        transforms = transforms.ControlledTransform(transform=transforms, seed_offset=0)
         our_dataset = ossl.data.dataset.AddTransform(our_dataset, transform=transforms)
     else:
         our_dataset = ossl.data.dataset.AddTransform(

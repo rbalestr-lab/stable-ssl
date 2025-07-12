@@ -15,7 +15,7 @@ Self Supervised Learning (SSL) is the last frontier of AI. But quick experimenta
 
 ## How?
 
-To reach flexibility, scalability and stability, we rely on battle-tested third party libraries: `PyTorch`, `Lightning`, `HuggingFace`, `TorchMetrics` amongst a few others. Those dependencies allow us to focus on one thing: assmebling everything into a powerful SSL research framework. ``stable-ssl`` adopts a flexible and modular design for seamless integration of components from external libraries, including architectures, loss functions, evaluation metrics, and augmentations.
+To reach flexibility, scalability and stability, we rely on battle-tested third party libraries: `PyTorch`, `Lightning`, `HuggingFace`, `TorchMetrics` amongst a few others. Those dependencies allow us to focus on one thing: assembling everything into a powerful SSL research framework. ``stable-ssl`` adopts a flexible and modular design for seamless integration of components from external libraries, including architectures, loss functions, evaluation metrics, and augmentations.
 
 ## Log log log, monitor monitor monitor!
 
@@ -35,7 +35,7 @@ The key to SSL research is to log and monitor everything. This is what we bring 
         transform=train_transform,
     )
     ```
-    if it already exists on the Hub, otherwise you can wrap your own dataset into a HF dataset. **Why?** Imposing that format ensures consistent behavior (each sample is a dictionnary) and leverage powerful utilities from the `datasets` package. Once datasets (train et al.) are created, they can be used as-is with `torch.utils.data.DataLoader`. However we recommend putting them into our `DataModule` e.g.
+    if it already exists on the Hub, otherwise you can wrap your own dataset into a HF dataset. **Why?** Imposing that format ensures consistent behavior (each sample is a dictionary) and leverage powerful utilities from the `datasets` package. Once datasets (train et al.) are created, they can be used as-is with `torch.utils.data.DataLoader`. However we recommend putting them into our `DataModule` e.g.
     ```
     datamodule = ssl.data.DataModule(train=train_dataset, val=val_dataset, ...)
     ```

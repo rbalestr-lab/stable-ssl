@@ -5,8 +5,9 @@ import pytest
 def test_repeated_sampler(n_views):
     import logging
 
-    import stable_ssl as ossl
     from omegaconf import OmegaConf
+
+    import stable_ssl as ossl
 
     logging.basicConfig(level=logging.INFO)
 
@@ -101,8 +102,9 @@ def test_repeated_sampler(n_views):
 
 def test_trainer_info():
     import lightning as pl
-    import stable_ssl as ossl
     import torch
+
+    import stable_ssl as ossl
     from stable_ssl.data import transforms
 
     train_transform = transforms.ToImage()

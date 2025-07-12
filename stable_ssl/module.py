@@ -66,7 +66,7 @@ class Module(pl.LightningModule):
             return state
         if "loss" not in state:
             logging.error(
-                "the forward dictionnary should contain `loss` otherwise use `optim=False` in your module"
+                "the forward dictionary should contain `loss` otherwise use `optim=False` in your module"
                 "if you don't need training/optimization"
             )
         # self.untoggle_optimizer(opt)

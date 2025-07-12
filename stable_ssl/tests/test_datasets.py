@@ -1,7 +1,8 @@
 def test_hf_datasets():
-    import stable_ssl as ossl
     import torch
     from torchvision.transforms import v2
+
+    import stable_ssl as ossl
 
     # without transform
     dataset1 = ossl.data.HFDataset("ylecun/mnist", split="train")
@@ -23,9 +24,10 @@ def test_hf_datasets():
 
 
 def test_hf_dataloaders():
-    import stable_ssl as ossl
     import torch
     from torchvision.transforms import v2
+
+    import stable_ssl as ossl
 
     transform = v2.Compose([v2.ToImage(), v2.ToDtype(torch.float32, scale=True)])
 
@@ -45,9 +47,10 @@ def test_hf_dataloaders():
 def test_datamodule():
     import logging
 
-    import stable_ssl as ossl
     import torch
     from omegaconf import OmegaConf
+
+    import stable_ssl as ossl
 
     logging.basicConfig(level=logging.INFO)
 

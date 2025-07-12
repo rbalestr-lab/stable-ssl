@@ -1,10 +1,11 @@
 def test_probing():
     import lightning as pl
-    import stable_ssl as ossl
     import torch
     import torchmetrics
-    from stable_ssl.data import transforms
     from transformers import AutoModelForImageClassification
+
+    import stable_ssl as ossl
+    from stable_ssl.data import transforms
 
     # without transform
     mean = [0.485, 0.456, 0.406]

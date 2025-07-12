@@ -1,8 +1,7 @@
 import pytest
-
 from transformers import (
-    AutoModelForImageClassification,
     AutoModel,
+    AutoModelForImageClassification,
 )
 
 
@@ -73,8 +72,9 @@ from transformers import (
     ],
 )
 def test_torchvision_embedding_dim(name):
-    import stable_ssl as ossl
     import torchvision
+
+    import stable_ssl as ossl
 
     if "vit" in name:
         shape = (10, 3, 224, 224)
@@ -98,8 +98,9 @@ def test_torchvision_embedding_dim(name):
     ],
 )
 def test_hf_embedding_dim(name, method, shape):
-    import stable_ssl as ossl
     import torch
+
+    import stable_ssl as ossl
 
     module = method.from_pretrained(name)
 

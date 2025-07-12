@@ -2,8 +2,9 @@ def test_dictconfig():
     import logging
 
     import lightning as pl
-    import stable_ssl as ossl
     from omegaconf import OmegaConf
+
+    import stable_ssl as ossl
 
     logging.basicConfig(level=logging.INFO)
 
@@ -48,6 +49,7 @@ def test_datamodule():
     import logging
 
     import lightning as pl
+
     import stable_ssl as ossl
 
     logging.basicConfig(level=logging.INFO)
@@ -77,8 +79,9 @@ def test_dataloader():
     import logging
 
     import lightning as pl
-    import stable_ssl as ossl
     import torch
+
+    import stable_ssl as ossl
 
     logging.basicConfig(level=logging.INFO)
 
