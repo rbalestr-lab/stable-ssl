@@ -19,7 +19,7 @@ You should become root to do it. Then copy font files there:
 cp *.afm /usr/share/fonts/cm-unicode/
 cp *.pfb /usr/share/fonts/cm-unicode/
 
-If you are using XFree86 prior to 4.3 you shoul also copy fonts.scale there.
+If you are using XFree86 prior to 4.3 you should also copy fonts.scale there.
 Then change directory to /usr/share/fonts/cm-unicode/ :
 
 cd /usr/share/fonts/cm-unicode/
@@ -48,7 +48,7 @@ fc-cache
 
 Installation for ghostscript
 ----------------------------
-(Optional, modern versions of ghostscript retreive information from fontconfig)
+(Optional, modern versions of ghostscript retrieve information from fontconfig)
 
 
 Assuming that you have rather new ghostscript version like 7.x go to

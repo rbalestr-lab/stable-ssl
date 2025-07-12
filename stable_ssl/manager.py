@@ -100,7 +100,7 @@ class Manager(submitit.helpers.Checkpointable):
         # so that we can resume on requeue
 
         # this override is only useful if receiving parameters
-        # from wandb e.g. using wandb sweep. We retreive them and
+        # from wandb e.g. using wandb sweep. We retrieve them and
         # requeue with those instead of user args
         self.override = []
         if isinstance(

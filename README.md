@@ -40,7 +40,7 @@ The key to SSL research is to log and monitor everything. This is what we bring 
     datamodule = ssl.data.DataModule(train=train_dataset, val=val_dataset, ...)
     ```
     to ensure precise logging and easy debugging.
-2. **module, models, forward**: the overall orchestration leverages `ssl.Module` which inherits from `lightning.LightningModule`. We provide all the basic required utilites (optimizer/scheduler creation etc). So the only required implementation for the user is the `forward` method, for example a supervised learning run would define
+2. **module, models, forward**: the overall orchestration leverages `ssl.Module` which inherits from `lightning.LightningModule`. We provide all the basic required utilities (optimizer/scheduler creation etc). So the only required implementation for the user is the `forward` method, for example a supervised learning run would define
     ```
     def forward(self, batch, stage):
         batch["embedding"] = self.backbone(batch["image"])["logits"]
@@ -49,7 +49,7 @@ The key to SSL research is to log and monitor everything. This is what we bring 
             batch["loss"] = torch.nn.functional.cross_entropy(preds, batch["label"])
         return batch
     ```
-    the `forward` method takes in a dictionnary (`batch` from the data loader) and should return a dictionnary. If any module has to be trained, then a `loss` key must be present. Further customization can be done (see the `examples`) ensuring that any desired behavior can be achieved. The `self` is a LightningModule with any attribute passed during module creation:
+    the `forward` method takes in a dictionary (`batch` from the data loader) and should return a dictionary. If any module has to be trained, then a `loss` key must be present. Further customization can be done (see the `examples`) ensuring that any desired behavior can be achieved. The `self` is a LightningModule with any attribute passed during module creation:
     ```
     config = AutoConfig.from_pretrained("microsoft/resnet-18")
     backbone = ViT(512)
