@@ -4,9 +4,17 @@ from random import getstate, setstate
 from random import seed as rseed
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
+from typing import Union
+
+import numpy as np
+import PIL.Image
+import torch
+from torchvision import tv_tensors
+
 import numpy as np
 import torch
 from PIL import ImageFilter
+import torchvision
 from torchvision.transforms import v2
 from torchvision.transforms.functional import InterpolationMode
 from torchvision.transforms.v2 import functional as F
@@ -20,7 +28,7 @@ class Transform(v2.Transform):
         i = name.split(".")
         if i[0].isnumeric():
             i[0] = int(i[0])
-        return self.nested_access(v[i], ".".join(i[1:]))
+        return self.nested_get(v[i[0]], ".".join(i[1:]))
 
     def nested_set(self, original, value, name):
         if "." not in name:
@@ -50,6 +58,24 @@ class Transform(v2.Transform):
     # def __call__(self, x):
 
 
+@torch.jit.unused
+def to_image(
+    inpt: Union[torch.Tensor, PIL.Image.Image, np.ndarray],
+) -> tv_tensors.Image:
+    """See :class:`~torchvision.transforms.v2.ToImage` for details."""
+    if isinstance(inpt, np.ndarray):
+        output = torch.from_numpy(np.atleast_3d(inpt)).transpose(-3, -1).contiguous()
+    elif isinstance(inpt, PIL.Image.Image):
+        output = torchvision.transforms.functional.pil_to_tensor(inpt)
+    elif isinstance(inpt, torch.Tensor):
+        output = inpt
+    else:
+        raise TypeError(
+            f"Input can either be a pure Tensor, a numpy array, or a PIL image, but got {type(inpt)} instead."
+        )
+    return tv_tensors.Image(output)
+
+
 class ToImage(Transform):
     def __init__(
         self,
@@ -60,7 +86,8 @@ class ToImage(Transform):
         source: str = "image",
         target: str = "image",
     ):
-        t = [v2.ToImage(), v2.ToDtype(dtype, scale=scale)]
+        super().__init__()
+        t = [to_image, v2.ToDtype(dtype, scale=scale)]
         if mean is not None and std is not None:
             t.append(v2.Normalize(mean=mean, std=std))
         self.t = v2.Compose(t)
