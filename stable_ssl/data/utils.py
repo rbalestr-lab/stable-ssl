@@ -1,8 +1,9 @@
-import logging
+from loguru import logger as logging
 from typing import Union
 
 import lightning as pl
 import torch
+import numpy as np
 
 
 class FromTorchDataset(torch.utils.data.Dataset):
@@ -27,6 +28,101 @@ class FromTorchDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.dataset)
+
+    @property
+    def column_names(self):
+        return self.names
+
+
+class MinariStepsDataset(torch.utils.data.Dataset):
+    NAMES = ["observations", "actions", "rewards", "terminations", "truncations"]
+
+    def __init__(self, dataset, num_steps=2):
+        self.num_steps = num_steps
+        self.dataset = dataset
+        self.bounds = self.dataset.episode_indices
+        self.bounds -= np.arange(self.dataset.total_episodes) * (num_steps - 1)
+        self._length = (
+            self.dataset.total_steps - (num_steps - 1) * self.dataset.total_episodes
+        )
+        self._trainer = None
+        logging.info("Minari Dataset setup")
+        logging.info(f"\t- {self.dataset.total_episodes} episodes")
+        logging.info(f"\t- {len(self)} steps")
+
+    def set_pl_trainer(self, trainer: pl.Trainer):
+        self._trainer = trainer
+
+    def nested_step(self, value, idx):
+        if type(value) is dict:
+            return {k: self.nested_step(v, idx) for k, v in value.items()}
+        return value[idx : idx + self.num_steps]
+
+    def __getitem__(self, idx):
+        ep_idx = np.searchsorted(self.bounds, idx, side="right") - 1
+        frame_idx = idx - self.bounds[ep_idx]
+        episode = self.dataset[ep_idx]
+        sample = {
+            name: self.nested_step(getattr(episode, name), frame_idx)
+            for name in self.NAMES
+        }
+        if self._trainer is not None:
+            if "global_step" in sample:
+                raise ValueError("Can't use that keywords")
+            if "current_epoch" in sample:
+                raise ValueError("Can't use that keywords")
+            sample["global_step"] = self._trainer.global_step
+            sample["current_epoch"] = self._trainer.current_epoch
+        return sample
+
+    def __len__(self):
+        return self._length
+
+    @property
+    def column_names(self):
+        return self.names
+
+
+class MinariEpisodeDataset(torch.utils.data.Dataset):
+    NAMES = ["observations", "actions", "rewards", "terminations", "truncations"]
+
+    def __init__(self, dataset):
+        self.dataset = dataset
+        self.bounds = self.dataset.episode_indices
+        self._trainer = None
+
+        logging.info("Minari Dataset setup")
+        logging.info(f"\t- {self.dataset.total_episodes} episodes")
+        logging.info(f"\t- {len(self)} steps")
+
+    def set_pl_trainer(self, trainer: pl.Trainer):
+        self._trainer = trainer
+
+    def nested_step(self, value, idx):
+        if type(value) is dict:
+            return {k: self.nested_step(v, idx) for k, v in value.items()}
+        return value[idx]
+
+    def __getitem__(self, idx):
+        ep_idx = np.searchsorted(self.bounds, idx, side="right") - 1
+        frame_idx = idx - self.bounds[ep_idx]
+        print(ep_idx, frame_idx)
+        episode = self.dataset[ep_idx]
+        sample = {
+            name: self.nested_step(getattr(episode, name), frame_idx)
+            for name in self.NAMES
+        }
+        if self._trainer is not None:
+            if "global_step" in sample:
+                raise ValueError("Can't use that keywords")
+            if "current_epoch" in sample:
+                raise ValueError("Can't use that keywords")
+            sample["global_step"] = self._trainer.global_step
+            sample["current_epoch"] = self._trainer.current_epoch
+        return sample
+
+    def __len__(self):
+        return self.dataset.total_steps
 
     @property
     def column_names(self):

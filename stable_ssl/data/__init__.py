@@ -9,6 +9,7 @@ from .utils import (
     HFDataset,
     fold_views,
     FromTorchDataset,
+    MinariStepsDataset,
 )
 
 __all__ = [
@@ -25,4 +26,5 @@ __all__ = [
     HFDataset,
     fold_views,
     FromTorchDataset,
+    MinariStepsDataset,
 ]
