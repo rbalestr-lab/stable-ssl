@@ -41,7 +41,7 @@ dependencies = [
     "tensorboard",
     "loguru",
     "pytest",
-    "scikit-learn",
+    "scikit-learn>=1.7.0",
     "prettytable"
 ]
 
