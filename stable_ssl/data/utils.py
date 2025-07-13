@@ -1,9 +1,9 @@
-from loguru import logger as logging
 from typing import Union
 
 import lightning as pl
-import torch
 import numpy as np
+import torch
+from loguru import logger as logging
 
 
 class FromTorchDataset(torch.utils.data.Dataset):

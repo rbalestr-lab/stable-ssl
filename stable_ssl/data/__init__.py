@@ -6,10 +6,10 @@ from .utils import (
     Categorical,
     ExponentialMixtureNoiseModel,
     ExponentialNormalNoiseModel,
-    HFDataset,
-    fold_views,
     FromTorchDataset,
+    HFDataset,
     MinariStepsDataset,
+    fold_views,
 )
 
 __all__ = [
