@@ -1,10 +1,3 @@
-from typing import Union
-
-import lightning as pl
-import numpy as np
-import torch
-from loguru import logger as logging
-import bisect
 import itertools
 import math
 import warnings
@@ -15,10 +8,15 @@ from collections.abc import Sequence
 # targets fail to typecheck with:
 #     TypeError: Cannot create a consistent method resolution order (MRO) for
 #     bases Iterable, Generic
-from typing import cast, Generic, Iterable, Optional, Union  # noqa: UP035
+from typing import Optional, Union, cast  # noqa: UP035
+
+import lightning as pl
+import numpy as np
+import torch
+from loguru import logger as logging
 
 # No 'default_generator' in torch/__init__.pyi
-from torch import default_generator, Generator, randperm
+from torch import Generator, default_generator, randperm
 
 
 class Dataset(torch.utils.data.Dataset):
