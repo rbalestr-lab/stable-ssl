@@ -6,17 +6,15 @@ import torch
 from loguru import logger as logging
 
 
-class FromTorchDataset(torch.utils.data.Dataset):
-    def __init__(self, dataset, names):
-        self.dataset = dataset
-        self.names = names
+class Dataset(torch.utils.data.Dataset):
+    def __init__(self, transform=None):
+        self.transform = transform
+        self._trainer = None
 
     def set_pl_trainer(self, trainer: pl.Trainer):
         self._trainer = trainer
 
-    def __getitem__(self, idx):
-        sample = self.dataset[idx]
-        sample = {k: v for k, v in zip(self.names, sample)}
+    def process_sample(self, sample):
         if self._trainer is not None:
             if "global_step" in sample:
                 raise ValueError("Can't use that keywords")
@@ -24,7 +22,27 @@ class FromTorchDataset(torch.utils.data.Dataset):
                 raise ValueError("Can't use that keywords")
             sample["global_step"] = self._trainer.global_step
             sample["current_epoch"] = self._trainer.current_epoch
+        if self.transform:
+            sample = self.transform(sample)
         return sample
+
+    def __getitem__(self, idx):
+        raise NotImplementedError
+
+    def __len__(self):
+        raise NotImplementedError
+
+
+class FromTorchDataset(Dataset):
+    def __init__(self, dataset, names, transform):
+        super().__init__(transform)
+        self.dataset = dataset
+        self.names = names
+
+    def __getitem__(self, idx):
+        sample = self.dataset[idx]
+        sample = {k: v for k, v in zip(self.names, sample)}
+        return self.process_sample(sample)
 
     def __len__(self):
         return len(self.dataset)
@@ -34,10 +52,11 @@ class FromTorchDataset(torch.utils.data.Dataset):
         return self.names
 
 
-class MinariStepsDataset(torch.utils.data.Dataset):
+class MinariStepsDataset(Dataset):
     NAMES = ["observations", "actions", "rewards", "terminations", "truncations"]
 
-    def __init__(self, dataset, num_steps=2):
+    def __init__(self, dataset, num_steps=2, transform=None):
+        super().__init__(transform)
         self.num_steps = num_steps
         self.dataset = dataset
         self.bounds = self.dataset.episode_indices
@@ -45,13 +64,9 @@ class MinariStepsDataset(torch.utils.data.Dataset):
         self._length = (
             self.dataset.total_steps - (num_steps - 1) * self.dataset.total_episodes
         )
-        self._trainer = None
         logging.info("Minari Dataset setup")
         logging.info(f"\t- {self.dataset.total_episodes} episodes")
         logging.info(f"\t- {len(self)} steps")
-
-    def set_pl_trainer(self, trainer: pl.Trainer):
-        self._trainer = trainer
 
     def nested_step(self, value, idx):
         if type(value) is dict:
@@ -66,14 +81,7 @@ class MinariStepsDataset(torch.utils.data.Dataset):
             name: self.nested_step(getattr(episode, name), frame_idx)
             for name in self.NAMES
         }
-        if self._trainer is not None:
-            if "global_step" in sample:
-                raise ValueError("Can't use that keywords")
-            if "current_epoch" in sample:
-                raise ValueError("Can't use that keywords")
-            sample["global_step"] = self._trainer.global_step
-            sample["current_epoch"] = self._trainer.current_epoch
-        return sample
+        return self.process_sample(sample)
 
     def __len__(self):
         return self._length
@@ -129,10 +137,11 @@ class MinariEpisodeDataset(torch.utils.data.Dataset):
         return self.names
 
 
-class HFDataset(torch.utils.data.Dataset):
+class HFDataset(Dataset):
     def __init__(
         self, *args, transform=None, rename_columns=None, remove_columns=None, **kwargs
     ):
+        super().__init__(transform)
         import datasets
 
         if (
@@ -163,25 +172,11 @@ class HFDataset(torch.utils.data.Dataset):
                 dataset = dataset.rename_column(k, v)
         if remove_columns is not None:
             dataset = dataset.remove_columns(remove_columns)
-        self.transform = transform
         self.dataset = dataset
-        self._trainer = None
-
-    def set_pl_trainer(self, trainer: pl.Trainer):
-        self._trainer = trainer
 
     def __getitem__(self, idx):
         sample = self.dataset[idx]
-        if self._trainer is not None:
-            if "global_step" in sample:
-                raise ValueError("Can't use that keywords")
-            if "current_epoch" in sample:
-                raise ValueError("Can't use that keywords")
-            sample["global_step"] = self._trainer.global_step
-            sample["current_epoch"] = self._trainer.current_epoch
-        if self.transform:
-            sample = self.transform(sample)
-        return sample
+        return self.process_sample(sample)
 
     def __len__(self):
         return self.dataset.num_rows
