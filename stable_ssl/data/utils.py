@@ -5,6 +5,34 @@ import lightning as pl
 import torch
 
 
+class FromTorchDataset(torch.utils.data.Dataset):
+    def __init__(self, dataset, names):
+        self.dataset = dataset
+        self.names = names
+
+    def set_pl_trainer(self, trainer: pl.Trainer):
+        self._trainer = trainer
+
+    def __getitem__(self, idx):
+        sample = self.dataset[idx]
+        sample = {k: v for k, v in zip(self.names, sample)}
+        if self._trainer is not None:
+            if "global_step" in sample:
+                raise ValueError("Can't use that keywords")
+            if "current_epoch" in sample:
+                raise ValueError("Can't use that keywords")
+            sample["global_step"] = self._trainer.global_step
+            sample["current_epoch"] = self._trainer.current_epoch
+        return sample
+
+    def __len__(self):
+        return len(self.dataset)
+
+    @property
+    def column_names(self):
+        return self.names
+
+
 class HFDataset(torch.utils.data.Dataset):
     def __init__(
         self, *args, transform=None, rename_columns=None, remove_columns=None, **kwargs

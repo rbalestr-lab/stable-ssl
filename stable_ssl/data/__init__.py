@@ -8,6 +8,7 @@ from .utils import (
     ExponentialNormalNoiseModel,
     HFDataset,
     fold_views,
+    FromTorchDataset,
 )
 
 __all__ = [
@@ -23,4 +24,5 @@ __all__ = [
     Categorical,
     HFDataset,
     fold_views,
+    FromTorchDataset,
 ]
