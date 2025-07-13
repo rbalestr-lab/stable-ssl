@@ -10,6 +10,8 @@ from .utils import (
     HFDataset,
     MinariStepsDataset,
     fold_views,
+    Subset,
+    random_split,
 )
 
 __all__ = [
@@ -27,4 +29,6 @@ __all__ = [
     fold_views,
     FromTorchDataset,
     MinariStepsDataset,
+    Subset,
+    random_split,
 ]
