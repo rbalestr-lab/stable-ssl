@@ -15,8 +15,7 @@ from .utils import all_gather, all_reduce
 
 
 def mae(target, pred, mask, norm_pix_loss=False):
-    """
-    imgs: [N, L, p*p*3]
+    """imgs: [N, L, p*p*3]
     pred: [N, L, p*p*3]
     mask: [N, L], 0 is keep, 1 is remove,
     """

@@ -1,3 +1,4 @@
+from . import mae
 from .convmixer import ConvMixer
 from .mlp import MLP
 from .resnet9 import Resnet9
@@ -8,7 +9,6 @@ from .utils import (
     from_torchvision,
     set_embedding_dim,
 )
-from . import mae
 
 __all__ = [
     MLP,
