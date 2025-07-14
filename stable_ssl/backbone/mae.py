@@ -22,7 +22,7 @@ def get_1d_sincos_pos_embed_from_grid(embed_dim, pos):
     out: (M, D)
     """
     assert embed_dim % 2 == 0
-    omega = np.arange(embed_dim // 2, dtype=np.float)
+    omega = np.arange(embed_dim // 2, dtype=float)
     omega /= embed_dim / 2.0
     omega = 1.0 / 10000**omega  # (D/2,)
 
@@ -102,7 +102,6 @@ class MaskedAutoencoderViT(nn.Module):
                     num_heads,
                     mlp_ratio,
                     qkv_bias=True,
-                    qk_scale=None,
                     norm_layer=norm_layer,
                 )
                 for i in range(depth)
@@ -128,7 +127,6 @@ class MaskedAutoencoderViT(nn.Module):
                     decoder_num_heads,
                     mlp_ratio,
                     qkv_bias=True,
-                    qk_scale=None,
                     norm_layer=norm_layer,
                 )
                 for i in range(decoder_depth)

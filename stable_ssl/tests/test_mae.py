@@ -2,7 +2,6 @@ def test_probing():
     import lightning as pl
     import torch
     import torchmetrics
-    from transformers import AutoConfig, AutoModelForImageClassification
 
     import stable_ssl as ossl
     from stable_ssl.data import transforms
@@ -18,7 +17,6 @@ def test_probing():
             brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8
         ),
         transforms.RandomGrayscale(p=0.2),
-        transforms.GaussianBlur(kernel_size=(5, 5), p=1.0),
         transforms.ToImage(mean=mean, std=std),
     )
     train_dataset = ossl.data.HFDataset(
@@ -54,8 +52,7 @@ def test_probing():
 
     def forward(self, batch, stage):
         latent, pred, mask = self.backbone(batch["image"])
-        print(latent.shape)
-        batch["embedding"] = latent
+        batch["embedding"] = latent[:, 0]  # CLS token only
         if self.training:
             proj = self.projector(batch["embedding"])
             loss = ossl.losses.mae(self.backbone.patchify(batch["image"]), pred, mask)
@@ -70,7 +67,7 @@ def test_probing():
         module,
         "embedding",
         "label",
-        probe=torch.nn.Linear(512, 10),
+        probe=torch.nn.Linear(768, 10),
         loss_fn=torch.nn.CrossEntropyLoss(),
         metrics={
             "top1": torchmetrics.classification.MulticlassAccuracy(10),

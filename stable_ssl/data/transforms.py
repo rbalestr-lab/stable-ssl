@@ -36,7 +36,7 @@ class Transform(v2.Transform):
             i = name.split(".")
             if i[0].isnumeric():
                 i[0] = int(i[0])
-            return self.nested_set(original[i[0]], value, ".".join(i[1:]))
+            self.nested_set(original[i[0]], value, ".".join(i[1:]))
 
     def get_name(self, x):
         base = self.name
@@ -111,6 +111,7 @@ class RandomGrayscale(Transform, v2.RandomGrayscale):
     def __call__(self, x) -> Any:
         if self.p < 1 and torch.rand(1) >= self.p:
             x[self.get_name(x)] = False
+            self.nested_set(x, self.nested_get(x, self.source), self.target)
             return x
         channels, *_ = query_chw([self.nested_get(x, self.source)])
         self.nested_set(
@@ -166,6 +167,7 @@ class GaussianBlur(Transform, v2.GaussianBlur):
             x[self.get_name(x)] = torch.zeros((2,))
             return x
         params = self.make_params([])
+        print(self.nested_get(x, self.source))
         self.nested_set(
             x, self.transform(self.nested_get(x, self.source), params), self.target
         )
@@ -330,22 +332,20 @@ class ColorJitter(Transform, v2.ColorJitter):
 
     def __call__(self, x) -> Any:
         if self.p < 1 and torch.rand(1) > self.p:
+            self.nested_set(x, self.nested_get(x, self.source), self.target)
             x[self.get_name(x)] = torch.zeros(8)
             return x
         params = self.make_params([])
-        x[self.target] = self.transform(self.nested_get(x, self.source), params)
+        self.nested_set(
+            x, self.transform(self.nested_get(x, self.source), params), self.target
+        )
         brightness_factor = params["brightness_factor"]
         contrast_factor = params["contrast_factor"]
         saturation_factor = params["saturation_factor"]
         hue_factor = params["hue_factor"]
         perm = params["fn_idx"].tolist()
-        self.nested_set(
-            x,
-            torch.Tensor(
-                [brightness_factor, contrast_factor, saturation_factor, hue_factor]
-                + perm
-            ),
-            self.target,
+        x[self.get_name(x)] = torch.Tensor(
+            [brightness_factor, contrast_factor, saturation_factor, hue_factor] + perm
         )
         return x
 
