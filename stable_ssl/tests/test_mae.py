@@ -54,14 +54,12 @@ def test_probing():
         latent, pred, mask = self.backbone(batch["image"])
         batch["embedding"] = latent[:, 0]  # CLS token only
         if self.training:
-            proj = self.projector(batch["embedding"])
             loss = ossl.losses.mae(self.backbone.patchify(batch["image"]), pred, mask)
             batch["loss"] = loss
         return batch
 
     backbone = ossl.backbone.mae.vit_base_patch16_dec512d8b()
-    projector = torch.nn.Linear(512, 128)
-    module = ossl.Module(backbone=backbone, projector=projector, forward=forward)
+    module = ossl.Module(backbone=backbone, forward=forward)
     linear_probe = ossl.callbacks.OnlineProbe(
         "linear_probe",
         module,
