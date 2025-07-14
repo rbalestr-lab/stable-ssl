@@ -8,6 +8,7 @@ from .utils import (
     from_torchvision,
     set_embedding_dim,
 )
+from . import mae
 
 __all__ = [
     MLP,
@@ -18,4 +19,5 @@ __all__ = [
     EvalOnly,
     set_embedding_dim,
     ConvMixer,
+    mae,
 ]

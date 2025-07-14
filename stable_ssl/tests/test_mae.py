@@ -53,23 +53,18 @@ def test_probing():
     data = ossl.data.DataModule(train=train, val=val)
 
     def forward(self, batch, stage):
-        batch["embedding"] = self.backbone(batch["image"])["logits"]
+        latent, pred, mask = self.backbone(batch["image"])
+        print(latent.shape)
+        batch["embedding"] = latent
         if self.training:
             proj = self.projector(batch["embedding"])
-            views = ossl.data.fold_views(proj, batch["sample_idx"])
-            batch["loss"] = self.simclr_loss(views[0], views[1])
+            loss = ossl.losses.mae(self.backbone.patchify(batch["image"]), pred, mask)
+            batch["loss"] = loss
         return batch
 
-    config = AutoConfig.from_pretrained("microsoft/resnet-18")
-    backbone = AutoModelForImageClassification.from_config(config)
+    backbone = ossl.backbone.mae.vit_base_patch16_dec512d8b()
     projector = torch.nn.Linear(512, 128)
-    backbone.classifier[1] = torch.nn.Identity()
-    module = ossl.Module(
-        backbone=backbone,
-        projector=projector,
-        forward=forward,
-        simclr_loss=ossl.losses.NTXEntLoss(temperature=0.1),
-    )
+    module = ossl.Module(backbone=backbone, projector=projector, forward=forward)
     linear_probe = ossl.callbacks.OnlineProbe(
         "linear_probe",
         module,
@@ -82,28 +77,16 @@ def test_probing():
             "top5": torchmetrics.classification.MulticlassAccuracy(10, top_k=5),
         },
     )
-    knn_probe = ossl.callbacks.OnlineKNN(
-        module,
-        "knn_probe",
-        "embedding",
-        "label",
-        20000,
-        metrics=torchmetrics.classification.MulticlassAccuracy(10),
-        k=10,
-        features_dim=512,
-    )
-
     trainer = pl.Trainer(
         max_epochs=6,
         num_sanity_val_steps=1,
-        callbacks=[linear_probe, knn_probe],
+        callbacks=[linear_probe],
         precision="16-mixed",
         logger=False,
         enable_checkpointing=False,
     )
     manager = ossl.Manager(trainer=trainer, module=module, data=data)
     manager()
-    # manager.validate()
 
 
 if __name__ == "__main__":
