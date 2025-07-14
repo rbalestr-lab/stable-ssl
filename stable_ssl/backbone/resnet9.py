@@ -3,9 +3,7 @@ from torch import nn
 
 
 class ResidualBlock(nn.Module):
-    """
-    A residual block as defined by He et al.
-    """
+    """A residual block as defined by He et al."""
 
     def __init__(self, in_channels, out_channels, kernel_size, padding, stride):
         super(ResidualBlock, self).__init__()
@@ -105,9 +103,7 @@ class MLP(torch.nn.Sequential):
 
 
 class Resnet9(nn.Module):
-    """
-    A Residual network.
-    """
+    """A Residual network."""
 
     def __init__(self, num_classes, num_channels, *args, **kwargs):
         super(Resnet9, self).__init__()

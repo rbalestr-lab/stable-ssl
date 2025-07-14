@@ -195,7 +195,7 @@ class OnlineProbe(Callback):
         if self.early_stopping is None:
             return
         raise NotImplementedError
-        metric = trainer.callback_metrics[self.name]
+        # metric = trainer.callback_metrics[self.name]
         should_stop = self.early_stopping.should_stop(trainer.current_epoch)
         trainer.should_stop = trainer.should_stop or should_stop
         return super().on_validation_end(trainer, pl_module)

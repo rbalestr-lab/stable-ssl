@@ -1,3 +1,5 @@
+import copy
+import math
 from typing import Optional, Union
 
 import torch
@@ -9,6 +11,8 @@ from transformers import TimmWrapperModel
 
 
 class EvalOnly(nn.Module):
+    """Wrapper that forces a module to remain in evaluation mode."""
+
     def __init__(self, backbone: nn.Module):
         super().__init__()
         self.backbone = backbone
@@ -28,28 +32,23 @@ class EvalOnly(nn.Module):
 class TeacherStudentModule(nn.Module):
     """Student network and its teacher network updated as an EMA of the student network.
 
-    The teacher model is updated by taking a running average of the student’s
+    The teacher model is updated by taking a running average of the student's
     parameters and buffers. When `ema_coefficient == 0.0`, the teacher and student
     are literally the same object, saving memory but forward passes through the teacher
     will not produce any gradients.
 
-    Parameters
-    ----------
-    student : torch.nn.Module
-        The student model whose parameters will be tracked.
-    warm_init : bool, optional
-        If True, performs an initialization step to match the student’s parameters
-        immediately. Default is True.
-    base_ema_coefficient : float, optional
-        EMA decay factor at the start of training.
-        This value will be updated following a cosine schedule.
-        Should be in [0, 1]. A value of 0.0 means the teacher is fully
-        updated to the student’s parameters on every step, while a value of 1.0 means
-        the teacher remains unchanged.
-        Default is 0.996.
-    final_ema_coefficient : float, optional
-        EMA decay factor at the end of training.
-        Default is 1.
+    Args:
+        student (torch.nn.Module): The student model whose parameters will be tracked.
+        warm_init (bool, optional): If True, performs an initialization step to match the student's parameters
+            immediately. Default is True.
+        base_ema_coefficient (float, optional): EMA decay factor at the start of training.
+            This value will be updated following a cosine schedule.
+            Should be in [0, 1]. A value of 0.0 means the teacher is fully
+            updated to the student's parameters on every step, while a value of 1.0 means
+            the teacher remains unchanged.
+            Default is 0.996.
+        final_ema_coefficient (float, optional): EMA decay factor at the end of training.
+            Default is 1.
     """
 
     def __init__(
@@ -62,12 +61,13 @@ class TeacherStudentModule(nn.Module):
         if not (0.0 <= base_ema_coefficient <= 1.0) or not (
             0.0 <= final_ema_coefficient <= 1.0
         ):
-            log_and_raise(
-                ValueError,
+            error_msg = (
                 f"ema_coefficient must be in [0, 1]. Found: "
                 f"base_ema_coefficient={base_ema_coefficient}, "
-                "final_ema_coefficient={final_ema_coefficient}.",
+                f"final_ema_coefficient={final_ema_coefficient}."
             )
+            logging.error(error_msg)
+            raise ValueError(error_msg)
 
         super().__init__()
         self.student = student
@@ -124,12 +124,9 @@ class TeacherStudentModule(nn.Module):
             0.5 * (final_ema_coefficient - base_ema_coefficient)
             * (1 + cos(epoch / total_epochs * pi))
 
-        Parameters
-        ----------
-        epoch : int
-            Current epoch in the training loop.
-        total_epochs : int
-            Total number of epochs in the training loop.
+        Args:
+            epoch (int): Current epoch in the training loop.
+            total_epochs (int): Total number of epochs in the training loop.
         """
         self.ema_coefficient = self.final_ema_coefficient - 0.5 * (
             self.final_ema_coefficient - self.base_ema_coefficient
@@ -164,23 +161,17 @@ def from_torchvision(model_name, low_resolution=False, **kwargs):
     If num_classes is provided, the last layer is replaced by a linear layer of
     output size num_classes. Otherwise, the last layer is replaced by an identity layer.
 
-    Parameters
-    ----------
-    model_name : str
-        Name of the backbone model. Supported models are:
-        - Any model from torchvision.models
-        - "Resnet9"
-        - "ConvMixer"
-    low_resolution : bool, optional
-        Whether to adapt the resolution of the model (for CIFAR typically).
-        By default False.
-    **kwargs: dict
-        Additional keyword arguments for the model.
+    Args:
+        model_name (str): Name of the backbone model. Supported models are:
+            - Any model from torchvision.models
+            - "Resnet9"
+            - "ConvMixer"
+        low_resolution (bool, optional): Whether to adapt the resolution of the model (for CIFAR typically).
+            By default False.
+        **kwargs: Additional keyword arguments for the model.
 
-    Returns
-    -------
-    torch.nn.Module
-        The neural network model.
+    Returns:
+        torch.nn.Module: The neural network model.
     """
     try:
         model = torchvision.models.__dict__[model_name](**kwargs)

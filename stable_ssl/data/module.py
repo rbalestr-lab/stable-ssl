@@ -14,11 +14,14 @@ from .utils import HFDataset
 
 
 class DictFormat(Dataset):
+    """Format dataset with named columns for dictionary-style access.
+
+    Args:
+        dataset (Iterable): Dataset to be wrapped.
+        names (Iterable): Column names for the dataset.
+    """
+
     def __init__(self, dataset: Iterable, names: Iterable):
-        """
-        Arguments:
-            dataset (Iterable): Path to the csv file with annotations.
-        """
         self.dataset = dataset
         self.names = names
 
@@ -34,6 +37,8 @@ class DictFormat(Dataset):
 
 
 class DataModule(pl.LightningDataModule):
+    """PyTorch Lightning DataModule for handling train/val/test/predict dataloaders."""
+
     def __init__(
         self,
         train: Optional[Union[dict, DictConfig, DataLoader]] = None,

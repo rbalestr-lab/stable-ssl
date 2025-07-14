@@ -20,6 +20,17 @@ def wrap_training_step(fn, name):
 
 
 class OnlineQueue(Callback):
+    """Online queue callback for storing and managing tensors during training.
+
+    Args:
+        pl_module: PyTorch Lightning module.
+        name: Name of the callback.
+        to_save: Keys to save from the batch.
+        queue_length: Maximum length of the queue.
+        dims: Dimensions of the tensors to store.
+        dtypes: Data types of the tensors to store.
+    """
+
     def __init__(
         self,
         pl_module,
@@ -29,11 +40,6 @@ class OnlineQueue(Callback):
         dims: Union[list[tuple[int]], list[int], int],
         dtypes: Union[tuple[int], list[int], int],
     ) -> None:
-        """
-        Args:
-            k: k for k nearest neighbor
-            temperature: temperature. See tau in section 3.4 of https://arxiv.org/pdf/1805.01978.pdf.
-        """
         if type(to_save) is str:
             to_save = [to_save]
         if type(dims[0]) not in [tuple, list]:

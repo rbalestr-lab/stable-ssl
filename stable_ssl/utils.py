@@ -32,6 +32,15 @@ def dict_values(**kwargs):
 
 
 class ImageToVideoEncoder(torch.nn.Module):
+    """Wrapper to apply an image encoder to video data by processing each frame independently.
+
+    This module takes video data with shape (batch, time, channel, height, width) and applies
+    an image encoder to each frame, returning the encoded features.
+
+    Args:
+        encoder (torch.nn.Module): The image encoder module to apply to each frame.
+    """
+
     def __init__(self, encoder: torch.nn.Module):
         super().__init__()
         self.encoder = encoder
@@ -69,9 +78,9 @@ def all_reduce(tensor, *args, **kwargs):
 
 
 class FullGatherLayer(torch.autograd.Function):
-    """
-    Gather tensors from all process and support backward propagation
-    for the gradients across processes.
+    """Gather tensors from all process and support backward propagation.
+
+    Supports backward propagation for the gradients across processes.
     """
 
     @staticmethod
@@ -93,31 +102,38 @@ class FullGatherLayer(torch.autograd.Function):
 
 
 class MyReLU(torch.autograd.Function):
-    """
-    We can implement our own custom autograd Functions by subclassing
-    torch.autograd.Function and implementing the forward and backward passes
-    which operate on Tensors.
+    """Custom autograd Function for the Rectified Linear Unit (ReLU) activation.
+
+    This Function clamps negative input values to zero while retaining positive values.
+    The forward pass applies ReLU, and the backward pass propagates gradients
+    only for inputs greater than zero.
+
+    Args:
+        ctx (torch.autograd.FunctionCtx):
+            A context object provided by PyTorch's autograd engine.
+            Use `ctx.save_for_backward(*tensors)` in `forward` to stash
+            any tensors needed for gradient computation. In `backward`,
+            retrieve those tensors via `ctx.saved_tensors` to compute
+            gradients with respect to inputs.
+        input (torch.Tensor):
+            The input tensor to which ReLU is applied.
+
+    Returns:
+        torch.Tensor: The result of applying ReLU element-wise to the input.
+
+    Example:
+        >>> x = torch.tensor([-1.0, 2.0, -3.0])
+        >>> MyReLU.apply(x)
+        tensor([0.0, 2.0, 0.0])
     """
 
     @staticmethod
     def forward(ctx, input):
-        """
-        In the forward pass we receive a Tensor containing the input and return
-        a Tensor containing the output. ctx is a context object that can be used
-        to stash information for backward computation. You can cache arbitrary
-        objects for use in the backward pass using the ctx.save_for_backward method.
-        """
         ctx.save_for_backward(input)
         return input.clamp(min=0)
 
     @staticmethod
     def backward(ctx, grad_output):
-        """
-
-        In the backward pass we receive a Tensor containing the gradient of the loss
-        with respect to the output, and we need to compute the gradient of the loss
-        with respect to the input.
-        """
         (input,) = ctx.saved_tensors
         grad_input = grad_output.clone()
         grad_input[input < 0] = 0
@@ -125,10 +141,7 @@ class MyReLU(torch.autograd.Function):
 
 
 class OrderedCovariance(torch.autograd.Function):
-    """
-
-    Custom covariance operator.
-    """
+    """Ordered covariance module."""
 
     @staticmethod
     def forward(ctx, X):
@@ -148,6 +161,8 @@ class OrderedCovariance(torch.autograd.Function):
 
 
 class Covariance(torch.autograd.Function):
+    """Covariance module."""
+
     @staticmethod
     def forward(ctx, X):
         C = (X.T @ X).fill_diagonal_(0)
@@ -165,11 +180,15 @@ covariance = Covariance.apply
 
 
 class Normalize(torch.nn.Module):
+    """Normalize tensor and scale by square root of number of elements."""
+
     def forward(self, x):
         return torch.nn.functional.normalize(x, dim=(0, 1, 2)) * np.sqrt(x.numel())
 
 
 class UnsortedQueue(torch.nn.Module):
+    """A queue data structure that stores tensors with a maximum length."""
+
     def __init__(
         self, max_length: int, shape: Union[int, Iterable[int]] = None, dtype=None
     ):
@@ -235,6 +254,8 @@ class UnsortedQueue(torch.nn.Module):
 
 
 class EMA(torch.nn.Module):
+    """Exponential Moving Average module."""
+
     def __init__(self, alpha: float):
         super().__init__()
         self.alpha = alpha

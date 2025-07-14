@@ -83,6 +83,7 @@ def wrap_validation_step(fn, target, input, name, k, temperature):
 
 class OnlineKNN(Callback):
     """Weighted KNN online evaluator for self-supervised learning.
+
     The weighted KNN classifier matches sec 3.4 of https://arxiv.org/pdf/1805.01978.pdf.
     The implementation follows:
         1. https://github.com/zhirongw/lemniscate.pytorch/blob/master/test.py
@@ -105,11 +106,6 @@ class OnlineKNN(Callback):
         temperature: float = 0.07,
         normalizer: str = "batch_norm",
     ) -> None:
-        """
-        Args:
-            k: k for k nearest neighbor
-            temperature: temperature. See tau in section 3.4 of https://arxiv.org/pdf/1805.01978.pdf.
-        """
         logging.info(f"Setting up callback ({self.NAME})")
         logging.info(f"\t- {input=}")
         logging.info(f"\t- {target=}")

@@ -12,6 +12,8 @@ from .utils import get_required_fn_parameters
 
 
 class Module(pl.LightningModule):
+    """PyTorch Lightning module with callbacks support, user-defined forward and metrics."""
+
     def __init__(self, *args, forward: callable, hparams: dict = None, **kwargs):
         super().__init__()
         logging.info("Configuring module! 🔧")

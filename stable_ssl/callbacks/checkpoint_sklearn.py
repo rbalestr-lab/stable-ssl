@@ -8,6 +8,8 @@ from tabulate import tabulate
 
 
 class SklearnCheckpoint(Callback):
+    """Callback for saving and loading sklearn models in PyTorch Lightning checkpoints."""
+
     def setup(
         self, trainer: Trainer, pl_module: LightningModule, stage: Optional[str] = None
     ) -> None:

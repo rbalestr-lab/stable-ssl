@@ -9,9 +9,10 @@ from ..data.module import DataModule
 
 
 class ModuleSummary(pl.Callback):
+    """Callback for logging module summaries in a formatted table."""
+
     @rank_zero_only
     def setup(self, trainer, pl_module, stage):
-        N = "\033[0m"
         headers = [
             "Module",
             "Trainable parameters",
@@ -58,9 +59,10 @@ class ModuleSummary(pl.Callback):
 
 
 class LoggingCallback(pl.Callback):
+    """Callback for logging validation metrics in a formatted table."""
+
     @rank_zero_only
     def on_validation_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
-        N = "\033[0m"
         metrics = trainer.callback_metrics
         table = PrettyTable()
         table.field_names = ["Metric", "Value"]
@@ -68,14 +70,16 @@ class LoggingCallback(pl.Callback):
             if key not in ["log", "progress_bar"]:
                 table.add_row(
                     [
-                        "\033[0;34;40m" + key + N,
-                        "\033[0;32;40m" + str(metrics[key].item()) + N,
+                        "\033[0;34;40m" + key + "\033[0m",
+                        "\033[0;32;40m" + str(metrics[key].item()) + "\033[0m",
                     ]
                 )
         print(table)
 
 
 class TrainerInfo(Callback):
+    """Callback for linking trainer to DataModule and providing extra information."""
+
     def setup(self, trainer, pl_module, stage):
         logging.info("\t linking trainer to DataModule! 🔧")
         if not isinstance(trainer.datamodule, DataModule):

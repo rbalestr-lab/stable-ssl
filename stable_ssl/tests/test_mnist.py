@@ -43,6 +43,7 @@ def test_dictconfig():
     manager = ossl.Manager(
         trainer=pl.Trainer(max_epochs=1), module=pl.LightningModule(), data=data
     )
+    assert manager is not None
 
 
 def test_datamodule():
@@ -73,6 +74,7 @@ def test_datamodule():
     )
     data = ossl.data.DataModule(train=train, test=test)
     manager = ossl.Manager(trainer=pl.Trainer(), module=pl.LightningModule(), data=data)
+    assert manager is not None
 
 
 def test_dataloader():

@@ -27,11 +27,9 @@ class NTXEntLoss(torch.nn.Module):
     Introduced in the SimCLR paper :cite:`chen2020simple`.
     Also used in MoCo :cite:`he2020momentum`.
 
-    Parameters
-    ----------
-    temperature : float, optional
-        The temperature scaling factor.
-        Default is 0.5.
+    Args:
+        temperature (float, optional): The temperature scaling factor.
+            Default is 0.5.
     """
 
     def __init__(self, temperature: float = 0.5):
@@ -41,17 +39,12 @@ class NTXEntLoss(torch.nn.Module):
     def forward(self, z_i, z_j):
         """Compute the NT-Xent loss.
 
-        Parameters
-        ----------
-        z_i : torch.Tensor
-            Latent representation of the first augmented view of the batch.
-        z_j : torch.Tensor
-            Latent representation of the second augmented view of the batch.
+        Args:
+            z_i (torch.Tensor): Latent representation of the first augmented view of the batch.
+            z_j (torch.Tensor): Latent representation of the second augmented view of the batch.
 
-        Returns
-        -------
-        float
-            The computed contrastive loss.
+        Returns:
+            float: The computed contrastive loss.
         """
         z_i = torch.cat(all_gather(z_i), 0)
         z_j = torch.cat(all_gather(z_j), 0)
@@ -86,17 +79,12 @@ class NegativeCosineSimilarity(torch.nn.Module):
     def forward(self, z_i, z_j):
         """Compute the loss of the BYOL model.
 
-        Parameters
-        ----------
-        z_i : torch.Tensor
-            Latent representation of the first augmented view of the batch.
-        z_j : torch.Tensor
-            Latent representation of the second augmented view of the batch.
+        Args:
+            z_i (torch.Tensor): Latent representation of the first augmented view of the batch.
+            z_j (torch.Tensor): Latent representation of the second augmented view of the batch.
 
-        Returns
-        -------
-        float
-            The computed loss.
+        Returns:
+            float: The computed loss.
         """
         sim = torch.nn.CosineSimilarity(dim=1)
         return -sim(z_i, z_j).mean()
@@ -105,20 +93,15 @@ class NegativeCosineSimilarity(torch.nn.Module):
 class VICRegLoss(torch.nn.Module):
     """SSL objective used in VICReg :cite:`bardes2021vicreg`.
 
-    Parameters
-    ----------
-    sim_coeff : float, optional
-        The weight of the similarity loss (attractive term).
-        Default is 25.
-    std_coeff : float, optional
-        The weight of the standard deviation loss.
-        Default is 25.
-    cov_coeff : float, optional
-        The weight of the covariance loss.
-        Default is 1.
-    epsilon : float, optional
-        Small value to avoid division by zero.
-        Default is 1e-4.
+    Args:
+        sim_coeff (float, optional): The weight of the similarity loss (attractive term).
+            Default is 25.
+        std_coeff (float, optional): The weight of the standard deviation loss.
+            Default is 25.
+        cov_coeff (float, optional): The weight of the covariance loss.
+            Default is 1.
+        epsilon (float, optional): Small value to avoid division by zero.
+            Default is 1e-4.
     """
 
     def __init__(
@@ -137,17 +120,12 @@ class VICRegLoss(torch.nn.Module):
     def forward(self, z_i, z_j):
         """Compute the loss of the VICReg model.
 
-        Parameters
-        ----------
-        z_i : torch.Tensor
-            Latent representation of the first augmented view of the batch.
-        z_j : torch.Tensor
-            Latent representation of the second augmented view of the batch.
+        Args:
+            z_i (torch.Tensor): Latent representation of the first augmented view of the batch.
+            z_j (torch.Tensor): Latent representation of the second augmented view of the batch.
 
-        Returns
-        -------
-        float
-            The computed loss.
+        Returns:
+            float: The computed loss.
         """
         repr_loss = F.mse_loss(z_i, z_j)
 
@@ -178,11 +156,9 @@ class VICRegLoss(torch.nn.Module):
 class BarlowTwinsLoss(torch.nn.Module):
     """SSL objective used in Barlow Twins :cite:`zbontar2021barlow`.
 
-    Parameters
-    ----------
-    lambd : float, optional
-        The weight of the off-diagonal terms in the loss.
-        Default is 5e-3.
+    Args:
+        lambd (float, optional): The weight of the off-diagonal terms in the loss.
+            Default is 5e-3.
     """
 
     def __init__(self, lambd: float = 5e-3):
@@ -193,17 +169,12 @@ class BarlowTwinsLoss(torch.nn.Module):
     def forward(self, z_i, z_j):
         """Compute the loss of the Barlow Twins model.
 
-        Parameters
-        ----------
-        z_i : torch.Tensor
-            Latent representation of the first augmented view of the batch.
-        z_j : torch.Tensor
-            Latent representation of the second augmented view of the batch.
+        Args:
+            z_i (torch.Tensor): Latent representation of the first augmented view of the batch.
+            z_j (torch.Tensor): Latent representation of the second augmented view of the batch.
 
-        Returns
-        -------
-        float
-            The computed loss.
+        Returns:
+            float: The computed loss.
         """
         c = self.bn(z_i).T @ self.bn(z_j)  # normalize along the batch dimension
         c = c / z_i.size(0)

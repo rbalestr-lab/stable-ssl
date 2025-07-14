@@ -90,6 +90,8 @@ def LinearWarmupThreeStepsAnnealing(
 
 
 class LinearWarmupCosineAnnealingLR(_LRScheduler):
+    """Learning rate scheduler with linear warmup followed by cosine annealing."""
+
     def __init__(
         self,
         optimizer,

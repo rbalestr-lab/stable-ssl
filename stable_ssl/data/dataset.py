@@ -45,11 +45,9 @@ def random_seed(seed):
 
 
 class DictFormat(Dataset):
+    """Format dataset to ensure dictionary-based item access."""
+
     def __init__(self, dataset: Iterable):
-        """
-        Arguments:
-            dataset (Iterable): Path to the csv file with annotations.
-        """
         self.dataset = dataset
         assert type(dataset) not in [
             DictFormat,
@@ -69,14 +67,14 @@ class DictFormat(Dataset):
 
 
 class AddTransform(Dataset):
-    """Face Landmarks dataset."""
+    """Add a transform to a dataset.
+
+    Args:
+        dataset (Iterable): Dataset to apply transforms to.
+        transform (callable): Transform to be applied on a sample.
+    """
 
     def __init__(self, dataset: Iterable, transform: callable):
-        """
-        Arguments:
-            dataset (Iterable): Path to the csv file with annotations.
-            transform (callable): Transform to be applied on a sample.
-        """
         assert type(dataset) in [
             DictFormat,
             AddTransform,

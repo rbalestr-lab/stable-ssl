@@ -16,13 +16,6 @@ from .__about__ import (
 from .manager import Manager
 from .module import Module
 
-try:
-    import lightning
-except ModuleNotFoundError:
-    logging.error(
-        "pytorch lightning module is not installed, but required by our module!"
-    )
-
 __all__ = [
     utils,
     data,
@@ -35,6 +28,12 @@ __all__ = [
     Manager,
     backbone,
     Module,
+    __author__,
+    __license__,
+    __summary__,
+    __title__,
+    __url__,
+    __version__,
 ]
 import sys
 

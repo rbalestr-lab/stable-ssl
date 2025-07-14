@@ -6,8 +6,10 @@ from torch.optim.optimizer import Optimizer, required
 
 
 class LARS(Optimizer):
-    """Extends SGD in PyTorch with LARS scaling from the paper
-    `Large batch training of Convolutional Networks <https://arxiv.org/pdf/1708.03888.pdf>`_.
+    r"""Extends SGD in PyTorch with LARS scaling from the paper.
+
+    Implementation based on `Large batch training of Convolutional Networks <https://arxiv.org/pdf/1708.03888.pdf>`_.
+
     Args:
         params (iterable): iterable of parameters to optimize or dicts defining
             parameter groups
@@ -18,6 +20,7 @@ class LARS(Optimizer):
         nesterov (bool, optional): enables Nesterov momentum (default: False)
         eta (float, optional): trust coefficient for computing LR (default: 0.001)
         eps (float, optional): eps for division denominator (default: 1e-8)
+
     Example:
         >>> model = torch.nn.Linear(10, 1)
         >>> input = torch.Tensor(10)
@@ -28,6 +31,7 @@ class LARS(Optimizer):
         >>> optimizer.zero_grad()
         >>> loss_fn(model(input), target).backward()
         >>> optimizer.step()
+
     .. note::
         The application of momentum in the SGD part is modified according to
         the PyTorch standards. LARS scaling fits into the equation in the
@@ -42,6 +46,7 @@ class LARS(Optimizer):
         parameters, gradient, velocity, momentum, and weight decay respectively.
         The :math:`lars_lr` is defined by Eq. 6 in the paper.
         The Nesterov version is analogously modified.
+
     .. warning::
         Parameters with weight decay set to 0 will automatically be excluded from
         layer-wise LR scaling. This is to ensure consistency with papers like SimCLR
@@ -93,6 +98,7 @@ class LARS(Optimizer):
     @torch.no_grad()
     def step(self, closure=None):
         """Performs a single optimization step.
+
         Args:
             closure (callable, optional): A closure that reevaluates the model
                 and returns the loss.

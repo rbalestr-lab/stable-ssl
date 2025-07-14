@@ -20,6 +20,8 @@ from torch import Generator, default_generator, randperm
 
 
 class Dataset(torch.utils.data.Dataset):
+    """Base dataset class with transform support and PyTorch Lightning integration."""
+
     def __init__(self, transform=None):
         self.transform = transform
         self._trainer = None
@@ -47,8 +49,7 @@ class Dataset(torch.utils.data.Dataset):
 
 
 class Subset(Dataset):
-    r"""
-    Subset of a dataset at specified indices.
+    r"""Subset of a dataset at specified indices.
 
     Args:
         dataset (Dataset): The whole Dataset
@@ -85,6 +86,8 @@ class Subset(Dataset):
 
 
 class FromTorchDataset(Dataset):
+    """Wrapper for PyTorch datasets with custom column naming and transforms."""
+
     def __init__(self, dataset, names, transform):
         super().__init__(transform)
         self.dataset = dataset
@@ -104,6 +107,8 @@ class FromTorchDataset(Dataset):
 
 
 class MinariStepsDataset(Dataset):
+    """Dataset for Minari reinforcement learning data with step-based access."""
+
     NAMES = ["observations", "actions", "rewards", "terminations", "truncations"]
 
     def __init__(self, dataset, num_steps=2, transform=None):
@@ -143,6 +148,8 @@ class MinariStepsDataset(Dataset):
 
 
 class MinariEpisodeDataset(torch.utils.data.Dataset):
+    """Dataset for Minari reinforcement learning data with episode-based access."""
+
     NAMES = ["observations", "actions", "rewards", "terminations", "truncations"]
 
     def __init__(self, dataset):
@@ -189,6 +196,8 @@ class MinariEpisodeDataset(torch.utils.data.Dataset):
 
 
 class HFDataset(Dataset):
+    """Hugging Face dataset wrapper with transform and column manipulation support."""
+
     def __init__(
         self, *args, transform=None, rename_columns=None, remove_columns=None, **kwargs
     ):
@@ -238,6 +247,8 @@ class HFDataset(Dataset):
 
 
 class Categorical(torch.nn.Module):
+    """Categorical distribution for sampling discrete values with given probabilities."""
+
     def __init__(
         self,
         values: Union[list, torch.Tensor],
@@ -256,6 +267,8 @@ class Categorical(torch.nn.Module):
 
 
 class ExponentialMixtureNoiseModel(torch.nn.Module):
+    """Exponential mixture noise model for data augmentation or sampling."""
+
     def __init__(self, rates, prior, upper_bound=torch.inf):
         super().__init__()
         mix = torch.distributions.Categorical(torch.Tensor(prior))
@@ -271,6 +284,8 @@ class ExponentialMixtureNoiseModel(torch.nn.Module):
 
 
 class ExponentialNormalNoiseModel(torch.nn.Module):
+    """Exponential-normal noise model combining exponential and normal distributions."""
+
     def __init__(self, rate, mean, std, prior, upper_bound=torch.inf):
         super().__init__()
         self.mix = torch.distributions.Categorical(torch.Tensor(prior))
@@ -306,8 +321,7 @@ def random_split(
     lengths: Sequence[Union[int, float]],
     generator: Optional[Generator] = default_generator,
 ) -> list[Subset]:
-    r"""
-    Randomly split a dataset into non-overlapping new datasets of given lengths.
+    r"""Randomly split a dataset into non-overlapping new datasets of given lengths.
 
     If a list of fractions that sum up to 1 is given,
     the lengths will be computed automatically as

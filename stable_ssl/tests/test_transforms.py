@@ -116,11 +116,13 @@ def test_transforms_batch(our_transform, true_transform):
 )
 def test_proba(our_transform, proba):
     our_transform.p = proba
-    transforms = transforms.Compose(our_transform, transforms.ToImage())
+    composed_transforms = transforms.Compose(our_transform, transforms.ToImage())
     our_dataset = ossl.data.dataset.DictFormat(
         Subset(CIFAR10("~/data", download=True), range(2000))
     )
-    our_dataset = ossl.data.dataset.AddTransform(our_dataset, transform=transforms)
+    our_dataset = ossl.data.dataset.AddTransform(
+        our_dataset, transform=composed_transforms
+    )
     t = v2.Compose([v2.ToImage(), v2.ToDtype(torch.float32, scale=True)])
     true_dataset = CIFAR10("~/data", transform=t)
     identity = []

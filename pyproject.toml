@@ -14,41 +14,25 @@ readme = {file = "README.md", content-type = "text/markdown"}
 dependencies = [
     "torch",
     "torchvision",
-    "torchaudio",
     "hydra-core",
-    "hydra-joblib-launcher",
-    "hydra-submitit-launcher",
-    "hydra-optuna-sweeper==1.3.0.dev0",
-    "submitit",
-    "tqdm",
-    "transformers",
-    "wandb",
-    "matplotlib",
-    "legacy-cgi",
-    "seaborn",
-    "jupyter",
     "lightning",
-    "torchmetrics",
-    "ipywidgets",
-    "widgetsnbextension",
-    "pandas-profiling",
-    "tabulate",
-    "timm",
+    "hydra-submitit-launcher",
+    "submitit",
+    "wandb",
     "datasets",
-    "stable-baselines3",
-    "minigrid",
-    "rich",
-    "tensorboard",
     "loguru",
-    "pytest",
     "scikit-learn>=1.7.0",
-    "prettytable"
+    "prettytable",
+    "timm",
+    "transformers",
+    "tabulate",
+    "matplotlib",
 ]
 
 dynamic = ["version"]
 
-[project.entry-points."console_scripts"]
-stable-ssl = "stable_ssl.cli:entry"
+# [project.entry-points."console_scripts"]
+# stable-ssl = "stable_ssl.cli:entry"
 
 [tool.setuptools]
 packages = ["stable_ssl"]
@@ -60,7 +44,6 @@ version = {attr = "stable_ssl.__about__.__version__"}
 dev = [
     "pytest",
     "coverage",
-    "numpydoc",
     "pytest-cov",
     "codecov",
     "pre-commit",
@@ -73,8 +56,12 @@ doc = [
     "sphinx-book-theme",
     "sphinxcontrib-bibtex",
     "matplotlib",
-    "numpydoc",
     "memory_profiler",
     "myst-parser",
-    "myst-parser",
 ]
+
+[tool.ruff.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+docstring-code-format = true

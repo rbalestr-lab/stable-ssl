@@ -3,15 +3,20 @@ import torchmetrics
 
 
 class EarlyStopping(torch.nn.Module):
+    """Early stopping module that can stop training based on metric milestones."""
+
     def __init__(
         self,
         mode: str = "min",
         milestones: dict[int, float] = None,
         metric_name: str = None,
+        patience: int = 10,
     ):
+        super().__init__()
         self.mode = mode
         self.milestones = milestones or {}
         self.metric_name = metric_name
+        self.patience = patience
         self.register_buffer("history", torch.zeros(patience))
 
     def should_stop(self, metric, step):

@@ -26,21 +26,15 @@ def collapse_nested_dict(
 ) -> dict:
     """Parse a Hydra config and make it readable for wandb (flatten).
 
-    Parameters
-    ----------
-    cfg: Union[dict, object]
-        The original (Hydra) nested dict.
-    level_separator: str, optional
-        The string to separate level names. Defaults to ".".
-    _base_name: str, optional
-        The parent string, used for recursion only, users should ignore.
-        Defaults to None.
-    _flat_cfg: dict, optional
-        The flattened config, used for recursion only, users should ignore.
-        Defaults to None.
+    Args:
+        cfg (Union[dict, object]): The original (Hydra) nested dict.
+        level_separator (str, optional): The string to separate level names. Defaults to ".".
+        _base_name (str, optional): The parent string, used for recursion only, users should ignore.
+            Defaults to None.
+        _flat_cfg (dict, optional): The flattened config, used for recursion only, users should ignore.
+            Defaults to None.
 
-    Returns
-    -------
+    Returns:
         dict: Flat config.
     """
     # INIT
@@ -96,18 +90,13 @@ def instanciate_config(cfg=None, debug_hash=None) -> object:
 class HardwareConfig:
     """Configuration for the hardware parameters.
 
-    Parameters
-    ----------
-    seed : int, optional
-        Random seed for reproducibility. Default is None.
-    float16 : bool, optional
-        Whether to use mixed precision (float16) for training.
-        Default is False.
-    world_size : int, optional
-        Number of processes participating in distributed training.
-        Default is 1.
-    device : str, optional
-        The device to use for training. Default is "cuda" if available, else "cpu".
+    Args:
+        seed (int, optional): Random seed for reproducibility. Default is None.
+        float16 (bool, optional): Whether to use mixed precision (float16) for training.
+            Default is False.
+        world_size (int, optional): Number of processes participating in distributed training.
+            Default is 1.
+        device (str, optional): The device to use for training. Default is "cuda" if available, else "cpu".
     """
 
     seed: Optional[int] = None
@@ -120,40 +109,29 @@ class HardwareConfig:
 class LoggerConfig:
     """Configuration for logging and checkpointing during training or evaluation.
 
-    Parameters
-    ----------
-    level : int, optional
-        The logging level. Determines the threshold for what gets logged. Default is 20.
-    metric : dict, optional
-        A dictionary to store and log various metrics. Default is an empty dict.
-    monitor : dict, optional
-        A dictionary to store and log various monitoring statistics.
-        Default is an empty dict
-    save_final_model : str or bool, optional
-        Specifies whether to save the final trained model.
-        If a name is provided, the final model will be saved with that name.
-        Default is False.
-    eval_every_epoch : int, optional
-        The frequency (in epochs) at which the model will be evaluated.
-        For example, if set to 1, evaluation occurs every epoch. Default is 1.
-    log_every_step : int, optional
-        The frequency (in training steps) at which to log intermediate metrics.
-        For example, if set to 1, logs occur every step. Default is 1.
-    checkpoint_frequency : int, optional
-        The frequency (in epochs) at which model checkpoints are saved.
-        For example, if set to 10, a checkpoint is saved every 10 epochs.
-        Default is None.
-    checkpoint_model_only : bool, optional
-        Whether to save only the model weights (True) or save additional training state
-        (False) during checkpointing. Default is True.
-    dump_path : pathlib.Path, optional
-        The path where output is dumped. Defaults to Hydra's runtime output directory.
-    wandb : bool or dict or None, optional
-        Configuration for Weights & Biases logging.
-        If `True`, it will be converted to an empty dictionary and default keys will be
-        filled in if `rank == 0`. Default is None.
-        See :mod:`stable_ssl.config.WandbConfig`
-        for the full list of parameters and their defaults.
+    Args:
+        level (int, optional): The logging level. Determines the threshold for what gets logged. Default is 20.
+        metric (dict, optional): A dictionary to store and log various metrics. Default is an empty dict.
+        monitor (dict, optional): A dictionary to store and log various monitoring statistics.
+            Default is an empty dict
+        save_final_model (str or bool, optional): Specifies whether to save the final trained model.
+            If a name is provided, the final model will be saved with that name.
+            Default is False.
+        eval_every_epoch (int, optional): The frequency (in epochs) at which the model will be evaluated.
+            For example, if set to 1, evaluation occurs every epoch. Default is 1.
+        log_every_step (int, optional): The frequency (in training steps) at which to log intermediate metrics.
+            For example, if set to 1, logs occur every step. Default is 1.
+        checkpoint_frequency (int, optional): The frequency (in epochs) at which model checkpoints are saved.
+            For example, if set to 10, a checkpoint is saved every 10 epochs.
+            Default is None.
+        checkpoint_model_only (bool, optional): Whether to save only the model weights (True) or save additional training state
+            (False) during checkpointing. Default is True.
+        dump_path (pathlib.Path, optional): The path where output is dumped. Defaults to Hydra's runtime output directory.
+        wandb (bool or dict or None, optional): Configuration for Weights & Biases logging.
+            If `True`, it will be converted to an empty dictionary and default keys will be
+            filled in if `rank == 0`. Default is None.
+            See :mod:`stable_ssl.config.WandbConfig`
+            for the full list of parameters and their defaults.
     """
 
     level: int = 20
@@ -174,22 +152,14 @@ class LoggerConfig:
 class WandbConfig:
     """Configuration for the Weights & Biases logging.
 
-    Parameters
-    ----------
-    dir : pathlib.Path, optional
-        The path where output is dumped. Defaults to Hydra's runtime output directory.
-    entity : str, optional
-        Name of the (Weights & Biases) entity. Default is None.
-    project : str, optional
-        Name of the (Weights & Biases) project. Default is None.
-    name : str, optional
-        Name of the Weights & Biases run. Default is None.
-    id : str, optional
-        ID of the Weights & Biases run. Default is None.
-    tags : list, optional
-        List of tags for the Weights & Biases run. Default is None.
-    group : str, optional
-        Group for the Weights & Biases run. Default is None.
+    Args:
+        dir (pathlib.Path, optional): The path where output is dumped. Defaults to Hydra's runtime output directory.
+        entity (str, optional): Name of the (Weights & Biases) entity. Default is None.
+        project (str, optional): Name of the (Weights & Biases) project. Default is None.
+        name (str, optional): Name of the Weights & Biases run. Default is None.
+        id (str, optional): ID of the Weights & Biases run. Default is None.
+        tags (list, optional): List of tags for the Weights & Biases run. Default is None.
+        group (str, optional): Group for the Weights & Biases run. Default is None.
     """
 
     dir: str = field(
@@ -207,24 +177,17 @@ class WandbConfig:
 class OptimConfig:
     """Configuration for the optimization parameters.
 
-    Parameters
-    ----------
-    optimizer : dict
-        Configuration for the optimizer.
-    scheduler : dict
-        Configuration for the learning rate scheduler.
-    epochs : int, optional
-        Number of epochs to train the model. Default is 1000.
-    max_steps : int, optional
-        Maximum number of steps to train the model. Default is -1.
-        If negative, the models trains on the full dataset.
-        If it is between 0 and 1, it represents the fraction of the dataset to train on.
-    accumulation_steps : int, optional
-        Number of steps to accumulate gradients before updating the model.
-        Default is 1.
-    grad_max_norm : float, optional
-        Maximum norm of the gradients. If None, no clipping is applied.
-        Default is None.
+    Args:
+        optimizer (dict): Configuration for the optimizer.
+        scheduler (dict): Configuration for the learning rate scheduler.
+        epochs (int, optional): Number of epochs to train the model. Default is 1000.
+        max_steps (int, optional): Maximum number of steps to train the model. Default is -1.
+            If negative, the models trains on the full dataset.
+            If it is between 0 and 1, it represents the fraction of the dataset to train on.
+        accumulation_steps (int, optional): Number of steps to accumulate gradients before updating the model.
+            Default is 1.
+        grad_max_norm (float, optional): Maximum norm of the gradients. If None, no clipping is applied.
+            Default is None.
     """
 
     optimizer: dict

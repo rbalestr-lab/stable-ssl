@@ -6,15 +6,19 @@ def _collapse_nested_dict(base, other):
     if type(base) in [list, tuple]:
         for i in range(len(base)):
             base[i] = _collapse_nested_dict(base[i], other[i])
-    elif type(base) == dict:
+        return base
+    elif isinstance(base, dict):
         for key in base:
             base[key] = _collapse_nested_dict(base[key], other[key])
+        return base
     else:
         base = torch.cat([base, other], 0)
-    return base
+        return base
 
 
 class Collator:
+    """Custom collate function that optionally builds an affinity (or “graph”) matrix based on a specified field."""
+
     def __init__(self, G_from=None):
         self.G_from = G_from
 

@@ -83,13 +83,13 @@ class RepeatedRandomSampler(torch.utils.data.DistributedSampler):
             raise NotImplementedError()
             for _ in range(self.num_samples // 32):
                 yield from torch.randint(
-                    high=n, size=(32,), dtype=torch.int64, generator=generator
+                    high=n, size=(32,), dtype=torch.int64, generator=g
                 ).tolist()
             yield from torch.randint(
                 high=n,
                 size=(self.num_samples % 32,),
                 dtype=torch.int64,
-                generator=generator,
+                generator=g,
             ).tolist()
         else:
             overall_slice = torch.randperm(n, generator=g)

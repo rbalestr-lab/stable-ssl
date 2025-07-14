@@ -63,9 +63,9 @@ def project_to_table(
         row (str): name of the column in configs to use as row
         column (str): name of the column in configs to use as column
         agg (callable): aggregator if many values are present
+        filters: filters to apply to the data
 
-    Returns
-    -------
+    Returns:
         DataFrame: the formatted table
     """
     logging.info(f"Creating table from {len(configs)} runs.")

@@ -17,6 +17,8 @@ from torchvision.transforms.v2._utils import query_chw
 
 
 class Transform(v2.Transform):
+    """Base transform class extending torchvision v2.Transform with nested data handling."""
+
     def nested_get(self, v, name):
         if name == "":
             return v
@@ -50,28 +52,28 @@ class Transform(v2.Transform):
     def name(self):
         return self.__class__.__name__
 
-    # def __call__(self, x):
-
 
 @torch.jit.unused
 def to_image(
-    inpt: Union[torch.Tensor, PIL.Image.Image, np.ndarray],
+    input: Union[torch.Tensor, PIL.Image.Image, np.ndarray],
 ) -> tv_tensors.Image:
     """See :class:`~torchvision.transforms.v2.ToImage` for details."""
-    if isinstance(inpt, np.ndarray):
-        output = torch.from_numpy(np.atleast_3d(inpt)).transpose(-3, -1).contiguous()
-    elif isinstance(inpt, PIL.Image.Image):
-        output = torchvision.transforms.functional.pil_to_tensor(inpt)
-    elif isinstance(inpt, torch.Tensor):
-        output = inpt
+    if isinstance(input, np.ndarray):
+        output = torch.from_numpy(np.atleast_3d(input)).transpose(-3, -1).contiguous()
+    elif isinstance(input, PIL.Image.Image):
+        output = torchvision.transforms.functional.pil_to_tensor(input)
+    elif isinstance(input, torch.Tensor):
+        output = input
     else:
         raise TypeError(
-            f"Input can either be a pure Tensor, a numpy array, or a PIL image, but got {type(inpt)} instead."
+            f"Input can either be a pure Tensor, a numpy array, or a PIL image, but got {type(input)} instead."
         )
     return tv_tensors.Image(output)
 
 
 class ToImage(Transform):
+    """Convert input to image tensor with optional normalization."""
+
     def __init__(
         self,
         dtype=torch.float32,
@@ -95,6 +97,8 @@ class ToImage(Transform):
 
 
 class RandomGrayscale(Transform, v2.RandomGrayscale):
+    """Randomly convert image to grayscale with given probability."""
+
     def __init__(self, p=0.1, source: str = "image", target: str = "image"):
         super().__init__(p)
         self.source = source
@@ -121,6 +125,8 @@ class RandomGrayscale(Transform, v2.RandomGrayscale):
 
 
 class RandomSolarize(Transform, v2.RandomSolarize):
+    """Randomly solarize image by inverting pixel values above threshold."""
+
     def __init__(self, threshold, p=0.5, source: str = "image", target: str = "image"):
         super().__init__(threshold, p)
         self.source = source
@@ -138,6 +144,8 @@ class RandomSolarize(Transform, v2.RandomSolarize):
 
 
 class GaussianBlur(Transform, v2.GaussianBlur):
+    """Apply Gaussian blur to image with random sigma values."""
+
     _NAMES = ["sigma_x", "sigma_y"]
 
     def __init__(
@@ -166,6 +174,8 @@ class GaussianBlur(Transform, v2.GaussianBlur):
 
 
 class PILGaussianBlur(Transform):
+    """PIL-based Gaussian blur transform with random sigma sampling."""
+
     _NAMES = ["sigma_x", "sigma_y"]
 
     def __init__(self, sigma=None, p=1, source: str = "image", target: str = "image"):
@@ -174,6 +184,9 @@ class PILGaussianBlur(Transform):
         Args:
             sigma (Sequence[float]): range to sample the radius of the gaussian blur filter.
                 Defaults to [0.1, 2.0].
+            p (float): probability of applying the transform.
+            source (str): source key in the data dictionary.
+            target (str): target key in the data dictionary.
         """
         if sigma is None:
             sigma = [0.1, 2.0]
@@ -187,11 +200,10 @@ class PILGaussianBlur(Transform):
         """Applies gaussian blur to an input image.
 
         Args:
-            img (Image): an image in the PIL.Image format.
+            x (dict): Data dictionary containing the image to transform.
 
-        Returns
-        -------
-            Image: blurred image.
+        Returns:
+            dict: Data dictionary with blurred image.
         """
         if self.p < 1 and torch.rand(1) >= self.p:
             x[self.get_name(x)] = torch.zeros((1,))
@@ -209,9 +221,7 @@ class PILGaussianBlur(Transform):
 
 
 class UniformTemporalSubsample(Transform):
-    """
-    ``nn.Module`` wrapper for ``pytorchvideo.transforms.functional.uniform_temporal_subsample``.
-    """
+    """``nn.Module`` wrapper for ``pytorchvideo.transforms.functional.uniform_temporal_subsample``."""
 
     def __init__(
         self,
@@ -220,11 +230,6 @@ class UniformTemporalSubsample(Transform):
         source: str = "video",
         target: str = "video",
     ):
-        """
-        Args:
-            num_samples (int): The number of equispaced samples to be selected
-            temporal_dim (int): dimension of temporal to perform temporal subsample.
-        """
         super().__init__(num_samples, temporal_dim)
         self.source = source
         self.target = target
@@ -237,6 +242,8 @@ class UniformTemporalSubsample(Transform):
 
 
 class RandomContiguousTemporalSampler(Transform):
+    """Randomly sample contiguous frames from a video sequence."""
+
     def __init__(self, source, target, num_frames, frame_subsampling: int = 1):
         self.source = source
         self.target = target
@@ -266,6 +273,8 @@ class RandomContiguousTemporalSampler(Transform):
 
 
 class RGB(Transform, v2.RGB):
+    """Convert image to RGB format."""
+
     def __init__(self, source: str = "image", target: str = "image"):
         super().__init__()
         self.source = source
@@ -279,6 +288,8 @@ class RGB(Transform, v2.RGB):
 
 
 class Resize(Transform, v2.Resize):
+    """Resize image to specified size."""
+
     def __init__(
         self,
         size,
@@ -300,6 +311,8 @@ class Resize(Transform, v2.Resize):
 
 
 class ColorJitter(Transform, v2.ColorJitter):
+    """Randomly change brightness, contrast, saturation, and hue of an image."""
+
     def __init__(
         self,
         brightness=None,
@@ -338,6 +351,8 @@ class ColorJitter(Transform, v2.ColorJitter):
 
 
 class RandomRotation(Transform, v2.RandomRotation):
+    """Rotate image by random angle within specified degrees range."""
+
     def __init__(
         self,
         degrees,
@@ -362,6 +377,8 @@ class RandomRotation(Transform, v2.RandomRotation):
 
 
 class RandomChannelPermutation(Transform, v2.RandomChannelPermutation):
+    """Randomly permute the channels of an image."""
+
     def __init__(self, source: str = "image", target: str = "image"):
         super().__init__()
         self.source = source
@@ -378,6 +395,8 @@ class RandomChannelPermutation(Transform, v2.RandomChannelPermutation):
 
 
 class RandomCrop(Transform, v2.RandomCrop):
+    """Crop a random portion of image and resize it to given size."""
+
     _NAMES = ["needs_crop", "top", "left", "height", "width", "needs_pad", "padding"]
 
     def __init__(
@@ -412,6 +431,8 @@ class RandomCrop(Transform, v2.RandomCrop):
 
 
 class RandomHorizontalFlip(Transform, v2.RandomHorizontalFlip):
+    """Horizontally flip the given image randomly with a given probability."""
+
     def __init__(self, p=0.5, source: str = "image", target: str = "image"):
         super().__init__(p)
         self.source = source
@@ -430,6 +451,8 @@ class RandomHorizontalFlip(Transform, v2.RandomHorizontalFlip):
 
 
 class RandomResizedCrop(Transform, v2.RandomResizedCrop):
+    """Crop a random portion of image and resize it to given size."""
+
     _NAMES = ["top", "left", "height", "width"]
 
     def __init__(
@@ -461,6 +484,8 @@ class RandomResizedCrop(Transform, v2.RandomResizedCrop):
 
 
 class CenterCrop(Transform, v2.CenterCrop):
+    """Crop the center of an image to the given size."""
+
     _NAMES = []
 
     def __init__(self, size, source: str = "image", target: str = "image"):
@@ -633,6 +658,8 @@ class ControlledTransform(Transform):
 
 
 class Conditional(Transform):
+    """Apply transform conditionally based on a data dictionary key."""
+
     def __init__(self, transform, condition_key, apply_on_true=True):
         super().__init__()
         self._transform = transform
@@ -651,6 +678,8 @@ class Conditional(Transform):
 
 
 class AdditiveGaussian(Transform):
+    """Add Gaussian noise to input data."""
+
     BYPASS_VALUE = False
 
     def __init__(self, sigma, p=1):
@@ -671,6 +700,8 @@ class AdditiveGaussian(Transform):
 
 
 class Compose(v2.Transform):
+    """Compose multiple transforms together in sequence."""
+
     def __init__(self, *args):
         super().__init__()
         self.args = args

@@ -84,17 +84,17 @@ def test_datamodule():
     module.setup("fit")
     assert not torch.is_tensor(module.train_dataset[0]["image"])
     loader = module.train_dataloader()
-    assert loader.drop_last == True
+    assert loader.drop_last
     module.setup("test")
     loader = module.test_dataloader()
     assert torch.is_tensor(module.test_dataset[0]["image"])
-    assert loader.drop_last == False
+    assert not loader.drop_last
     module.setup("validate")
     loader = module.val_dataloader()
-    assert loader.drop_last == False
+    assert not loader.drop_last
     module.setup("predict")
     loader = module.predict_dataloader()
-    assert loader.drop_last == False
+    assert not loader.drop_last
 
 
 # if __name__ == "__main__":
