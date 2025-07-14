@@ -167,7 +167,6 @@ class GaussianBlur(Transform, v2.GaussianBlur):
             x[self.get_name(x)] = torch.zeros((2,))
             return x
         params = self.make_params([])
-        print(self.nested_get(x, self.source))
         self.nested_set(
             x, self.transform(self.nested_get(x, self.source), params), self.target
         )
