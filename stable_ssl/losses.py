@@ -14,6 +14,24 @@ from loguru import logger as logging
 from .utils import all_gather, all_reduce
 
 
+def mae(target, pred, mask, norm_pix_loss=False):
+    """
+    imgs: [N, L, p*p*3]
+    pred: [N, L, p*p*3]
+    mask: [N, L], 0 is keep, 1 is remove,
+    """
+    if norm_pix_loss:
+        mean = target.mean(dim=-1, keepdim=True)
+        var = target.var(dim=-1, keepdim=True)
+        target = (target - mean) / (var + 1.0e-6) ** 0.5
+
+    loss = (pred - target) ** 2
+    loss = loss.mean(dim=-1)  # [N, L], mean loss per patch
+
+    loss = (loss * mask).sum() / mask.sum()  # mean loss on removed patches
+    return loss
+
+
 def off_diagonal(x):
     """Return a flattened view of the off-diagonal elements of a square matrix."""
     n, m = x.shape
