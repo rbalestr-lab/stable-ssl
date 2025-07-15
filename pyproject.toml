@@ -27,6 +27,7 @@ dependencies = [
     "transformers",
     "tabulate",
     "matplotlib",
+    "requests-cache[all]"
 ]
 
 dynamic = ["version"]

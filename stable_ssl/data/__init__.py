@@ -13,6 +13,7 @@ from .utils import (
     Subset,
     fold_views,
     random_split,
+    download,
 )
 
 __all__ = [
@@ -33,4 +34,5 @@ __all__ = [
     Subset,
     random_split,
     GMM,
+    download,
 ]

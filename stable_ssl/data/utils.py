@@ -2,12 +2,6 @@ import itertools
 import math
 import warnings
 from collections.abc import Sequence
-
-# UP006 wants 'Iterable' to be imported from collections.abc but it needs to
-# stay from typing for now due to BC concerns. In particular several internal
-# targets fail to typecheck with:
-#     TypeError: Cannot create a consistent method resolution order (MRO) for
-#     bases Iterable, Generic
 from typing import Optional, Union, cast  # noqa: UP035
 
 import lightning as pl
@@ -15,9 +9,59 @@ import numpy as np
 import torch
 import torch.distributions as dist
 from loguru import logger as logging
+from tqdm import tqdm
 
 # No 'default_generator' in torch/__init__.pyi
 from torch import Generator, default_generator, randperm
+from requests_cache import CachedSession
+from filelock import FileLock
+from pathlib import Path
+from urllib.parse import urlparse
+import os
+
+
+def download(url, dest_folder, backend="filesystem", cache_dir="~/.stable_ssl/"):
+    try:
+        parsed_url = urlparse(url)
+        filename = os.path.basename(parsed_url.path)
+        # Ensure the destination folder exists
+        dest_folder = Path(dest_folder)
+        dest_folder.mkdir(exist_ok=True, parents=True)
+        # Get the file name
+        local_filename = dest_folder / filename
+        lock_filename = dest_folder / f"{filename}.lock"
+        # Use a file lock to prevent concurrent downloads
+        with FileLock(lock_filename):
+            # Download the file
+            session = CachedSession(cache_dir, backend=backend)
+            print(f"Downloading: {url}")
+            response = session.get(url, stream=True)
+            # Raise an error for bad responses
+            response.raise_for_status()
+            # Get the total file size from headers
+            total_size = int(response.headers.get("content-length", 0))
+            downloaded_size = 0
+            # Write the file to the destination folder
+            with open(local_filename, "wb") as f, tqdm(
+                desc=local_filename.name,
+                total=total_size,
+                unit="B",
+                unit_scale=True,
+                unit_divisor=1024,
+            ) as bar:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+                    bar.update(len(chunk))
+                    downloaded_size += len(chunk)
+            if downloaded_size == total_size:
+                print("Download complete and successful!")
+            else:
+                logging.error("Download incomplete or corrupted.")
+            return local_filename
+    except Exception as e:
+        print(f"Error downloading {url}: {e}")
+        raise (e)
+        return None
 
 
 class Dataset(torch.utils.data.Dataset):
