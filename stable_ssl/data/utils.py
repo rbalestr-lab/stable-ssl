@@ -1,37 +1,35 @@
 import itertools
 import math
+import multiprocessing
+import os
+import time
 import warnings
 from collections.abc import Sequence
-from typing import Optional, Union, cast, Iterable
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+from typing import Iterable, Optional, Union, cast
+from urllib.parse import urlparse
 
 import lightning as pl
 import numpy as np
+import rich.progress
 import torch
 import torch.distributions as dist
-from loguru import logger as logging
-from tqdm import tqdm
-
-# No 'default_generator' in torch/__init__.pyi
-from torch import Generator, default_generator, randperm
-from requests_cache import CachedSession
 from filelock import FileLock
-from pathlib import Path
-from urllib.parse import urlparse
-import os
-import rich.progress
-import multiprocessing
-from concurrent.futures import ProcessPoolExecutor
-import time
+from loguru import logger as logging
+from requests_cache import CachedSession
 from rich.console import Console
-
 from rich.progress import (
     BarColumn,
-    Progress,
+    MofNCompleteColumn,
     TextColumn,
     TimeElapsedColumn,
     TimeRemainingColumn,
-    MofNCompleteColumn,
 )
+
+# No 'default_generator' in torch/__init__.pyi
+from torch import Generator, default_generator, randperm
+from tqdm import tqdm
 
 
 def bulk_download(
@@ -43,7 +41,6 @@ def bulk_download(
     """_summary_
 
     Example:
-
     import stable_ssl
     stable_ssl.data.bulk_download([
         "https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz",
@@ -159,14 +156,17 @@ def download(
             # Get the total file size from headers
             downloaded_size = 0
             # Write the file to the destination folder
-            with open(local_filename, "wb") as f, tqdm(
-                desc=local_filename.name,
-                total=total_size,
-                unit="B",
-                unit_scale=True,
-                unit_divisor=1024,
-                disable=not progress_bar,
-            ) as bar:
+            with (
+                open(local_filename, "wb") as f,
+                tqdm(
+                    desc=local_filename.name,
+                    total=total_size,
+                    unit="B",
+                    unit_scale=True,
+                    unit_divisor=1024,
+                    disable=not progress_bar,
+                ) as bar,
+            ):
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
                     downloaded_size += len(chunk)

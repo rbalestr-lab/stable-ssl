@@ -11,10 +11,10 @@ from .utils import (
     HFDataset,
     MinariStepsDataset,
     Subset,
+    bulk_download,
+    download,
     fold_views,
     random_split,
-    download,
-    bulk_download,
 )
 
 __all__ = [
