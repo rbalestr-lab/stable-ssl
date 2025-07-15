@@ -13,11 +13,11 @@ from typing import Optional, Union, cast  # noqa: UP035
 import lightning as pl
 import numpy as np
 import torch
+import torch.distributions as dist
 from loguru import logger as logging
 
 # No 'default_generator' in torch/__init__.pyi
 from torch import Generator, default_generator, randperm
-import torch.distributions as dist
 
 
 class Dataset(torch.utils.data.Dataset):

@@ -1,11 +1,9 @@
 from functools import partial
 
+import numpy as np
 import torch
 import torch.nn as nn
-
-from timm.models.vision_transformer import PatchEmbed, Block
-import numpy as np
-
+from timm.models.vision_transformer import Block, PatchEmbed
 
 # --------------------------------------------------------
 # 2D sine-cosine position embedding
@@ -16,8 +14,7 @@ import numpy as np
 
 
 def get_1d_sincos_pos_embed_from_grid(embed_dim, pos):
-    """
-    embed_dim: output dimension for each position
+    """embed_dim: output dimension for each position
     pos: a list of positions to be encoded: size (M,)
     out: (M, D)
     """
@@ -48,8 +45,7 @@ def get_2d_sincos_pos_embed_from_grid(embed_dim, grid):
 
 
 def get_2d_sincos_pos_embed(embed_dim, grid_size, cls_token=False):
-    """
-    grid_size: int of the grid height and width
+    """grid_size: int of the grid height and width
     return:
     pos_embed: [grid_size*grid_size, embed_dim] or [1+grid_size*grid_size, embed_dim] (w/ or w/o cls_token)
     """
@@ -184,8 +180,7 @@ class MaskedAutoencoderViT(nn.Module):
             nn.init.constant_(m.weight, 1.0)
 
     def patchify(self, imgs):
-        """
-        imgs: (N, 3, H, W)
+        """imgs: (N, 3, H, W)
         x: (N, L, patch_size**2 *3)
         """
         p = self.patch_embed.patch_size[0]
@@ -198,8 +193,7 @@ class MaskedAutoencoderViT(nn.Module):
         return x
 
     def unpatchify(self, x):
-        """
-        x: (N, L, patch_size**2 *3)
+        """x: (N, L, patch_size**2 *3)
         imgs: (N, 3, H, W)
         """
         p = self.patch_embed.patch_size[0]
@@ -212,8 +206,7 @@ class MaskedAutoencoderViT(nn.Module):
         return imgs
 
     def random_masking(self, x, mask_ratio):
-        """
-        Perform per-sample random masking by per-sample shuffling.
+        """Perform per-sample random masking by per-sample shuffling.
         Per-sample shuffling is done by argsort random noise.
         x: [N, L, D], sequence
         """
@@ -309,7 +302,7 @@ def vit_base_patch16_dec512d8b(**kwargs):
         decoder_num_heads=16,
         mlp_ratio=4,
         norm_layer=partial(nn.LayerNorm, eps=1e-6),
-        **kwargs
+        **kwargs,
     )
     return model
 
@@ -325,7 +318,7 @@ def vit_large_patch16_dec512d8b(**kwargs):
         decoder_num_heads=16,
         mlp_ratio=4,
         norm_layer=partial(nn.LayerNorm, eps=1e-6),
-        **kwargs
+        **kwargs,
     )
     return model
 
@@ -341,7 +334,7 @@ def vit_huge_patch14_dec512d8b(**kwargs):
         decoder_num_heads=16,
         mlp_ratio=4,
         norm_layer=partial(nn.LayerNorm, eps=1e-6),
-        **kwargs
+        **kwargs,
     )
     return model
 

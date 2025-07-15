@@ -3,6 +3,7 @@ from .collate import Collator
 from .module import DataModule
 from .sampler import RandomBatchSampler, RepeatedRandomSampler, SupervisedBatchSampler
 from .utils import (
+    GMM,
     Categorical,
     ExponentialMixtureNoiseModel,
     ExponentialNormalNoiseModel,
@@ -12,7 +13,6 @@ from .utils import (
     Subset,
     fold_views,
     random_split,
-    GMM,
 )
 
 __all__ = [
