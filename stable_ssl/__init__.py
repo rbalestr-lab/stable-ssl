@@ -3,7 +3,7 @@
 
 
 import logging
-
+import richuru
 from . import backbone, callbacks, data, losses, module, optim, static, utils
 from .__about__ import (
     __author__,
@@ -39,6 +39,9 @@ import sys
 
 from loguru import logger
 
+richuru.install()
+
+
 logger.remove()
 logger.add(
     sys.stderr,
@@ -46,21 +49,21 @@ logger.add(
 )
 
 
-# REDIRECT STANDARD PRINTING TO LOGURU
-class StreamToLoguru:
-    def __init__(self, logger, level="INFO"):
-        self.logger = logger
-        self.level = level
+# # REDIRECT STANDARD PRINTING TO LOGURU
+# class StreamToLoguru:
+#     def __init__(self, logger, level="INFO"):
+#         self.logger = logger
+#         self.level = level
 
-    def write(self, message):
-        if message.strip():  # Avoid logging empty lines
-            self.logger.opt(depth=1).log(self.level, message.strip())
+#     def write(self, message):
+#         if message.strip():  # Avoid logging empty lines
+#             self.logger.opt(depth=1).log(self.level, message.strip())
 
-    def flush(self):
-        pass  # Loguru handles flushing internally
+#     def flush(self):
+#         pass  # Loguru handles flushing internally
 
 
-sys.stdout = StreamToLoguru(logger, "INFO")
+# sys.stdout = StreamToLoguru(logger, "INFO")
 
 
 # REDIRECT STANDARD LOGGING TO LOGURU

@@ -14,6 +14,7 @@ from .utils import (
     fold_views,
     random_split,
     download,
+    bulk_download,
 )
 
 __all__ = [
@@ -35,4 +36,5 @@ __all__ = [
     random_split,
     GMM,
     download,
+    bulk_download,
 ]

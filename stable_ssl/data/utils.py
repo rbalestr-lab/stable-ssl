@@ -2,7 +2,7 @@ import itertools
 import math
 import warnings
 from collections.abc import Sequence
-from typing import Optional, Union, cast  # noqa: UP035
+from typing import Optional, Union, cast, Iterable
 
 import lightning as pl
 import numpy as np
@@ -18,12 +18,126 @@ from filelock import FileLock
 from pathlib import Path
 from urllib.parse import urlparse
 import os
+import rich.progress
+import multiprocessing
+from concurrent.futures import ProcessPoolExecutor
+import time
+from rich.console import Console
+
+from rich.progress import (
+    BarColumn,
+    Progress,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+    MofNCompleteColumn,
+)
 
 
-def download(url, dest_folder, backend="filesystem", cache_dir="~/.stable_ssl/"):
+def bulk_download(
+    urls: Iterable[str],
+    dest_folder: Union[str, Path],
+    backend: str = "filesystem",
+    cache_dir: str = "~/.stable_ssl/",
+):
+    """_summary_
+
+    Example:
+
+    import stable_ssl
+    stable_ssl.data.bulk_download([
+        "https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz",
+        "https://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz",
+        ],"todelete")
+
+    Args:
+        urls (Iterable[str]): _description_
+        dest_folder (Union[str, Path]): _description_
+        backend (str, optional): _description_. Defaults to "filesystem".
+        cache_dir (str, optional): _description_. Defaults to "~/.stable_ssl/".
+    """
+    num_workers = len(urls)
+    filenames = [os.path.basename(urlparse(url).path) for url in urls]
+    console = Console(force_terminal=True, force_interactive=False)
+    with rich.progress.Progress(
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        MofNCompleteColumn(),
+        TextColumn("•"),
+        TimeElapsedColumn(),
+        TextColumn("•"),
+        TimeRemainingColumn(),
+        refresh_per_second=5,
+        # console=console
+    ) as progress:
+        futures = []
+        with multiprocessing.Manager() as manager:
+            _progress = manager.dict()  # Shared dictionary for progress
+            with ProcessPoolExecutor(max_workers=num_workers) as executor:
+                for i in range(num_workers):  # 10 tasks in this example
+                    task_id = filenames[i]
+                    # Submit tasks and pass the shared dict and task ID
+                    future = executor.submit(
+                        download,
+                        urls[i],
+                        dest_folder,
+                        backend,
+                        cache_dir,
+                        False,
+                        _progress,
+                        task_id,
+                    )
+                    futures.append(future)
+                # Create Rich tasks for each process
+                rich_tasks = {}
+                # for future in futures:
+                #     # This will block until the task is submitted, returning the task_id
+                #     task_id = future.result()
+                #     rich_tasks[task_id] = progress.add_task(
+                #         f"[green]{task_id}", total=_progress[task_id]["total"]
+                #     )
+
+                # Update Rich progress bars based on the shared dictionary
+                while not all(future.done() for future in futures):
+                    # print(_progress)
+                    for task_id in list(_progress.keys()):
+                        if task_id in rich_tasks:
+                            progress.update(
+                                rich_tasks[task_id],
+                                completed=_progress[task_id]["progress"],
+                            )
+                        else:
+                            rich_tasks[task_id] = progress.add_task(
+                                f"[green]{task_id}",
+                                total=_progress[task_id]["total"],
+                                visible=True,
+                            )
+                    # for task_id, task_rich_id in rich_tasks.items():
+                    #     if (
+                    #         _progress[task_id]["progress"]
+                    #         <= _progress[task_id]["total"]
+                    #     ):
+                    #         progress.update(
+                    #             task_rich_id, completed=_progress[task_id]["progress"]
+                    #         )
+                    time.sleep(0.01)
+
+                # Final update after all tasks are completed
+                # for task_id, task_rich_id in rich_tasks.items():
+                #     progress.update(task_rich_id, completed=_progress[task_id]["total"])
+
+
+def download(
+    url,
+    dest_folder,
+    backend="filesystem",
+    cache_dir="~/.stable_ssl/",
+    progress_bar=True,
+    _progress_dict=None,
+    _task_id=None,
+):
     try:
-        parsed_url = urlparse(url)
-        filename = os.path.basename(parsed_url.path)
+        filename = os.path.basename(urlparse(url).path)
         # Ensure the destination folder exists
         dest_folder = Path(dest_folder)
         dest_folder.mkdir(exist_ok=True, parents=True)
@@ -34,12 +148,15 @@ def download(url, dest_folder, backend="filesystem", cache_dir="~/.stable_ssl/")
         with FileLock(lock_filename):
             # Download the file
             session = CachedSession(cache_dir, backend=backend)
-            print(f"Downloading: {url}")
+            logging.info(f"Downloading: {url}")
+            response = session.head(url)
+            total_size = int(response.headers.get("content-length", 0))
+            logging.info(f"Total size: {total_size}")
+
             response = session.get(url, stream=True)
             # Raise an error for bad responses
-            response.raise_for_status()
+            # response.raise_for_status()
             # Get the total file size from headers
-            total_size = int(response.headers.get("content-length", 0))
             downloaded_size = 0
             # Write the file to the destination folder
             with open(local_filename, "wb") as f, tqdm(
@@ -48,18 +165,24 @@ def download(url, dest_folder, backend="filesystem", cache_dir="~/.stable_ssl/")
                 unit="B",
                 unit_scale=True,
                 unit_divisor=1024,
+                disable=not progress_bar,
             ) as bar:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
-                    bar.update(len(chunk))
                     downloaded_size += len(chunk)
+                    bar.update(len(chunk))
+                    if _progress_dict is not None:
+                        _progress_dict[_task_id] = {
+                            "progress": downloaded_size,
+                            "total": total_size,
+                        }
             if downloaded_size == total_size:
-                print("Download complete and successful!")
+                logging.info("Download complete and successful!")
             else:
                 logging.error("Download incomplete or corrupted.")
             return local_filename
     except Exception as e:
-        print(f"Error downloading {url}: {e}")
+        logging.error(f"Error downloading {url}: {e}")
         raise (e)
         return None
 
