@@ -17,6 +17,7 @@ from loguru import logger as logging
 
 # No 'default_generator' in torch/__init__.pyi
 from torch import Generator, default_generator, randperm
+import torch.distributions as dist
 
 
 class Dataset(torch.utils.data.Dataset):
@@ -46,6 +47,35 @@ class Dataset(torch.utils.data.Dataset):
 
     def __len__(self):
         raise NotImplementedError
+
+
+class GMM(Dataset):
+    def __init__(self, num_components=5, num_samples=100, dim=2):
+        super().__init__()
+        # Define the means for each component
+        means = torch.rand(num_components, dim) * 10
+        # Define the covariance matrices for each component
+        # For simplicity, we'll use diagonal covariance matrices
+        covariances = torch.stack(
+            [torch.eye(dim) * torch.rand(1) for _ in range(num_components)]
+        )
+        # Define the mixing coefficients (weights) for each component
+        weights = torch.distributions.Dirichlet(torch.ones(num_components)).sample()
+        # Create a categorical distribution for the mixture components
+        mix = dist.Categorical(weights)
+        # Create a multivariate normal distribution for each component
+        components = dist.MultivariateNormal(means, covariance_matrix=covariances)
+        # Create the Gaussian Mixture Model
+        self.model = dist.MixtureSameFamily(mix, components)
+        self.samples = self.model.sample((num_samples,))
+        # Calculate the log-likelihoods of all samples
+        self.log_likelihoods = self.model.log_prob(self.samples)
+
+    def __getitem__(self, idx):
+        sample = dict(
+            sample=self.samples[idx], log_likelihood=self.log_likelihoods[idx]
+        )
+        return self.process_sample(sample)
 
 
 class Subset(Dataset):

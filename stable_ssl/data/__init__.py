@@ -12,6 +12,7 @@ from .utils import (
     Subset,
     fold_views,
     random_split,
+    GMM,
 )
 
 __all__ = [
@@ -31,4 +32,5 @@ __all__ = [
     MinariStepsDataset,
     Subset,
     random_split,
+    GMM,
 ]
