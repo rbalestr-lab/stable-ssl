@@ -141,8 +141,6 @@ class ImageRetrieval(Callback):
                 )
                 return
 
-            logging.error(self.query_col)
-
             is_query = torch.tensor(
                 val_dataset[self.query_col], device=pl_module.device
             ).squeeze()
@@ -184,6 +182,8 @@ class ImageRetrieval(Callback):
                 logs[f"eval/{self.name}_{k}"] = res.item() * 100
 
             self.log_dict(logs, on_epoch=True, rank_zero_only=True)
+
+            logging.info(f"Finished computing results for {self.name} callback")
 
         if torch.distributed.is_initialized():
             torch.distributed.barrier()

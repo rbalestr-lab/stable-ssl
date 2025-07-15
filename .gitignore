@@ -177,3 +177,4 @@ wandb/
 *.pt
 *.out
 .vscode/launch.json
+*.lock

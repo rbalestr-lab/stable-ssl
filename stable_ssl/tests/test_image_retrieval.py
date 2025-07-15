@@ -7,10 +7,8 @@ def test_imgret():
     import stable_ssl as ossl
     from stable_ssl.data import transforms
 
-    # Load processor and model from Hugging Face
     backbone = AutoModel.from_pretrained("facebook/dino-vits16")
 
-    # without transform
     mean = [0.485, 0.456, 0.406]
     std = [0.229, 0.224, 0.225]
     train_transform = transforms.Compose(
@@ -32,10 +30,9 @@ def test_imgret():
         drop_last=True,
     )
 
-    # TODO perform correct transform
     val_transform = transforms.Compose(
         transforms.RGB(),
-        transforms.Resize((224, 224)),
+        transforms.Resize((224, 224), antialias=True),
         transforms.ToImage(mean=mean, std=std),
     )
 
@@ -71,7 +68,6 @@ def test_imgret():
         backbone=ossl.backbone.EvalOnly(backbone), forward=forward, optim=None
     )
 
-    # Assume that validation set is used for image retrieval
     img_ret = ossl.callbacks.ImageRetrieval(
         module,
         "img_ret",
