@@ -64,9 +64,9 @@ logger.add(
 #     def flush(self):
 #         pass  # Loguru handles flushing internally
 
-    @property
-    def encoding(self):
-        return "utf-8"
+# @property
+# def encoding(self):
+#     return "utf-8"
 
 
 # sys.stdout = StreamToLoguru(logger, "INFO")
