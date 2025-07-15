@@ -71,6 +71,9 @@ class GMM(Dataset):
         # Calculate the log-likelihoods of all samples
         self.log_likelihoods = self.model.log_prob(self.samples)
 
+    def score(self, samples):
+        return self.model.log_prob(samples)
+
     def __getitem__(self, idx):
         sample = dict(
             sample=self.samples[idx], log_likelihood=self.log_likelihoods[idx]
