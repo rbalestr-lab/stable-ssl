@@ -1,4 +1,5 @@
 from .checkpoint_sklearn import SklearnCheckpoint
+from .image_retrieval import ImageRetrieval
 from .knn import OnlineKNN
 from .lidar import LiDAR
 from .probe import OnlineProbe
@@ -18,4 +19,5 @@ __all__ = [
     OnlineWriter,
     RankMe,
     LiDAR,
+    ImageRetrieval,
 ]
