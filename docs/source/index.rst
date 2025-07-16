@@ -18,9 +18,10 @@
     :maxdepth: 1
     :caption: API
 
+    api/backbone
     api/data
     api/losses
     api/manager
-    api/modules
+    api/module
     api/monitors
     api/optim

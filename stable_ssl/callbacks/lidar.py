@@ -2,7 +2,9 @@ import types
 from typing import Iterable
 
 import torch
+import torch.distributed as dist
 from loguru import logger as logging
+from torch.distributed import broadcast, reduce
 
 from .queue import OnlineQueue
 
@@ -14,22 +16,15 @@ def wrap_validation_step(fn, target, input, name):
         if batch_idx > 0:
             return batch
         embeddings = getattr(self, f"_cached_{name}_X")
-        # Remove unused variable assignment
-        # encoding = self.all_gather(embeddings).flatten(0, 1)
         if self.trainer.global_rank == 0:
             class_means = embeddings.mean(dim=1)
             grand_mean_local = class_means.mean(dim=0)
 
-            # Define missing variables
-            d = embeddings.shape[-1]  # embedding dimension
+            d = embeddings.shape[-1]
             device = embeddings.device
-            local_n = class_means.shape[0]  # number of classes
-            q = embeddings.shape[1]  # samples per class
+            local_n = class_means.shape[0]
+            q = embeddings.shape[1]
             n_total = local_n * q
-
-            # Import missing modules
-            import torch.distributed as dist
-            from torch.distributed import broadcast, reduce
 
             local_Sb = torch.zeros(d, d, device=device)
             local_Sw = torch.zeros(d, d, device=device)

@@ -10,10 +10,11 @@ import lightning
 import lightning as pl
 import pandas as pd
 import submitit
-import wandb
 from lightning.pytorch.utilities.rank_zero import rank_zero_only
 from loguru import logger as logging
 from omegaconf import DictConfig, OmegaConf, open_dict
+
+import wandb
 
 from .utils import get_required_fn_parameters
 
