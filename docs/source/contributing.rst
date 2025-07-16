@@ -55,7 +55,7 @@ PR Checklist
 When preparing the PR, please make sure to
 check the following points:
 
-- The automatic tests pass on your local machine. This can be done by running ``python -m pytest stable_ssl/tests`` in the root directory of the repository after making the desired changes.
+- The automatic tests pass on your local machine. This can be done by running ``python -m pytest stable_ssl/tests -m unit`` in the root directory of the repository after making the desired changes. Only unit tests should be run locally. See `TESTING.md <https://github.com/rbalestr-lab/stable-ssl/blob/main/TESTING.md>`_ for detailed information about writing and running tests.
 - If your pull request addresses an issue, please use the pull request title to describe the issue and mention the issue number in the pull request description. This will make sure a link back to the original issue is created.
 - The documentation is updated if necessary. You can edit the documentation using any text editor and then generate the HTML output by typing ``make html`` from the ``docs/`` directory. The resulting HTML files will be placed in ``docs/build/html/`` and are viewable in a web browser.
 
@@ -66,10 +66,17 @@ When creating a pull request (PR), use the appropriate prefix to indicate its st
 - ``[WIP]`` **(Work in Progress)**: Use this prefix for an incomplete contribution where further work is planned before seeking a full review. Consider including a `task list <https://github.com/blog/1375-task-lists-in-gfm-issues-pulls-comments>`_ in your PR description to outline planned work or track progress. Change the prefix to `[MRG]` once the PR is mature and ready for detailed review.
 
 
+
 A ``[WIP]`` PR can serve multiple purposes:
 1- Indicate that you are actively working on something to prevent duplicated efforts by others.
 2- Request early feedback on functionality, design, or API.
 3- Seek collaborators to assist with development.
+
+
+Testing
+-------
+
+All contributions should include appropriate tests. See `TESTING.md <https://github.com/rbalestr-lab/stable-ssl/blob/main/TESTING.md>`_ for comprehensive guidance on writing unit tests, integration tests, and best practices for the stable-ssl testing framework.
 
 
 New contributor tips

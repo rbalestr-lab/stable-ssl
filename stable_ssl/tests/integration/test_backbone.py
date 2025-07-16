@@ -1,0 +1,62 @@
+"""Integration tests for backbone models requiring actual model loading."""
+
+import pytest
+from transformers import AutoModel, AutoModelForImageClassification
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "name",
+    [
+        "alexnet",
+        "resnet18",
+        "resnet50",
+        "efficientnet_b0",
+        "mobilenet_v2",
+        # Add more models as needed, keeping a smaller subset for integration tests
+    ],
+)
+def test_torchvision_embedding_dim(name):
+    """Test setting embedding dimension on torchvision models."""
+    import torchvision
+
+    import stable_ssl as ossl
+
+    if "vit" in name:
+        shape = (10, 3, 224, 224)
+    else:
+        shape = (10, 3, 512, 512)
+
+    module = torchvision.models.__dict__[name]()
+    ossl.backbone.set_embedding_dim(
+        module,
+        dim=20,
+        expected_input_shape=shape,
+        expected_output_shape=(shape[0], 20),
+    )
+
+
+@pytest.mark.integration
+@pytest.mark.download
+@pytest.mark.parametrize(
+    "name,method,shape",
+    [
+        ("microsoft/resnet-18", AutoModelForImageClassification, 224),
+        ("timm/swin_tiny_patch4_window7_224.ms_in1k", AutoModel, 224),
+    ],
+)
+def test_hf_embedding_dim(name, method, shape):
+    """Test setting embedding dimension on HuggingFace models."""
+    import torch
+
+    import stable_ssl as ossl
+
+    module = method.from_pretrained(name)
+
+    module = ossl.backbone.set_embedding_dim(
+        module,
+        dim=20,
+        expected_input_shape=(10, 3, shape, shape),
+        expected_output_shape=(10, 20),
+    )
+    module(torch.zeros(size=(10, 3, shape, shape)))

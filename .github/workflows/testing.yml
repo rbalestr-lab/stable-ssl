@@ -37,8 +37,8 @@ jobs:
         run: |
           python -m pip install --user -e .[all,dev]
       # Run Tests
-      - name: Run Tests
-        run: pytest stable_ssl/ --verbose --cov=stable_ssl stable_ssl/ --cov-report term
+      - name: Run Unit Tests
+        run: pytest stable_ssl/ -m unit --verbose --cov=stable_ssl --cov-report term
       # Codecov
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v4.0.1
@@ -69,8 +69,8 @@ jobs:
         run: |
           python -m pip install --user -e .[dev]
       # Run Tests
-      - name: Run Tests
-        run: pytest stable_ssl/ --verbose --cov=stable_ssl stable_ssl/ --cov-report term
+      - name: Run Unit Tests
+        run: pytest stable_ssl/ -m unit --verbose --cov=stable_ssl --cov-report term
       # Codecov
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v4.0.1
