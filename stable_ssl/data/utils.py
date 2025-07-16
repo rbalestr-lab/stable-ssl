@@ -18,7 +18,6 @@ import torch.distributions as dist
 from filelock import FileLock
 from loguru import logger as logging
 from requests_cache import CachedSession
-from rich.console import Console
 from rich.progress import (
     BarColumn,
     MofNCompleteColumn,
@@ -38,24 +37,24 @@ def bulk_download(
     backend: str = "filesystem",
     cache_dir: str = "~/.stable_ssl/",
 ):
-    """_summary_
+    """Download multiple files concurrently.
 
     Example:
-    import stable_ssl
-    stable_ssl.data.bulk_download([
-        "https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz",
-        "https://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz",
-        ],"todelete")
+        import stable_ssl
+        stable_ssl.data.bulk_download([
+            "https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz",
+            "https://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz",
+        ], "todelete")
 
     Args:
-        urls (Iterable[str]): _description_
-        dest_folder (Union[str, Path]): _description_
-        backend (str, optional): _description_. Defaults to "filesystem".
-        cache_dir (str, optional): _description_. Defaults to "~/.stable_ssl/".
+        urls (Iterable[str]): List of URLs to download
+        dest_folder (Union[str, Path]): Destination folder for downloads
+        backend (str, optional): Storage backend type. Defaults to "filesystem".
+        cache_dir (str, optional): Cache directory path. Defaults to "~/.stable_ssl/".
     """
     num_workers = len(urls)
     filenames = [os.path.basename(urlparse(url).path) for url in urls]
-    console = Console(force_terminal=True, force_interactive=False)
+    # console = Console(force_terminal=True, force_interactive=False)
     with rich.progress.Progress(
         TextColumn("[progress.description]{task.description}"),
         BarColumn(),
@@ -217,6 +216,8 @@ class Dataset(torch.utils.data.Dataset):
 
 
 class GMM(Dataset):
+    """Gaussian Mixture Model dataset for synthetic data generation."""
+
     def __init__(self, num_components=5, num_samples=100, dim=2):
         super().__init__()
         # Define the means for each component

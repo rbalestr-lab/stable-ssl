@@ -14,9 +14,14 @@ from timm.models.vision_transformer import Block, PatchEmbed
 
 
 def get_1d_sincos_pos_embed_from_grid(embed_dim, pos):
-    """embed_dim: output dimension for each position
-    pos: a list of positions to be encoded: size (M,)
-    out: (M, D)
+    """Get 1D sinusoidal positional embedding from grid.
+
+    Args:
+        embed_dim: output dimension for each position
+        pos: a list of positions to be encoded: size (M,)
+
+    Returns:
+        out: (M, D)
     """
     assert embed_dim % 2 == 0
     omega = np.arange(embed_dim // 2, dtype=float)
@@ -45,9 +50,15 @@ def get_2d_sincos_pos_embed_from_grid(embed_dim, grid):
 
 
 def get_2d_sincos_pos_embed(embed_dim, grid_size, cls_token=False):
-    """grid_size: int of the grid height and width
-    return:
-    pos_embed: [grid_size*grid_size, embed_dim] or [1+grid_size*grid_size, embed_dim] (w/ or w/o cls_token)
+    """Get 2D sinusoidal positional embedding.
+
+    Args:
+        embed_dim: embedding dimension
+        grid_size: int of the grid height and width
+        cls_token: whether to include class token
+
+    Returns:
+        pos_embed: [grid_size*grid_size, embed_dim] or [1+grid_size*grid_size, embed_dim] (w/ or w/o cls_token)
     """
     grid_h = np.arange(grid_size, dtype=np.float32)
     grid_w = np.arange(grid_size, dtype=np.float32)
@@ -62,7 +73,7 @@ def get_2d_sincos_pos_embed(embed_dim, grid_size, cls_token=False):
 
 
 class MaskedAutoencoderViT(nn.Module):
-    """Masked Autoencoder with VisionTransformer backbone"""
+    """Masked Autoencoder with VisionTransformer backbone."""
 
     def __init__(
         self,
@@ -180,8 +191,13 @@ class MaskedAutoencoderViT(nn.Module):
             nn.init.constant_(m.weight, 1.0)
 
     def patchify(self, imgs):
-        """imgs: (N, 3, H, W)
-        x: (N, L, patch_size**2 *3)
+        """Convert images to patches.
+
+        Args:
+            imgs: (N, 3, H, W)
+
+        Returns:
+            x: (N, L, patch_size**2 *3)
         """
         p = self.patch_embed.patch_size[0]
         assert imgs.shape[2] == imgs.shape[3] and imgs.shape[2] % p == 0
@@ -193,8 +209,13 @@ class MaskedAutoencoderViT(nn.Module):
         return x
 
     def unpatchify(self, x):
-        """x: (N, L, patch_size**2 *3)
-        imgs: (N, 3, H, W)
+        """Convert patches back to images.
+
+        Args:
+            x: (N, L, patch_size**2 *3)
+
+        Returns:
+            imgs: (N, 3, H, W)
         """
         p = self.patch_embed.patch_size[0]
         h = w = int(x.shape[1] ** 0.5)
@@ -207,8 +228,17 @@ class MaskedAutoencoderViT(nn.Module):
 
     def random_masking(self, x, mask_ratio):
         """Perform per-sample random masking by per-sample shuffling.
+
         Per-sample shuffling is done by argsort random noise.
-        x: [N, L, D], sequence
+
+        Args:
+            x: [N, L, D], sequence
+            mask_ratio: ratio of patches to mask
+
+        Returns:
+            x_masked: masked sequence
+            mask: binary mask
+            ids_restore: indices to restore original order
         """
         N, L, D = x.shape  # batch, length, dim
         len_keep = int(L * (1 - mask_ratio))

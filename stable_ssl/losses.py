@@ -15,9 +15,16 @@ from .utils import all_gather, all_reduce
 
 
 def mae(target, pred, mask, norm_pix_loss=False):
-    """imgs: [N, L, p*p*3]
-    pred: [N, L, p*p*3]
-    mask: [N, L], 0 is keep, 1 is remove,
+    """Compute masked autoencoder loss.
+
+    Args:
+        target: [N, L, p*p*3] target images
+        pred: [N, L, p*p*3] predicted images
+        mask: [N, L], 0 is keep, 1 is remove
+        norm_pix_loss: whether to normalize pixels
+
+    Returns:
+        loss: mean loss value
     """
     if norm_pix_loss:
         mean = target.mean(dim=-1, keepdim=True)
