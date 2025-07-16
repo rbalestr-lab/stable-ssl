@@ -54,11 +54,11 @@ The key to SSL research is to log and monitor everything. This is what we bring 
     config = AutoConfig.from_pretrained("microsoft/resnet-18")
     backbone = ViT(512)
     projector = torch.nn.Linear(512, 128)
-    module = stable_ssl.Module(
+    module = ssl.Module(
         backbone=backbone,
         projector=projector,
         forward=forward,
-        simclr_loss=stable_ssl.losses.NTXEntLoss(temperature=0.1),
+        simclr_loss=ssl.losses.NTXEntLoss(temperature=0.1),
     )
     ```
     any `kwarg` passed to `stable_ssl.Module` is automatically set, the only reserved `kwarg` is `forward`
@@ -72,7 +72,7 @@ The key to SSL research is to log and monitor everything. This is what we bring 
             logger=False,
             enable_checkpointing=False,
         )
-    manager = ossl.Manager(trainer=trainer, module=module, data=data)
+    manager = ssl.Manager(trainer=trainer, module=module, data=data)
     manager()
     ```
     once this is specified, simply pipe everything into our manager class that will connect everything and launch fitting! This extra wrapper is needed to produce as precise logging as possible.
@@ -80,7 +80,7 @@ The key to SSL research is to log and monitor everything. This is what we bring 
 <details>
   <summary>Minimal Example : SimCLR INET10</summary>
     ```
-    import optimalssl as ossl
+    import optimalssl as ssl
     import torch
     from transformers import AutoModelForImageClassification, AutoConfig
     import lightning as pl
@@ -101,7 +101,7 @@ The key to SSL research is to log and monitor everything. This is what we bring 
         transforms.GaussianBlur(kernel_size=(5, 5), p=1.0),
         transforms.ToImage(mean=mean, std=std),
     )
-    train_dataset = ossl.data.HFDataset(
+    train_dataset = ssl.data.HFDataset(
         path="frgfm/imagenette",
         name="160px",
         split="train",
@@ -109,7 +109,7 @@ The key to SSL research is to log and monitor everything. This is what we bring 
     )
     train = torch.utils.data.DataLoader(
         dataset=train_dataset,
-        sampler=ossl.data.sampler.RepeatedRandomSampler(train_dataset, n_views=2),
+        sampler=ssl.data.sampler.RepeatedRandomSampler(train_dataset, n_views=2),
         batch_size=64,
         num_workers=20,
         drop_last=True,
@@ -121,7 +121,7 @@ The key to SSL research is to log and monitor everything. This is what we bring 
         transforms.ToImage(mean=mean, std=std),
     )
     val = torch.utils.data.DataLoader(
-        dataset=ossl.data.HFDataset(
+        dataset=ssl.data.HFDataset(
             path="frgfm/imagenette",
             name="160px",
             split="validation",
@@ -130,13 +130,13 @@ The key to SSL research is to log and monitor everything. This is what we bring 
         batch_size=128,
         num_workers=10,
     )
-    data = ossl.data.DataModule(train=train, val=val)
+    data = ssl.data.DataModule(train=train, val=val)
 
     def forward(self, batch, stage):
         batch["embedding"] = self.backbone(batch["image"])["logits"]
         if self.training:
             proj = self.projector(batch["embedding"])
-            views = ossl.data.fold_views(proj, batch["sample_idx"])
+            views = ssl.data.fold_views(proj, batch["sample_idx"])
             batch["loss"] = self.simclr_loss(views[0], views[1])
         return batch
 
@@ -144,13 +144,13 @@ The key to SSL research is to log and monitor everything. This is what we bring 
     backbone = AutoModelForImageClassification.from_config(config)
     projector = torch.nn.Linear(512, 128)
     backbone.classifier[1] = torch.nn.Identity()
-    module = ossl.Module(
+    module = ssl.Module(
         backbone=backbone,
         projector=projector,
         forward=forward,
-        simclr_loss=ossl.losses.NTXEntLoss(temperature=0.1),
+        simclr_loss=ssl.losses.NTXEntLoss(temperature=0.1),
     )
-    linear_probe = ossl.callbacks.OnlineProbe(
+    linear_probe = ssl.callbacks.OnlineProbe(
         "linear_probe",
         module,
         "embedding",
@@ -162,7 +162,7 @@ The key to SSL research is to log and monitor everything. This is what we bring 
             "top5": torchmetrics.classification.MulticlassAccuracy(10, top_k=5),
         },
     )
-    knn_probe = ossl.callbacks.OnlineKNN(
+    knn_probe = ssl.callbacks.OnlineKNN(
         module,
         "knn_probe",
         "embedding",
@@ -181,7 +181,7 @@ The key to SSL research is to log and monitor everything. This is what we bring 
         logger=False,
         enable_checkpointing=False,
     )
-    manager = ossl.Manager(trainer=trainer, module=module, data=data)
+    manager = ssl.Manager(trainer=trainer, module=module, data=data)
     manager()
     ```
 </details>
@@ -311,4 +311,4 @@ The library is not yet available on PyPI. You can install it from the source cod
 
 ## Contributors
 
-`stable-ssl` was started by Randall Balestriero circa 2020 for internal research projects. After numerous refactorings and simplifications, it became practical for external use circa 2024 at which point `Hugues Van Assel` and `Lucas Maes` joined as core contributors.
+`stable-ssl` was started by `Randall Balestriero` circa 2020 for internal research projects. After numerous refactorings and simplifications, it became practical for external use circa 2024 at which point `Hugues Van Assel` and `Lucas Maes` joined as core contributors.
