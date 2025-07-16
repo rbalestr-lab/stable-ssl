@@ -75,9 +75,18 @@ class RepeatedRandomSampler(torch.utils.data.DistributedSampler):
     #     return (len(self.data_source) * self.n_views) // self.num_replicas
 
     def __iter__(self) -> Iterator[int]:
+        """Iterate over the indices of the dataset.
+
+        Note: need to append the worker_id to the seed to ensure that each worker
+        gets a different random sequence. worker_init_fn is called only at the beginning
+
+        https://pytorch-lightning.readthedocs.io/en/1.7.7/api/pytorch_lightning.utilities.seed.html#pytorch_lightning.utilities.seed.seed_everything
+        """
         n = self._data_source_len
         g = torch.Generator()
-        g.manual_seed(self.seed + self.epoch)
+        worker_info = torch.utils.data.get_worker_info()
+        worker_id = worker_info.id if worker_info else 0
+        g.manual_seed(self.seed + self.epoch + worker_id)
 
         if self.replacement:
             raise NotImplementedError()
