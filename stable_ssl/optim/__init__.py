@@ -1,4 +1,17 @@
-from . import lr_scheduler
 from .lars import LARS
+from .lr_scheduler import (
+    CosineDecayer,
+    LinearWarmup,
+    LinearWarmupCosineAnnealing,
+    LinearWarmupCyclicAnnealing,
+    LinearWarmupThreeStepsAnnealing,
+)
 
-__all__ = [lr_scheduler, LARS]
+__all__ = [
+    LARS,
+    CosineDecayer,
+    LinearWarmup,
+    LinearWarmupCosineAnnealing,
+    LinearWarmupCyclicAnnealing,
+    LinearWarmupThreeStepsAnnealing,
+]

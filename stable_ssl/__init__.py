@@ -1,10 +1,8 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-
 import logging
-
-import richuru
+import sys
 
 from . import backbone, callbacks, data, losses, module, optim, static, utils
 from .__about__ import (
@@ -15,10 +13,34 @@ from .__about__ import (
     __url__,
     __version__,
 )
+from .callbacks import (
+    EarlyStopping,
+    ImageRetrieval,
+    LiDAR,
+    LoggingCallback,
+    ModuleSummary,
+    OnlineKNN,
+    OnlineProbe,
+    OnlineWriter,
+    RankMe,
+    SklearnCheckpoint,
+    TrainerInfo,
+)
 from .manager import Manager
 from .module import Module
 
 __all__ = [
+    OnlineProbe,
+    SklearnCheckpoint,
+    OnlineKNN,
+    TrainerInfo,
+    LoggingCallback,
+    ModuleSummary,
+    EarlyStopping,
+    OnlineWriter,
+    RankMe,
+    LiDAR,
+    ImageRetrieval,
     utils,
     data,
     module,
@@ -37,12 +59,17 @@ __all__ = [
     __url__,
     __version__,
 ]
-import sys
 
+# Setup logging
 from loguru import logger
 
-richuru.install()
+# Try to install richuru for better formatting if available
+try:
+    import richuru
 
+    richuru.install()
+except ImportError:
+    pass
 
 logger.remove()
 logger.add(
@@ -51,28 +78,7 @@ logger.add(
 )
 
 
-# # REDIRECT STANDARD PRINTING TO LOGURU
-# class StreamToLoguru:
-#     def __init__(self, logger, level="INFO"):
-#         self.logger = logger
-#         self.level = level
-
-#     def write(self, message):
-#         if message.strip():  # Avoid logging empty lines
-#             self.logger.opt(depth=1).log(self.level, message.strip())
-
-#     def flush(self):
-#         pass  # Loguru handles flushing internally
-
-# @property
-# def encoding(self):
-#     return "utf-8"
-
-
-# sys.stdout = StreamToLoguru(logger, "INFO")
-
-
-# REDIRECT STANDARD LOGGING TO LOGURU
+# Redirect standard logging to loguru
 class InterceptHandler(logging.Handler):
     def emit(self, record):
         # Get corresponding Loguru level if it exists
@@ -94,6 +100,7 @@ class InterceptHandler(logging.Handler):
 logging.root.handlers = []
 logging.basicConfig(handlers=[InterceptHandler()], level=0)
 
+# Try to set datasets logging verbosity if available
 try:
     import datasets
 
