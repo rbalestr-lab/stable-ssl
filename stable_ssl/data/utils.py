@@ -289,7 +289,7 @@ class Subset(Dataset):
 class FromTorchDataset(Dataset):
     """Wrapper for PyTorch datasets with custom column naming and transforms."""
 
-    def __init__(self, dataset, names, transform):
+    def __init__(self, dataset, names, transform=None):
         super().__init__(transform)
         self.dataset = dataset
         self.names = names
