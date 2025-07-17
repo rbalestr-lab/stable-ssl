@@ -3,15 +3,15 @@ from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 import torch
 import torch.nn.functional as F
-from lightning.pytorch import Callback, LightningModule, Trainer
+from lightning.pytorch import LightningModule, Trainer
 from loguru import logger as logging
 from torch import Tensor
 
-from ..utils import UnsortedQueue
+from .queue import OnlineQueue
 from .utils import format_metrics_as_dict
 
 
-class OnlineKNN(Callback):
+class OnlineKNN(OnlineQueue):
     """Weighted KNN online evaluator for self-supervised learning.
 
     The weighted KNN classifier matches sec 3.4 of https://arxiv.org/pdf/1805.01978.pdf.
@@ -49,8 +49,6 @@ class OnlineKNN(Callback):
         normalizer: str = "batch_norm",
         chunk_size: int = 1000,
     ) -> None:
-        super().__init__()
-
         # Validate inputs
         if k <= 0:
             raise ValueError(f"k must be positive, got {k}")
@@ -63,45 +61,34 @@ class OnlineKNN(Callback):
                 f"normalizer must be 'batch_norm' or 'layer_norm', got '{normalizer}'"
             )
 
-        logging.info(f"Setting up callback ({self.NAME})")
-        logging.info(f"\t- {input=}")
-        logging.info(f"\t- {target=}")
-        logging.info(f"\t- {k=}, {temperature=}")
-        logging.info(f"\t- {queue_length=}, {chunk_size=}")
-        logging.info("\t- caching modules into `_callbacks_modules`")
+        # Process features_dim
+        if isinstance(features_dim, (list, tuple)):
+            features_dim = int(np.prod(features_dim))
 
-        if name in pl_module._callbacks_modules:
-            raise ValueError(f"{name=} already used in callbacks")
+        # Initialize parent OnlineQueue with both input and target
+        super().__init__(
+            pl_module=pl_module,
+            name=name,
+            to_save=[input, target],
+            queue_length=queue_length,
+            dims=[features_dim, None],  # features have dims, labels inferred
+            dtypes=[None, None],  # Both dtypes inferred from data
+        )
 
-        self.name = name
         self.input = input
         self.target = target
         self.k = k
         self.temperature = temperature
         self.chunk_size = chunk_size
-
-        if isinstance(features_dim, (list, tuple)):
-            features_dim = int(np.prod(features_dim))
         self.features_dim = features_dim
 
+        # Add normalizer to the module dict
         normalizer_module = self._create_normalizer(normalizer, features_dim)
+        pl_module._callbacks_modules[name]["normalizer"] = normalizer_module
 
-        pl_module._callbacks_modules[name] = torch.nn.ModuleDict(
-            {
-                "normalizer": normalizer_module,
-                "queue_X": UnsortedQueue(queue_length, features_dim),
-                "queue_y": UnsortedQueue(queue_length),
-            }
-        )
-
-        logging.info(
-            f"`_callbacks_modules` now contains ({list(pl_module._callbacks_modules.keys())})"
-        )
+        # Add metrics
         logging.info("\t- caching metrics into `_callbacks_metrics`")
         pl_module._callbacks_metrics[name] = format_metrics_as_dict(metrics)
-
-        # Note: Cached feature banks are stored on pl_module during validation
-        # as _cached_{name}_X and _cached_{name}_y for potential cross-callback access
 
     def _create_normalizer(self, normalizer: str, features_dim: int) -> torch.nn.Module:
         """Create the appropriate normalizer module."""
@@ -122,47 +109,47 @@ class OnlineKNN(Callback):
         batch: Dict,
         batch_idx: int,
     ) -> None:
-        """Store features and labels during training."""
+        """Store normalized features and labels during training."""
+        # Only proceed if input is in batch (parent will handle the warning)
         if self.input not in batch:
-            logging.warning(f"Input key '{self.input}' not found in batch")
-            return
-        if self.target not in batch:
-            logging.warning(f"Target key '{self.target}' not found in batch")
             return
 
         with torch.no_grad():
+            # Normalize features before storing
             features = batch[self.input]
             normalizer = pl_module._callbacks_modules[self.name]["normalizer"]
             normalizer = normalizer.to(features.device)
             normalizer.train()  # to update running statistics
             normalized = normalizer(features)
-            pl_module._callbacks_modules[self.name]["queue_X"].append(normalized)
-            pl_module._callbacks_modules[self.name]["queue_y"].append(
-                batch[self.target]
+
+            # Create a modified batch with normalized features
+            modified_batch = batch.copy()
+            modified_batch[self.input] = normalized
+
+            # Use parent's on_train_batch_end to store both
+            super().on_train_batch_end(
+                trainer, pl_module, outputs, modified_batch, batch_idx
             )
 
     def on_validation_epoch_start(
         self, trainer: Trainer, pl_module: LightningModule
     ) -> None:
-        """Gather features from all processes at validation start."""
-        logging.info(
-            f"(Validation epoch start, {self.name}) gather queue from all processes"
-        )
+        """Use parent's validation caching and handle distributed gathering."""
+        # Call parent to create the validation cache
+        super().on_validation_epoch_start(trainer, pl_module)
 
-        qx = pl_module._callbacks_modules[self.name]["queue_X"]
-        qy = pl_module._callbacks_modules[self.name]["queue_y"]
+        # Get cached data
+        cached_data = pl_module._callbacks_validation_cache[self.name]
+        X = cached_data[self.input]
+        y = cached_data[self.target]
 
-        X = qx.get()
-        y = qy.get()
-
-        # Handle distributed training
+        # Handle distributed training gathering
         if trainer.world_size > 1:
             X = pl_module.all_gather(X).flatten(0, 1)
             y = pl_module.all_gather(y).flatten(0, 1)
-
-        # Store on pl_module for potential cross-callback access
-        setattr(pl_module, f"_cached_{self.name}_X", X)
-        setattr(pl_module, f"_cached_{self.name}_y", y)
+            # Update cache with gathered data
+            pl_module._callbacks_validation_cache[self.name][self.input] = X
+            pl_module._callbacks_validation_cache[self.name][self.target] = y
 
         if X.size(0) > 0:
             logging.info(
@@ -181,8 +168,15 @@ class OnlineKNN(Callback):
         dataloader_idx: int = 0,
     ) -> None:
         """Compute KNN predictions during validation."""
-        cached_X = getattr(pl_module, f"_cached_{self.name}_X", None)
-        cached_y = getattr(pl_module, f"_cached_{self.name}_y", None)
+        # Check if validation cache exists
+        if not hasattr(pl_module, "_callbacks_validation_cache"):
+            return
+        if self.name not in pl_module._callbacks_validation_cache:
+            return
+
+        cached_data = pl_module._callbacks_validation_cache[self.name]
+        cached_X = cached_data.get(self.input)
+        cached_y = cached_data.get(self.target)
 
         if cached_X is None or cached_X.size(0) == 0:
             return
@@ -276,13 +270,4 @@ class OnlineKNN(Callback):
 
         pl_module.log_dict(logs, on_step=False, on_epoch=True)
 
-    def on_validation_epoch_end(
-        self, trainer: Trainer, pl_module: LightningModule
-    ) -> None:
-        """Clean up cached data after validation."""
-        logging.info(f"(Validation epoch end, {self.name}) cleanup")
-        # Remove cached attributes from pl_module
-        if hasattr(pl_module, f"_cached_{self.name}_X"):
-            delattr(pl_module, f"_cached_{self.name}_X")
-        if hasattr(pl_module, f"_cached_{self.name}_y"):
-            delattr(pl_module, f"_cached_{self.name}_y")
+    # on_validation_epoch_end is handled by parent OnlineQueue

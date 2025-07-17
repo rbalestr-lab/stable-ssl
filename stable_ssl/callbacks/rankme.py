@@ -23,6 +23,13 @@ class RankMe(OnlineQueue):
 
     Higher RankMe values indicate more dimensions are being effectively used,
     while lower values suggest dimensional collapse.
+
+    Args:
+        pl_module: PyTorch Lightning module to attach the callback to.
+        name: Unique name for this callback instance.
+        target: Key in batch dict containing the feature embeddings to monitor.
+        queue_length: Maximum number of samples to store in the queue.
+        target_shape: Shape of the target embeddings (e.g., [768] for 768-dim features).
     """
 
     def __init__(

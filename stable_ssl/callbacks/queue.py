@@ -8,15 +8,35 @@ from stable_ssl.utils import UnsortedQueue
 
 
 class OnlineQueue(Callback):
-    """Online queue callback for storing and managing tensors during training.
+    """Maintain per-key circular buffers during training and snapshot them during validation.
+
+    This callback automatically creates an `UnsortedQueue` for each key in
+    `to_save` on your `pl_module`, appends that batch tensor at the end of every
+    training batch, and wraps around when it reaches `queue_length`.  At the
+    start of validation it takes a read-only snapshot of all queues, storing
+    them in `pl_module._callbacks_validation_cache[name]`, which downstream
+    callbacks can use (e.g. for contrastive losses or nearest-neighbor metrics).
 
     Args:
-        pl_module: PyTorch Lightning module.
-        name: Name of the callback.
-        to_save: Keys of tensors in the batch dict to store in queues (e.g., ['features', 'labels']).
-        queue_length: Maximum length of the queue.
-        dims: Dimensions of the tensors to store. Use None to infer from first batch.
-        dtypes: Data types of the tensors to store. Use None to infer from first batch.
+        pl_module (LightningModule):
+            Your LightningModule; this callback will store its queues in
+            `pl_module._callbacks_modules[name]`.
+        name (str):
+            Unique identifier for this queue callback.  Must not already exist
+            in `pl_module._callbacks_modules`.
+        to_save (str or Iterable[str]):
+            Batch keys (e.g. `"features"`, `"labels"`) whose tensors will be
+            enqueued every training step.
+        queue_length (int):
+            Maximum number of elements to keep per queue.  Once full, oldest
+            entries are overwritten in circular fashion.
+        dims (int, tuple[int, ...], list[int or tuple[int, ...]], optional):
+            Pre-allocate buffers with these shapes.  If a single value is given,
+            it is broadcast to all `to_save` keys.  If None (default), shapes
+            are inferred lazily from the first batch.
+        dtypes (torch.dtype or list[torch.dtype], optional):
+            Pre-allocate buffers with these dtypes.  Behaves like `dims` re:
+            broadcasting and inference on first batch.
     """
 
     def __init__(
