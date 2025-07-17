@@ -89,10 +89,8 @@ class OnlineKNN(Callback):
         pl_module._callbacks_modules[name] = torch.nn.ModuleDict(
             {
                 "normalizer": normalizer_module,
-                "queue_X": UnsortedQueue(
-                    queue_length, features_dim
-                ),  # Will use input dtype
-                "queue_y": UnsortedQueue(queue_length, (), torch.long),
+                "queue_X": UnsortedQueue(queue_length, features_dim),
+                "queue_y": UnsortedQueue(queue_length),
             }
         )
 

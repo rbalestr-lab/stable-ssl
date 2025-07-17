@@ -13,7 +13,9 @@ def wrap_validation_step(fn, name):
         if batch_idx > 0:
             return batch
         logging.info(f"{name}: batch 0 of validation step, computing RankMe")
-        embeddings = list(getattr(self, "_callbacks_queue")[name].values())[0]
+        embeddings = list(getattr(self, "_callbacks_validation_cache")[name].values())[
+            0
+        ]
         encoding = self.all_gather(embeddings).flatten(0, 1)
         if self.trainer.global_rank == 0:
             s = torch.linalg.svdvals(encoding)
