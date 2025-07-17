@@ -174,7 +174,7 @@ class TestDatasetUnit:
         assert renamed_data["toto"] == "image_data"
         assert renamed_data["label"] == 1
 
-    def test_repated_sampler_replicas(self):
+    def test_repeated_sampler_replicas(self):
         import stable_ssl as ssl
 
         results = {}
