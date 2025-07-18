@@ -80,11 +80,11 @@ The key to SSL research is to log and monitor everything. This is what we bring 
 <details>
   <summary>Minimal Example : SimCLR INET10</summary>
     ```
-    import optimalssl as ssl
+    import stable_ssl as ssl
     import torch
     from transformers import AutoModelForImageClassification, AutoConfig
     import lightning as pl
-    from optimalssl.data import transforms
+    from stable_ssl.data import transforms
     import torchmetrics
 
     # without transform

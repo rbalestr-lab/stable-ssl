@@ -15,16 +15,16 @@ Tests in stable-ssl are categorized to separate fast unit tests from slow integr
 
 ```bash
 # Unit tests only (CI default)
-pytest -m unit
+python -m pytest -m unit
 
 # Integration tests
-pytest -m integration
+python -m pytest -m integration
 
 # All tests
-pytest
+python -m pytest
 
 # Exclude slow tests
-pytest -m "not slow"
+python -m pytest -m "not slow"
 ```
 
 ## Test Organization
@@ -99,5 +99,5 @@ def test_simclr_training():
 GitHub Actions runs only unit tests:
 ```yaml
 - name: Run Unit Tests
-  run: pytest stable_ssl/ -m unit --verbose --cov=stable_ssl --cov-report term
+  run: python -m pytest stable_ssl/ -m unit --verbose --cov=stable_ssl --cov-report term
 ```

@@ -52,8 +52,12 @@ class OnlineQueue(Callback):
         # Initialize queue if not already done (handles fit, validate, test, etc.)
         if self._queue is None:
             self._queue = UnsortedQueue(self.queue_length, self.dim, self.dtype)
-            # Register as a submodule so it moves with the model
-            pl_module.add_module(f"queue_{self.key}_{id(self)}", self._queue)
+            # Register in _callbacks_modules for consistency with other callbacks
+            queue_key = f"queue_{self.key}_{id(self)}"
+            pl_module._callbacks_modules[queue_key] = self._queue
+            logging.info(
+                f"OnlineQueue: Registered queue as '{queue_key}' in _callbacks_modules"
+            )
 
     def on_train_batch_end(
         self,

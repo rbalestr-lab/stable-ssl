@@ -33,44 +33,44 @@ stable_ssl/tests/
 
 ### Run only unit tests (default, used in CI)
 ```bash
-pytest  # Default behavior
+python -m pytest  # Default behavior
 # or explicitly
-pytest -m unit
+python -m pytest -m unit
 ```
 
 ### Run integration tests
 ```bash
-pytest -m integration
+python -m pytest -m integration
 ```
 
 ### Run all tests
 ```bash
-pytest -m ""
+python -m pytest -m ""
 ```
 
 ### Run tests by specific markers
 ```bash
 # GPU tests only
-pytest -m gpu
+python -m pytest -m gpu
 
 # Tests that download data
-pytest -m download
+python -m pytest -m download
 
 # Slow tests
-pytest -m slow
+python -m pytest -m slow
 
 # Combine markers
-pytest -m "unit and not slow"
+python -m pytest -m "unit and not slow"
 ```
 
 ### Run specific test files
 ```bash
 # Run all transform tests
-pytest stable_ssl/tests/unit/test_transforms.py
-pytest stable_ssl/tests/integration/test_transforms.py
+python -m pytest stable_ssl/tests/unit/test_transforms.py
+python -m pytest stable_ssl/tests/integration/test_transforms.py
 
 # Run with coverage
-pytest --cov=stable_ssl -m unit
+python -m pytest --cov=stable_ssl -m unit
 ```
 
 ## Test Markers
@@ -129,7 +129,7 @@ def test_full_training():
 The CI pipeline runs only unit tests by default:
 ```yaml
 - name: Run Unit Tests
-  run: pytest stable_ssl/ -m unit --verbose --cov=stable_ssl
+  run: python -m pytest stable_ssl/ -m unit --verbose --cov=stable_ssl
 ```
 
 Integration tests can be run separately in nightly builds or on-demand.
