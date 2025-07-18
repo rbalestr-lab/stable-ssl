@@ -68,16 +68,89 @@ class OnlineQueue(Callback):
         if name in pl_module._callbacks_modules:
             raise ValueError(f"{name=} already used in callbacks")
 
-        pl_module._callbacks_modules[name] = torch.nn.ModuleDict(
-            {
-                n: UnsortedQueue(queue_length, dim, dtype)
-                if dim is not None and dtype is not None
-                else UnsortedQueue(queue_length, dim)
-                if dim is not None
-                else UnsortedQueue(queue_length)
-                for n, dim, dtype in zip(to_save, dims, dtypes)
-            }
-        )
+        # Initialize shared queues registry if not exists
+        if not hasattr(pl_module, "_shared_queues"):
+            pl_module._shared_queues = {}
+            pl_module._shared_queues_metadata = {}  # Track queue properties
+
+        # Create ModuleDict for this callback
+        pl_module._callbacks_modules[name] = torch.nn.ModuleDict()
+
+        # Process each key to save
+        for key, dim, dtype in zip(to_save, dims, dtypes):
+            # Check if a shared queue already exists for this key
+            if key in pl_module._shared_queues:
+                existing_meta = pl_module._shared_queues_metadata[key]
+                # Check compatibility
+                # For dtype: None is compatible with anything (will be inferred)
+                dtype_compatible = (
+                    existing_meta["dtype"] == dtype
+                    or existing_meta["dtype"] is None
+                    or dtype is None
+                )
+                # For dim: None is compatible with anything (will be inferred)
+                dim_compatible = (
+                    existing_meta["dim"] == dim
+                    or existing_meta["dim"] is None
+                    or dim is None
+                )
+
+                if dtype_compatible and dim_compatible:
+                    # Check queue length compatibility
+                    if existing_meta["queue_length"] == queue_length:
+                        # Fully compatible - reuse queue
+                        logging.info(
+                            f"\t- Reusing existing queue for '{key}' "
+                            f"(length={queue_length}, dim={dim}, dtype={dtype})"
+                        )
+                        pl_module._callbacks_modules[name][key] = (
+                            pl_module._shared_queues[key]
+                        )
+                        existing_meta["callbacks"].append(name)
+                    else:
+                        # Different queue length - create separate queue with warning
+                        logging.warning(
+                            f"Queue for '{key}' already exists with length "
+                            f"{existing_meta['queue_length']}, but callback '{name}' "
+                            f"needs length {queue_length}. Creating separate queue."
+                        )
+                        # Create new queue for this callback
+                        queue = UnsortedQueue(queue_length, dim, dtype)
+                        pl_module._callbacks_modules[name][key] = queue
+                else:
+                    # Incompatible dims or dtype - raise error
+                    incompatible_parts = []
+                    if not dim_compatible:
+                        incompatible_parts.append(
+                            f"dim (existing={existing_meta['dim']}, required={dim})"
+                        )
+                    if not dtype_compatible:
+                        incompatible_parts.append(
+                            f"dtype (existing={existing_meta['dtype']}, required={dtype})"
+                        )
+
+                    raise ValueError(
+                        f"Incompatible queue configuration for '{key}': "
+                        f"{' and '.join(incompatible_parts)}. "
+                        f"Note: None values are inferred from first batch."
+                    )
+            else:
+                # No existing queue - create new shared queue
+                queue = UnsortedQueue(queue_length, dim, dtype)
+                pl_module._shared_queues[key] = queue
+                pl_module._shared_queues_metadata[key] = {
+                    "queue_length": queue_length,
+                    "dim": dim,
+                    "dtype": dtype,
+                    "callbacks": [name],
+                    "owner": name,  # First callback to create queue owns the append
+                }
+                pl_module._callbacks_modules[name][key] = queue
+                logging.info(
+                    f"\t- Created new shared queue for '{key}' "
+                    f"(length={queue_length}, dim={dim}, dtype={dtype})"
+                )
+
         logging.info(
             f"`_callbacks_modules` now contains ({list(pl_module._callbacks_modules.keys())})"
         )
@@ -110,7 +183,18 @@ class OnlineQueue(Callback):
                         f"Key '{key}' not found in batch for {self.name} callback. Expected one of: {self.to_save}"
                     )
                     continue
-                pl_module._callbacks_modules[self.name][key].append(batch[key])
+
+                # Only append if this callback owns the shared queue or it's not a shared queue
+                if (
+                    hasattr(pl_module, "_shared_queues_metadata")
+                    and key in pl_module._shared_queues_metadata
+                ):
+                    # This is a shared queue - only append if we're the owner
+                    if pl_module._shared_queues_metadata[key]["owner"] == self.name:
+                        pl_module._callbacks_modules[self.name][key].append(batch[key])
+                else:
+                    # Not a shared queue (e.g., different queue_length) - always append
+                    pl_module._callbacks_modules[self.name][key].append(batch[key])
 
     def on_validation_epoch_start(self, trainer, pl_module):
         """Snapshot training queue contents at validation start for other callbacks to access.
@@ -160,7 +244,11 @@ class OnlineQueue(Callback):
         is deleted; the actual training queues remain intact.
         """
         logging.info(f"{self.name}: validation epoch end, cleaning up cache")
-        del pl_module._callbacks_queue_snapshots[self.name]
+        if (
+            hasattr(pl_module, "_callbacks_queue_snapshots")
+            and self.name in pl_module._callbacks_queue_snapshots
+        ):
+            del pl_module._callbacks_queue_snapshots[self.name]
 
     def get_queue_snapshot(
         self, pl_module: LightningModule

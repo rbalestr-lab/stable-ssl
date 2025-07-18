@@ -145,6 +145,7 @@ class OnlineKNN(OnlineQueue):
 
             self._log_metrics(pl_module, predictions, batch[self.target])
 
+    @torch.no_grad()
     def _compute_knn_predictions(
         self,
         batch: Dict,
@@ -153,36 +154,34 @@ class OnlineKNN(OnlineQueue):
         cached_y: Tensor,
     ) -> Optional[Tensor]:
         """Compute KNN predictions with memory-efficient chunked processing."""
-        with torch.no_grad():
-            features = batch[self.input]
-            batch_size = features.size(0)
-            num_classes = cached_y.max().item() + 1
+        features = batch[self.input]
+        batch_size = features.size(0)
+        num_classes = cached_y.max().item() + 1
 
-            predictions = torch.zeros(
-                batch_size, num_classes, device=features.device, dtype=torch.float32
-            )
+        predictions = torch.zeros(
+            batch_size, num_classes, device=features.device, dtype=torch.float32
+        )
 
-            if cached_X.device != features.device:
-                cached_X = cached_X.to(features.device)
-                cached_y = cached_y.to(features.device)
+        # Ensure tensors are on the same device for distance computation
+        if cached_X.device != features.device:
+            cached_X = cached_X.to(features.device)
+            cached_y = cached_y.to(features.device)
 
-            k_actual = min(self.k, cached_X.size(0))
+        k_actual = min(self.k, cached_X.size(0))
 
-            chunk_size = batch_size if self.chunk_size == -1 else self.chunk_size
-            dist_matrix = compute_pairwise_distances_chunked(
-                cached_X, features, metric=self.distance_metric, chunk_size=chunk_size
-            )
-            dist_weight, sim_indices = dist_matrix.topk(
-                k=k_actual, dim=0, largest=False
-            )
-            # 1/(d+T) is a monotonic proxy for exp(-d/T)
-            dist_weight = 1 / dist_weight.add_(self.temperature)
+        chunk_size = batch_size if self.chunk_size == -1 else self.chunk_size
+        dist_matrix = compute_pairwise_distances_chunked(
+            cached_X, features, metric=self.distance_metric, chunk_size=chunk_size
+        )
+        dist_weight, sim_indices = dist_matrix.topk(k=k_actual, dim=0, largest=False)
+        # 1/(d+T) is a monotonic proxy for exp(-d/T)
+        dist_weight = 1 / dist_weight.add_(self.temperature)
 
-            one_hot_labels = F.one_hot(cached_y[sim_indices], num_classes=num_classes)
+        one_hot_labels = F.one_hot(cached_y[sim_indices], num_classes=num_classes)
 
-            # Weighted voting
-            predictions = (dist_weight.unsqueeze(-1) * one_hot_labels).sum(0)
-            return predictions.detach()
+        # Weighted voting
+        predictions = (dist_weight.unsqueeze(-1) * one_hot_labels).sum(0)
+        return predictions
 
     def _log_metrics(
         self, pl_module: LightningModule, predictions: Tensor, targets: Tensor
