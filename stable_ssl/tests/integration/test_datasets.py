@@ -148,3 +148,20 @@ class TestDatasetIntegration:
             batch = next(iter(loader))
             assert batch["image"].shape[0] == batch_size
             assert len(batch["label"]) == batch_size
+
+    @pytest.integration
+    def test_fromtensor_dataset(self):
+        """Test FromTensorDataset transform logic."""
+        from stable_ssl.data import transforms
+        from stable_ssl.data.utils import FromTorchDataset
+
+        mock_data = torch.randn(128, 3, 32, 32)
+        trans = transforms.ToImage(mean=(0.5,), std=(0.5,))
+
+        # fake torch dataset
+        dataset = torch.utils.data.TensorDataset(mock_data)
+        data = FromTorchDataset(dataset, names=["image"])
+        data_trans = FromTorchDataset(dataset, names=["image"], transform=trans)
+
+        assert list(data[0].keys()) == ["image"]
+        assert list(data_trans[0].keys()) == ["image"]
