@@ -178,3 +178,6 @@ wandb/
 *.out
 .vscode/launch.json
 *.lock
+
+*.sbatch
+*.sh
