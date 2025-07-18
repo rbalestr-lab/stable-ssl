@@ -147,6 +147,13 @@ class OnlineKNN(Callback):
             )
             return
 
+        # Check if cached data is empty
+        if cached_features.numel() == 0 or cached_labels.numel() == 0:
+            logging.warning(
+                f"{self.name}: Queue data is empty, skipping KNN computation"
+            )
+            return
+
         # Compute predictions
         predictions = self._compute_knn_predictions(
             batch[self.input], cached_features, cached_labels
@@ -184,6 +191,12 @@ class OnlineKNN(Callback):
 
         k_actual = min(self.k, cached_features.size(0))
 
+        # Ensure both tensors have the same dtype for distance computation
+        if cached_features.dtype != features.dtype:
+            # Convert both to float32 for accurate distance computation
+            cached_features = cached_features.float()
+            features = features.float()
+
         # Compute distances
         chunk_size = batch_size if self.chunk_size == -1 else self.chunk_size
         dist_matrix = compute_pairwise_distances_chunked(
@@ -200,7 +213,12 @@ class OnlineKNN(Callback):
         dist_weight = 1 / dist_weight.add_(self.temperature)
 
         # One-hot encode labels
-        one_hot_labels = F.one_hot(cached_labels[sim_indices], num_classes=num_classes)
+        # sim_indices has shape [k_actual, batch_size], cached_labels has shape [N, 1]
+        # We need to squeeze cached_labels to 1D before indexing
+        labels_1d = (
+            cached_labels.squeeze(-1) if cached_labels.dim() > 1 else cached_labels
+        )
+        one_hot_labels = F.one_hot(labels_1d[sim_indices], num_classes=num_classes)
 
         # Weighted voting
         predictions = (dist_weight.unsqueeze(-1) * one_hot_labels).sum(0)

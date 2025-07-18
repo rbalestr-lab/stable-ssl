@@ -87,6 +87,12 @@ class RankMe(Callback):
             )
             return
 
+        if embeddings.numel() == 0:
+            logging.warning(
+                f"{self.name}: Queue data is empty, skipping RankMe computation"
+            )
+            return
+
         # Compute RankMe on rank 0 only
         if trainer.global_rank == 0:
             with torch.no_grad():

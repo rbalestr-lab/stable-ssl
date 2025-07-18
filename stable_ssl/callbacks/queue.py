@@ -71,7 +71,13 @@ class OnlineQueue(Callback):
                     f"Available keys: {list(batch.keys())}"
                 )
                 return
-            self._queue.append(batch[self.key])
+
+            data = batch[self.key]
+            # If dim is specified as a single int and data is 1D, add a dimension
+            if isinstance(self.dim, int) and data.dim() == 1:
+                data = data.unsqueeze(1)
+
+            self._queue.append(data)
 
     def on_validation_epoch_start(
         self, trainer: Trainer, pl_module: LightningModule
