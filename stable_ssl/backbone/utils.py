@@ -279,6 +279,8 @@ def set_embedding_dim(
     else:
         assert expected_output_shape is not None
         x = torch.empty(expected_input_shape, device="meta")
+        # Save original device before moving to meta
+        original_device = next(module.parameters()).device
         out = module.to("meta")(x)
         if isinstance(out, tuple):
             assert out[0].shape == expected_output_shape
@@ -286,4 +288,7 @@ def set_embedding_dim(
             assert out["logits"].shape == expected_output_shape
         else:
             assert out.shape == expected_output_shape
+        # Move module back to original device
+        # Use to_empty() for meta tensors which have no data
+        module = module.to_empty(device=original_device)
     return module

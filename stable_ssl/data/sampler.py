@@ -60,7 +60,7 @@ class RepeatedRandomSampler(torch.utils.data.DistributedSampler):
                 (self._data_source_len - self.num_replicas) / self.num_replicas  # type: ignore[arg-type]
             )
         else:
-            self.num_samples = self._data_source_len
+            self.num_samples = self._data_source_len // self.num_replicas  # type: ignore[arg-type]
 
         if not isinstance(self.replacement, bool):
             raise TypeError(

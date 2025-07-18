@@ -1,182 +1,238 @@
-import types
-from typing import Union
+"""KNN callback using the new queue discovery architecture."""
+
+from typing import Dict, List, Literal, Optional, Tuple, Union
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from lightning.pytorch import Callback, LightningModule, Trainer
 from loguru import logger as logging
+from torch import Tensor
 
-from ..utils import UnsortedQueue
+from stable_ssl.utils.distance_metrics import compute_pairwise_distances_chunked
+
+from .queue import find_or_create_queue_callback
 from .utils import format_metrics_as_dict
 
 
-def wrap_training_step(fn, target, input, name):
-    def ffn(
-        self,
-        batch,
-        batch_idx,
-        fn=fn,
-        name=name,
-        target=target,
-        input=input,
-    ):
-        batch = fn(batch, batch_idx)
-        with torch.no_grad():
-            norm = self._callbacks_modules[name]["normalizer"](batch[input])
-            self._callbacks_modules[name]["queue_X"].append(norm.half())
-            self._callbacks_modules[name]["queue_y"].append(batch[target])
-        return batch
-
-    return ffn
-
-
-def wrap_validation_step(fn, target, input, name, k, temperature):
-    def ffn(
-        self,
-        batch,
-        batch_idx,
-        fn=fn,
-        name=name,
-        target=target,
-        input=input,
-        k=k,
-        temperature=temperature,
-    ):
-        batch = fn(batch, batch_idx)
-        feature_bank = getattr(self, f"_cached_{name}_X")
-        if feature_bank.size(0) == 0:
-            return batch
-        labels = getattr(self, f"_cached_{name}_y")
-        num_classes = labels.max().item() + 1
-        norm = self._callbacks_modules[name]["normalizer"](batch[input]).half()
-        dist_matrix = torch.cdist(feature_bank, norm)
-        dist_weight, sim_indices = dist_matrix.topk(k=k, dim=0, largest=False)
-        dist_weight = 1 / dist_weight.add_(temperature)
-
-        one_hot_labels = torch.nn.functional.one_hot(
-            labels[sim_indices], num_classes=num_classes
-        )
-        # weighted score ---> [B, C]
-        preds = (dist_weight.unsqueeze(-1) * one_hot_labels).sum(0)
-        # add predictions to the batch dict
-        prediction_key = f"{name}_preds"
-
-        if prediction_key in batch:
-            msg = (
-                f"Asking to save predictions for callback `{name}`"
-                f"but `{prediction_key}` already exists in the batch dict."
-            )
-            logging.error(msg)
-            raise ValueError(msg)
-        batch[prediction_key] = preds.detach()
-
-        logs = {}
-        for k, metric in self._callbacks_metrics[name]["_val"].items():
-            metric(preds, batch[target])
-            logs[f"eval/{name}_{k}"] = metric
-        self.log_dict(logs, on_step=False, on_epoch=True)
-
-        return batch
-
-    return ffn
-
-
 class OnlineKNN(Callback):
-    """Weighted KNN online evaluator for self-supervised learning.
+    """Weighted KNN online evaluator using queue discovery.
 
-    The weighted KNN classifier matches sec 3.4 of https://arxiv.org/pdf/1805.01978.pdf.
-    The implementation follows:
-        1. https://github.com/zhirongw/lemniscate.pytorch/blob/master/test.py
-        2. https://github.com/leftthomas/SimCLR
-        3. https://github.com/facebookresearch/moco/blob/colab-notebook/colab/moco_cifar10_demo.ipynb
+    This callback finds OnlineQueue callbacks that track the required features
+    and labels, then uses that data for KNN evaluation during validation.
+
+    Args:
+        name: Unique identifier for this callback instance
+        input: Key in batch dict containing input features
+        target: Key in batch dict containing target labels
+        queue_length: Required queue length for both input and target
+        metrics: Dictionary of metrics to compute during validation
+        input_dim: Dimensionality of input features (None to accept any)
+        target_dim: Dimensionality of targets (None to accept any)
+        k: Number of nearest neighbors to consider
+        temperature: Temperature parameter for distance weighting
+        chunk_size: Batch size for memory-efficient distance computation (-1 for no chunking)
+        distance_metric: Distance metric to use for KNN computation
     """
-
-    NAME = "OnlineKNN"
 
     def __init__(
         self,
-        pl_module,
         name: str,
         input: str,
         target: str,
         queue_length: int,
-        metrics,
-        features_dim: Union[tuple[int], list[int], int],
+        metrics: Dict,
+        input_dim: Optional[Union[Tuple[int, ...], List[int], int]] = None,
+        target_dim: Optional[int] = None,
         k: int = 5,
         temperature: float = 0.07,
-        normalizer: str = "batch_norm",
+        chunk_size: int = -1,
+        distance_metric: Literal[
+            "euclidean", "squared_euclidean", "cosine", "manhattan"
+        ] = "euclidean",
     ) -> None:
-        logging.info(f"Setting up callback ({self.NAME})")
-        logging.info(f"\t- {input=}")
-        logging.info(f"\t- {target=}")
-        logging.info("\t- caching modules into `_callbacks_modules`")
-        if name in pl_module._callbacks_modules:
-            raise ValueError(f"{name=} already used in callbacks")
-        if type(features_dim) in [list, tuple]:
-            features_dim = np.prod(features_dim)
-        if normalizer not in ["batch_norm", "layer_norm"]:
-            raise ValueError(
-                "`normalizer` has to be one of `batch_norm` or `layer_norm`"
-            )
-        if normalizer == "batch_norm":
-            normalizer = torch.nn.BatchNorm1d(features_dim, affine=False)
-            dtype = torch.half
-        elif normalizer == "layer_norm":
-            normalizer = torch.nn.LayerNorm(
-                features_dim, elementwise_affine=False, bias=False
-            )
-            dtype = torch.half
-        else:
-            normalizer = torch.nn.Identity()
-            dtype = torch.float
+        super().__init__()
 
-        pl_module._callbacks_modules[name] = torch.nn.ModuleDict(
-            {
-                "normalizer": normalizer,
-                "queue_X": UnsortedQueue(queue_length, features_dim, dtype),
-                "queue_y": UnsortedQueue(queue_length, (), torch.long),
-            }
-        )
-        logging.info(
-            f"`_callbacks_modules` now contains ({list(pl_module._callbacks_modules.keys())})"
-        )
-        logging.info("\t- caching metrics into `_callbacks_metrics`")
-        pl_module._callbacks_metrics[name] = format_metrics_as_dict(metrics)
+        # Validate inputs
+        if k <= 0:
+            raise ValueError(f"k must be positive, got {k}")
+        if temperature <= 0:
+            raise ValueError(f"temperature must be positive, got {temperature}")
+        if chunk_size == 0 or chunk_size < -1:
+            raise ValueError(f"chunk_size must be positive or -1, got {chunk_size}")
 
-        logging.info("\t- wrapping the `training_step`")
-        fn = wrap_training_step(pl_module.training_step, target, input, name)
-        pl_module.training_step = types.MethodType(fn, pl_module)
-        logging.info("\t- wrapping the `validation_step`")
-        fn = wrap_validation_step(
-            pl_module.validation_step, target, input, name, k, temperature
-        )
-        pl_module.validation_step = types.MethodType(fn, pl_module)
+        # Process input_dim
+        if input_dim is not None and isinstance(input_dim, (list, tuple)):
+            input_dim = int(np.prod(input_dim))
 
-        self.k = k
         self.name = name
+        self.input = input
+        self.target = target
+        self.queue_length = queue_length
+        self.input_dim = input_dim
+        self.target_dim = target_dim
+        self.k = k
+        self.temperature = temperature
+        self.chunk_size = chunk_size
+        self.distance_metric = distance_metric
+        self.metrics = metrics
 
-    def on_validation_epoch_start(self, trainer, pl_module):
-        logging.info(
-            f"(Validation epoch start, {self.name}) gather queue from all processes"
-        )
+        # Queue references will be set in setup
+        self._input_queue = None
+        self._target_queue = None
 
-        qx = pl_module._callbacks_modules[self.name]["queue_X"]
-        qy = pl_module._callbacks_modules[self.name]["queue_y"]
-        if pl_module.trainer.world_size > 1:
-            X = pl_module.all_gather(qx.get()).flatten(0, 1)
-            y = pl_module.all_gather(qy.get()).flatten(0, 1)
-        else:
-            X = qx.get()
-            y = qy.get()
-        setattr(pl_module, f"_cached_{self.name}_X", X)
-        setattr(pl_module, f"_cached_{self.name}_y", y)
-        logging.info(
-            f"(Validation epoch start, {self.name}) X cache:{X.shape}, y cache: {y.shape}"
-        )
+    def setup(self, trainer: Trainer, pl_module: LightningModule, stage: str) -> None:
+        """Find or create queue callbacks and setup metrics."""
+        # Setup is needed for all stages, not just fit
+        if self._input_queue is None or self._target_queue is None:
+            # Find or create queue for input features
+            self._input_queue = find_or_create_queue_callback(
+                trainer,
+                self.input,
+                self.queue_length,
+                self.input_dim,
+                torch.float32 if self.input_dim is not None else None,
+                gather_distributed=True,  # KNN typically needs gathering
+                create_if_missing=True,
+            )
+            logging.info(f"{self.name}: Using queue for input '{self.input}'")
 
-    def on_validation_epoch_end(
-        self, trainer: Trainer, pl_module: LightningModule
+            # Find or create queue for target labels
+            self._target_queue = find_or_create_queue_callback(
+                trainer,
+                self.target,
+                self.queue_length,
+                self.target_dim,
+                torch.long if self.target_dim is not None else None,
+                gather_distributed=True,  # KNN typically needs gathering
+                create_if_missing=True,
+            )
+            logging.info(f"{self.name}: Using queue for target '{self.target}'")
+
+            # Setup metrics
+            logging.info(f"{self.name}: Setting up metrics")
+            if not hasattr(pl_module, "_callbacks_metrics"):
+                pl_module._callbacks_metrics = {}
+            pl_module._callbacks_metrics[self.name] = format_metrics_as_dict(
+                self.metrics
+            )
+
+    def on_validation_batch_end(
+        self,
+        trainer: Trainer,
+        pl_module: LightningModule,
+        outputs: Dict,
+        batch: Dict,
+        batch_idx: int,
+        dataloader_idx: int = 0,
     ) -> None:
-        logging.info(f"(Validation epoch end, {self.name}) cleanup")
-        delattr(pl_module, f"_cached_{self.name}_X")
-        delattr(pl_module, f"_cached_{self.name}_y")
+        """Compute KNN predictions during validation."""
+        # Check if required keys are in batch
+        if self.input not in batch:
+            logging.warning(f"{self.name}: Input key '{self.input}' not found in batch")
+            return
+        if self.target not in batch:
+            logging.warning(
+                f"{self.name}: Target key '{self.target}' not found in batch"
+            )
+            return
+
+        # Get cached data from queues
+        cached_features = self._input_queue.data
+        cached_labels = self._target_queue.data
+
+        if cached_features is None or cached_labels is None:
+            logging.warning(
+                f"{self.name}: Queue data not available (not in validation?)"
+            )
+            return
+
+        # Check if cached data is empty
+        if cached_features.numel() == 0 or cached_labels.numel() == 0:
+            logging.warning(
+                f"{self.name}: Queue data is empty, skipping KNN computation"
+            )
+            return
+
+        # Compute predictions
+        predictions = self._compute_knn_predictions(
+            batch[self.input], cached_features, cached_labels
+        )
+
+        if predictions is not None:
+            # Store predictions
+            prediction_key = f"{self.name}_preds"
+            if prediction_key in batch:
+                raise ValueError(f"Key '{prediction_key}' already exists in batch")
+            batch[prediction_key] = predictions
+
+            # Log metrics
+            self._log_metrics(pl_module, predictions, batch[self.target])
+
+    @torch.no_grad()
+    def _compute_knn_predictions(
+        self,
+        features: Tensor,
+        cached_features: Tensor,
+        cached_labels: Tensor,
+    ) -> Optional[Tensor]:
+        """Compute KNN predictions."""
+        batch_size = features.size(0)
+        num_classes = cached_labels.max().item() + 1
+
+        predictions = torch.zeros(
+            batch_size, num_classes, device=features.device, dtype=torch.float32
+        )
+
+        # Ensure tensors are on same device
+        if cached_features.device != features.device:
+            cached_features = cached_features.to(features.device)
+            cached_labels = cached_labels.to(features.device)
+
+        k_actual = min(self.k, cached_features.size(0))
+
+        # Ensure both tensors have the same dtype for distance computation
+        if cached_features.dtype != features.dtype:
+            # Convert both to float32 for accurate distance computation
+            cached_features = cached_features.float()
+            features = features.float()
+
+        # Compute distances
+        chunk_size = batch_size if self.chunk_size == -1 else self.chunk_size
+        dist_matrix = compute_pairwise_distances_chunked(
+            cached_features,
+            features,
+            metric=self.distance_metric,
+            chunk_size=chunk_size,
+        )
+
+        # Get k nearest neighbors
+        dist_weight, sim_indices = dist_matrix.topk(k=k_actual, dim=0, largest=False)
+
+        # Weight by inverse distance
+        dist_weight = 1 / dist_weight.add_(self.temperature)
+
+        # One-hot encode labels
+        # sim_indices has shape [k_actual, batch_size], cached_labels has shape [N, 1]
+        # We need to squeeze cached_labels to 1D before indexing
+        labels_1d = (
+            cached_labels.squeeze(-1) if cached_labels.dim() > 1 else cached_labels
+        )
+        one_hot_labels = F.one_hot(labels_1d[sim_indices], num_classes=num_classes)
+
+        # Weighted voting
+        predictions = (dist_weight.unsqueeze(-1) * one_hot_labels).sum(0)
+        return predictions
+
+    def _log_metrics(
+        self, pl_module: LightningModule, predictions: Tensor, targets: Tensor
+    ) -> None:
+        """Compute and log validation metrics."""
+        logs = {}
+        for metric_name, metric in pl_module._callbacks_metrics[self.name][
+            "_val"
+        ].items():
+            metric(predictions, targets)
+            logs[f"eval/{self.name}_{metric_name}"] = metric
+
+        pl_module.log_dict(logs, on_step=False, on_epoch=True)

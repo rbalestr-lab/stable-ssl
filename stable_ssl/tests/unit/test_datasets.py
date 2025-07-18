@@ -173,3 +173,27 @@ class TestDatasetUnit:
         assert "image" not in renamed_data
         assert renamed_data["toto"] == "image_data"
         assert renamed_data["label"] == 1
+
+    def test_repeated_sampler_replicas(self):
+        import stable_ssl as ssl
+
+        results = {}
+        num_replicas = 2
+        fake_data_source_len = 10
+
+        for rank in range(num_replicas):
+            with (
+                patch("torch.distributed.is_available", return_value=True),
+                patch("torch.distributed.is_initialized", return_value=True),
+                patch("torch.distributed.get_world_size", return_value=num_replicas),
+                patch("torch.distributed.get_rank", return_value=rank),
+            ):
+                sampler = ssl.data.RepeatedRandomSampler(
+                    data_source_or_len=fake_data_source_len, n_views=1, seed=42
+                )
+
+                epoch_len = len(list(iter(sampler)))
+                results[rank] = epoch_len
+
+        target_epoch_len = fake_data_source_len // num_replicas
+        assert all(results[rank] == target_epoch_len for rank in range(num_replicas))
