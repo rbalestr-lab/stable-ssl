@@ -1,282 +1,202 @@
-from typing import Dict, Iterable, Union
+"""Simplified queue callback that only collects data without complex sharing logic."""
+
+from typing import Optional, Union
 
 import torch
 from lightning.pytorch import Callback, LightningModule, Trainer
 from loguru import logger as logging
 
-from stable_ssl.utils import UnsortedQueue, broadcast_param_to_list
+from stable_ssl.utils import UnsortedQueue
 
 
 class OnlineQueue(Callback):
-    """Maintain per-key circular buffers during training and snapshot them during validation.
+    """Maintain a circular buffer for a single batch key during training.
 
-    This callback automatically creates an `UnsortedQueue` for each key in
-    `to_save` on your `pl_module`, appends that batch tensor at the end of every
-    training batch, and wraps around when it reaches `queue_length`.  At the
-    start of validation it takes a read-only snapshot of all queues, storing
-    them in `pl_module._callbacks_queue_snapshots[name]`, which downstream
-    callbacks can use (e.g. for nearest-neighbor metrics).
+    This callback creates a circular buffer that accumulates data during training
+    and provides snapshots during validation. Other callbacks can discover and
+    use this queue based on the data key and properties.
 
     Args:
-        pl_module (LightningModule):
-            Your LightningModule; this callback will store its queues in
-            `pl_module._callbacks_modules[name]`.
-        name (str):
-            Unique identifier for this queue callback.  Must not already exist
-            in `pl_module._callbacks_modules`.
-        to_save (str or Iterable[str]):
-            Batch keys (e.g. `"features"`, `"labels"`) whose tensors will be
-            enqueued every training step.
-        queue_length (int):
-            Maximum number of elements to keep per queue.  Once full, oldest
-            entries are overwritten in circular fashion.
-        dims (int, tuple[int, ...], list[int or tuple[int, ...]], optional):
-            Pre-allocate buffers with these shapes.  If a single value is given,
-            it is broadcast to all `to_save` keys.  If None (default), shapes
-            are inferred lazily from the first batch.
-        dtypes (torch.dtype or list[torch.dtype], optional):
-            Pre-allocate buffers with these dtypes.  Behaves like `dims` re:
-            broadcasting and inference on first batch.
-        gather_distributed (bool, optional):
-            If True, automatically gather cached data across all distributed
-            processes during validation. Default is False.
+        key: The batch key whose tensor will be queued every training step.
+        queue_length: Maximum number of elements to keep in the queue.
+        dim: Pre-allocate buffer with this shape. If None, inferred from first batch.
+        dtype: Pre-allocate buffer with this dtype. If None, inferred from first batch.
+        gather_distributed: If True, gather data across distributed processes during validation.
     """
 
     def __init__(
         self,
-        pl_module,
-        name: str,
-        to_save: Union[str, Iterable],
+        key: str,
         queue_length: int,
-        dims: Union[list[tuple[int]], list[int], int, None] = None,
-        dtypes: Union[tuple[int], list[int], int, None] = None,
+        dim: Optional[Union[int, tuple]] = None,
+        dtype: Optional[torch.dtype] = None,
         gather_distributed: bool = False,
     ) -> None:
-        # Normalize to_save to always be a list
-        if isinstance(to_save, str):
-            to_save = [to_save]
+        super().__init__()
 
-        # Broadcast all parameters to lists matching to_save length
-        dims = broadcast_param_to_list(dims, len(to_save), "dims")
-        dtypes = broadcast_param_to_list(dtypes, len(to_save), "dtypes")
-
-        logging.info(f"Setting up callback ({name=})")
-        logging.info(f"\t- {to_save=}")
-        logging.info(f"\t- {dims=}")
-        logging.info(f"\t- {dtypes=}")
-        logging.info("\t- caching modules into `_callbacks_modules`")
-        if name in pl_module._callbacks_modules:
-            raise ValueError(f"{name=} already used in callbacks")
-
-        # Initialize shared queues registry if not exists
-        if not hasattr(pl_module, "_shared_queues"):
-            pl_module._shared_queues = {}
-            pl_module._shared_queues_metadata = {}  # Track queue properties
-
-        # Create ModuleDict for this callback
-        pl_module._callbacks_modules[name] = torch.nn.ModuleDict()
-
-        # Process each key to save
-        for key, dim, dtype in zip(to_save, dims, dtypes):
-            # Check if a shared queue already exists for this key
-            if key in pl_module._shared_queues:
-                existing_meta = pl_module._shared_queues_metadata[key]
-                # Check compatibility
-                # For dtype: None is compatible with anything (will be inferred)
-                dtype_compatible = (
-                    existing_meta["dtype"] == dtype
-                    or existing_meta["dtype"] is None
-                    or dtype is None
-                )
-                # For dim: None is compatible with anything (will be inferred)
-                dim_compatible = (
-                    existing_meta["dim"] == dim
-                    or existing_meta["dim"] is None
-                    or dim is None
-                )
-
-                if dtype_compatible and dim_compatible:
-                    # Check queue length compatibility
-                    if existing_meta["queue_length"] == queue_length:
-                        # Fully compatible - reuse queue
-                        logging.info(
-                            f"\t- Reusing existing queue for '{key}' "
-                            f"(length={queue_length}, dim={dim}, dtype={dtype})"
-                        )
-                        pl_module._callbacks_modules[name][key] = (
-                            pl_module._shared_queues[key]
-                        )
-                        existing_meta["callbacks"].append(name)
-                    else:
-                        # Different queue length - create separate queue with warning
-                        logging.warning(
-                            f"Queue for '{key}' already exists with length "
-                            f"{existing_meta['queue_length']}, but callback '{name}' "
-                            f"needs length {queue_length}. Creating separate queue."
-                        )
-                        # Create new queue for this callback
-                        queue = UnsortedQueue(queue_length, dim, dtype)
-                        pl_module._callbacks_modules[name][key] = queue
-                else:
-                    # Incompatible dims or dtype - raise error
-                    incompatible_parts = []
-                    if not dim_compatible:
-                        incompatible_parts.append(
-                            f"dim (existing={existing_meta['dim']}, required={dim})"
-                        )
-                    if not dtype_compatible:
-                        incompatible_parts.append(
-                            f"dtype (existing={existing_meta['dtype']}, required={dtype})"
-                        )
-
-                    raise ValueError(
-                        f"Incompatible queue configuration for '{key}': "
-                        f"{' and '.join(incompatible_parts)}. "
-                        f"Note: None values are inferred from first batch."
-                    )
-            else:
-                # No existing queue - create new shared queue
-                queue = UnsortedQueue(queue_length, dim, dtype)
-                pl_module._shared_queues[key] = queue
-                pl_module._shared_queues_metadata[key] = {
-                    "queue_length": queue_length,
-                    "dim": dim,
-                    "dtype": dtype,
-                    "callbacks": [name],
-                    "owner": name,  # First callback to create queue owns the append
-                }
-                pl_module._callbacks_modules[name][key] = queue
-                logging.info(
-                    f"\t- Created new shared queue for '{key}' "
-                    f"(length={queue_length}, dim={dim}, dtype={dtype})"
-                )
-
-        logging.info(
-            f"`_callbacks_modules` now contains ({list(pl_module._callbacks_modules.keys())})"
-        )
-        self.name = name
-        self.to_save = to_save
+        self.key = key
+        self.queue_length = queue_length
+        self.dim = dim
+        self.dtype = dtype
         self.gather_distributed = gather_distributed
+        self._queue = None  # Will be initialized in setup
+        self._snapshot = None
+
+        logging.info(f"OnlineQueue initialized for key '{key}'")
+        logging.info(f"\t- queue_length: {queue_length}")
+        logging.info(f"\t- dim: {dim}")
+        logging.info(f"\t- dtype: {dtype}")
+
+    def setup(self, trainer: Trainer, pl_module: LightningModule, stage: str) -> None:
+        """Initialize queue during setup phase."""
+        # Initialize queue if not already done (handles fit, validate, test, etc.)
+        if self._queue is None:
+            self._queue = UnsortedQueue(self.queue_length, self.dim, self.dtype)
+            # Register as a submodule so it moves with the model
+            pl_module.add_module(f"queue_{self.key}_{id(self)}", self._queue)
 
     def on_train_batch_end(
         self,
         trainer: Trainer,
         pl_module: LightningModule,
-        outputs: Dict,
-        batch: Dict,
+        outputs: dict,
+        batch: dict,
         batch_idx: int,
     ) -> None:
-        """Store specified tensors from batch into persistent queues during training.
-
-        This method appends tensors from the current batch to their respective queues
-        in pl_module._callbacks_modules[self.name]. These queues accumulate data
-        across all training batches and epochs until they reach queue_length, at which
-        point older entries are overwritten in a circular buffer fashion.
-
-        The stored data persists across validation epochs and is used to create
-        snapshots during validation via on_validation_epoch_start.
-        """
+        """Append batch data to queue."""
         with torch.no_grad():
-            for key in self.to_save:
-                if key not in batch:
-                    logging.warning(
-                        f"Key '{key}' not found in batch for {self.name} callback. Expected one of: {self.to_save}"
-                    )
-                    continue
-
-                # Only append if this callback owns the shared queue or it's not a shared queue
-                if (
-                    hasattr(pl_module, "_shared_queues_metadata")
-                    and key in pl_module._shared_queues_metadata
-                ):
-                    # This is a shared queue - only append if we're the owner
-                    if pl_module._shared_queues_metadata[key]["owner"] == self.name:
-                        pl_module._callbacks_modules[self.name][key].append(batch[key])
-                else:
-                    # Not a shared queue (e.g., different queue_length) - always append
-                    pl_module._callbacks_modules[self.name][key].append(batch[key])
-
-    def on_validation_epoch_start(self, trainer, pl_module):
-        """Snapshot training queue contents at validation start for other callbacks to access.
-
-        This creates a temporary snapshot of the training data stored in queues,
-        making it available in pl_module._callbacks_queue_snapshots[self.name].
-        The snapshot is cleared at validation end.
-
-        If gather_distributed is True and world_size > 1, automatically gathers
-        data across all distributed processes.
-        """
-        logging.info(f"{self.name}: validation epoch start, caching queue(s)")
-
-        if not hasattr(pl_module, "_callbacks_queue_snapshots"):
-            pl_module._callbacks_queue_snapshots = {}
-
-        pl_module._callbacks_queue_snapshots[self.name] = {}
-        should_gather = self.gather_distributed and trainer.world_size > 1
-
-        if should_gather:
-            logging.info(
-                f"{self.name}: Caching and gathering distributed data across {trainer.world_size} processes"
-            )
-
-        for key in self.to_save:
-            queue = pl_module._callbacks_modules[self.name][key]
-            tensor = queue.get()
-
-            # Gather if distributed and requested
-            if should_gather:
-                gathered_tensor = pl_module.all_gather(tensor).flatten(0, 1)
-                pl_module._callbacks_queue_snapshots[self.name][key] = gathered_tensor
-                logging.info(
-                    f"\t- {key}: {tensor.shape} -> {gathered_tensor.shape} (gathered)"
+            if self.key not in batch:
+                logging.warning(
+                    f"OnlineQueue: Key '{self.key}' not found in batch. "
+                    f"Available keys: {list(batch.keys())}"
                 )
-            else:
-                pl_module._callbacks_queue_snapshots[self.name][key] = tensor
-                logging.info(f"\t- {key}: {tensor.shape}, {tensor.dtype}")
+                return
+            self._queue.append(batch[self.key])
+
+    def on_validation_epoch_start(
+        self, trainer: Trainer, pl_module: LightningModule
+    ) -> None:
+        """Create snapshot of queue contents for validation."""
+        logging.info(f"OnlineQueue: Creating snapshot for key '{self.key}'")
+
+        tensor = self._queue.get()
+
+        if self.gather_distributed and trainer.world_size > 1:
+            gathered = pl_module.all_gather(tensor).flatten(0, 1)
+            self._snapshot = gathered
+            logging.info(
+                f"\t- {self.key}: {tensor.shape} -> {gathered.shape} (gathered)"
+            )
+        else:
+            self._snapshot = tensor
+            logging.info(f"\t- {self.key}: {tensor.shape}")
 
     def on_validation_epoch_end(
         self, trainer: Trainer, pl_module: LightningModule
     ) -> None:
-        """Clean up the queue snapshot at the end of validation epoch.
+        """Clean up snapshot after validation."""
+        self._snapshot = None
 
-        This removes the temporary snapshot of training queue contents that was created
-        at validation start. Only the snapshot in pl_module._callbacks_queue_snapshots
-        is deleted; the actual training queues remain intact.
-        """
-        logging.info(f"{self.name}: validation epoch end, cleaning up cache")
-        if (
-            hasattr(pl_module, "_callbacks_queue_snapshots")
-            and self.name in pl_module._callbacks_queue_snapshots
-        ):
-            del pl_module._callbacks_queue_snapshots[self.name]
-
-    def get_queue_snapshot(
-        self, pl_module: LightningModule
-    ) -> Union[Dict[str, torch.Tensor], None]:
-        """Safely retrieve the queue snapshot for this callback.
-
-        This method handles all the validation and logging for accessing queue snapshots,
-        making it easy for child classes to get their cached data.
-
-        Args:
-            pl_module: The Lightning module
-
-        Returns:
-            Dictionary containing the queue snapshots if available, None otherwise.
-            Returns None with appropriate warning logs if snapshots are not available.
-        """
-        if not hasattr(pl_module, "_callbacks_queue_snapshots"):
-            logging.warning(
-                f"{self.name}: No queue snapshots found on pl_module. "
-                "Ensure OnlineQueue callbacks run before this callback."
-            )
+    @property
+    def data(self) -> Optional[torch.Tensor]:
+        """Get snapshot data during validation."""
+        if self._snapshot is None:
+            logging.warning("No queue snapshot available. Called outside validation?")
             return None
+        return self._snapshot
 
-        if self.name not in pl_module._callbacks_queue_snapshots:
-            logging.warning(
-                f"{self.name}: No queue snapshot found for this callback. "
-                f"Available snapshots: {list(pl_module._callbacks_queue_snapshots.keys())}"
+
+def find_or_create_queue_callback(
+    trainer: Trainer,
+    key: str,
+    queue_length: int,
+    dim: Optional[Union[int, tuple]] = None,
+    dtype: Optional[torch.dtype] = None,
+    gather_distributed: bool = False,
+    create_if_missing: bool = True,
+) -> "OnlineQueue":
+    """Find an OnlineQueue callback or create one if it doesn't exist.
+
+    Args:
+        trainer: The Lightning trainer containing callbacks
+        key: The batch key to look for
+        queue_length: Required queue length
+        dim: Required dimension (None means any)
+        dtype: Required dtype (None means any)
+        gather_distributed: Whether to gather across distributed processes
+        create_if_missing: If True, create queue when not found
+
+    Returns:
+        The matching or newly created OnlineQueue callback
+
+    Raises:
+        ValueError: If no matching queue is found and create_if_missing is False
+    """
+    matching_queues = []
+
+    for callback in trainer.callbacks:
+        if isinstance(callback, OnlineQueue) and callback.key == key:
+            # Check queue length match
+            if callback.queue_length != queue_length:
+                continue
+
+            # Check dim compatibility (None matches anything)
+            if dim is not None and callback.dim is not None and callback.dim != dim:
+                continue
+
+            # Check dtype compatibility (None matches anything)
+            if (
+                dtype is not None
+                and callback.dtype is not None
+                and callback.dtype != dtype
+            ):
+                continue
+
+            matching_queues.append(callback)
+
+    if not matching_queues:
+        if create_if_missing:
+            # Create a new queue callback
+            logging.info(
+                f"No queue found for key '{key}', creating new OnlineQueue with "
+                f"length={queue_length}, dim={dim}, dtype={dtype}"
             )
-            return None
+            new_queue = OnlineQueue(
+                key=key,
+                queue_length=queue_length,
+                dim=dim,
+                dtype=dtype,
+                gather_distributed=gather_distributed,
+            )
+            # Add to trainer callbacks
+            trainer.callbacks.append(new_queue)
+            # Run setup if trainer is already set up
+            if (
+                hasattr(trainer, "lightning_module")
+                and trainer.lightning_module is not None
+            ):
+                new_queue.setup(trainer, trainer.lightning_module, "fit")
+            return new_queue
+        else:
+            # List all available queues for better error message
+            available = [
+                f"(key='{cb.key}', length={cb.queue_length}, dim={cb.dim}, dtype={cb.dtype})"
+                for cb in trainer.callbacks
+                if isinstance(cb, OnlineQueue)
+            ]
+            raise ValueError(
+                f"No OnlineQueue found for key '{key}' with queue_length={queue_length}, "
+                f"dim={dim}, dtype={dtype}. Available queues: {available}"
+            )
 
-        return pl_module._callbacks_queue_snapshots[self.name]
+    if len(matching_queues) > 1:
+        queue_details = [
+            f"(length={cb.queue_length}, dim={cb.dim}, dtype={cb.dtype})"
+            for cb in matching_queues
+        ]
+        logging.warning(
+            f"Multiple OnlineQueue callbacks found for key '{key}': {queue_details}. "
+            f"Using the first one."
+        )
+
+    return matching_queues[0]
