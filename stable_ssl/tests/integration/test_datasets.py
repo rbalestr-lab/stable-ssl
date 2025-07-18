@@ -149,7 +149,6 @@ class TestDatasetIntegration:
             assert batch["image"].shape[0] == batch_size
             assert len(batch["label"]) == batch_size
 
-    @pytest.integration
     def test_fromtensor_dataset(self):
         """Test FromTensorDataset transform logic."""
         from stable_ssl.data import transforms
