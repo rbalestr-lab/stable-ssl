@@ -47,7 +47,9 @@ class RankMe(OnlineQueue):
             queue_length=queue_length,
             dims=[target_shape],
             dtypes=[torch.float],
+            gather_distributed=True,
         )
+        self.target = target
 
     def on_validation_batch_end(
         self,
@@ -58,31 +60,18 @@ class RankMe(OnlineQueue):
         batch_idx: int,
         dataloader_idx: int = 0,
     ) -> None:
-        """Compute RankMe metric on the first validation batch only.
-
-        RankMe (effective rank) is computed as exp(entropy) of the normalized
-        singular values of the feature matrix. This metric helps monitor the
-        dimensional collapse in self-supervised learning representations.
-        """
-        # Only compute on first batch (not possible to accumulate ranks across batches)
+        """Compute RankMe metric on the first validation batch only."""
+        # Only compute on first batch - the queue snapshot already contains all accumulated training data
         if batch_idx > 0:
             return
 
-        logging.info(f"{self.name}: batch 0 of validation step, computing RankMe")
+        logging.info(f"{self.name}: batch 0 of validation step, computing RankMe.")
 
-        # Get cached embeddings from parent's validation cache
-        if not hasattr(pl_module, "_callbacks_validation_cache"):
-            logging.warning(f"{self.name}: No validation cache found")
+        # Get validation cache using parent's method
+        cached_data = self.get_queue_snapshot(pl_module)
+        if cached_data is None:
             return
-
-        if self.name not in pl_module._callbacks_validation_cache:
-            logging.warning(f"{self.name}: No cached data found in validation cache")
-            return
-
-        embeddings = list(pl_module._callbacks_validation_cache[self.name].values())[0]
-
-        # Gather embeddings from all processes
-        embeddings = pl_module.all_gather(embeddings).flatten(0, 1)
+        embeddings = cached_data[self.target]
 
         # Compute RankMe on rank 0 only
         if trainer.global_rank == 0:
