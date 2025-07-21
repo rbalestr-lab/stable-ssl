@@ -15,7 +15,7 @@ from .utils import EarlyStopping, format_metrics_as_dict
 
 
 class OnlineProbe(Callback):
-    """Attaches a MLP for fine-tuning using the standard self-supervised protocol.
+    """Attaches a nn.Module for fine-tuning using the standard self-supervised protocol.
 
     This callback trains a probe (typically a linear classifier) on top of frozen
     features during the main training process. It manages its own optimizer and
