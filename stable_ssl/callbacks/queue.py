@@ -6,7 +6,7 @@ import torch
 from lightning.pytorch import Callback, LightningModule, Trainer
 from loguru import logger as logging
 
-from stable_ssl.utils import UnsortedQueue
+from stable_ssl.utils import UnsortedQueue, get_data_from_batch_or_outputs
 
 
 class OnlineQueue(Callback):
@@ -69,14 +69,12 @@ class OnlineQueue(Callback):
     ) -> None:
         """Append batch data to queue."""
         with torch.no_grad():
-            if self.key not in batch:
-                logging.warning(
-                    f"OnlineQueue: Key '{self.key}' not found in batch. "
-                    f"Available keys: {list(batch.keys())}"
-                )
+            data = get_data_from_batch_or_outputs(
+                self.key, batch, outputs, caller_name="OnlineQueue"
+            )
+            if data is None:
                 return
 
-            data = batch[self.key]
             # If dim is specified as a single int and data is 1D, add a dimension
             if isinstance(self.dim, int) and data.dim() == 1:
                 data = data.unsqueeze(1)

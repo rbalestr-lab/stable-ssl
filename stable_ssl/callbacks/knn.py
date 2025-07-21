@@ -9,6 +9,7 @@ from lightning.pytorch import Callback, LightningModule, Trainer
 from loguru import logger as logging
 from torch import Tensor
 
+from stable_ssl.utils import get_data_from_batch_or_outputs
 from stable_ssl.utils.distance_metrics import compute_pairwise_distances_chunked
 
 from .queue import find_or_create_queue_callback
@@ -127,14 +128,17 @@ class OnlineKNN(Callback):
         dataloader_idx: int = 0,
     ) -> None:
         """Compute KNN predictions during validation."""
-        # Check if required keys are in batch
-        if self.input not in batch:
-            logging.warning(f"{self.name}: Input key '{self.input}' not found in batch")
+        # Get input and target data from batch or outputs
+        input_data = get_data_from_batch_or_outputs(
+            self.input, batch, outputs, caller_name=self.name
+        )
+        if input_data is None:
             return
-        if self.target not in batch:
-            logging.warning(
-                f"{self.name}: Target key '{self.target}' not found in batch"
-            )
+
+        target_data = get_data_from_batch_or_outputs(
+            self.target, batch, outputs, caller_name=self.name
+        )
+        if target_data is None:
             return
 
         # Get cached data from queues
@@ -156,7 +160,7 @@ class OnlineKNN(Callback):
 
         # Compute predictions
         predictions = self._compute_knn_predictions(
-            batch[self.input], cached_features, cached_labels
+            input_data, cached_features, cached_labels
         )
 
         if predictions is not None:
@@ -178,7 +182,7 @@ class OnlineKNN(Callback):
     ) -> Optional[Tensor]:
         """Compute KNN predictions."""
         batch_size = features.size(0)
-        num_classes = cached_labels.max().item() + 1
+        num_classes = int(cached_labels.max().item()) + 1
 
         predictions = torch.zeros(
             batch_size, num_classes, device=features.device, dtype=torch.float32
@@ -218,7 +222,9 @@ class OnlineKNN(Callback):
         labels_1d = (
             cached_labels.squeeze(-1) if cached_labels.dim() > 1 else cached_labels
         )
-        one_hot_labels = F.one_hot(labels_1d[sim_indices], num_classes=num_classes)
+        # Ensure labels are LongTensor for one_hot
+        selected_labels = labels_1d[sim_indices].long()
+        one_hot_labels = F.one_hot(selected_labels, num_classes=num_classes)
 
         # Weighted voting
         predictions = (dist_weight.unsqueeze(-1) * one_hot_labels).sum(0)

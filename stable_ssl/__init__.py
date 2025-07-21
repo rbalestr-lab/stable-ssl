@@ -71,10 +71,21 @@ try:
 except ImportError:
     pass
 
+
+def rank_zero_only_filter(record):
+    """Filter to only log on rank 0 in distributed training."""
+    import os
+
+    # Check common environment variables for distributed rank
+    rank = os.environ.get("RANK", os.environ.get("LOCAL_RANK", "0"))
+    return rank == "0"
+
+
 logger.remove()
 logger.add(
     sys.stderr,
     format="<green>{time:HH:mm:ss.SSS}</green> | <level>{level: <7}</level> (<cyan>{process}, {name}</cyan>) | <level>{message}</level>",
+    filter=rank_zero_only_filter,
 )
 
 

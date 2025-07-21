@@ -61,16 +61,19 @@ class UnsortedQueue(torch.nn.Module):
     ):
         super().__init__()
         self.max_length = max_length
-        self.pointer = torch.nn.Buffer(torch.zeros((), dtype=torch.long))
-        self.filled = torch.nn.Buffer(torch.zeros((), dtype=torch.bool))
+        self.register_buffer("pointer", torch.zeros((), dtype=torch.long))
+        self.register_buffer("filled", torch.zeros((), dtype=torch.bool))
         if shape is None:
-            self.out = torch.nn.UninitializedBuffer()
+            # Initialize with a placeholder shape that will be updated on first append
+            self.register_buffer("out", torch.zeros((max_length, 1), dtype=dtype))
+            self.register_buffer("initialized", torch.tensor(False))
         else:
             if type(shape) is int:
                 shape = (shape,)
-            self.out = torch.nn.Buffer(
-                torch.zeros((max_length,) + tuple(shape), dtype=dtype)
+            self.register_buffer(
+                "out", torch.zeros((max_length,) + tuple(shape), dtype=dtype)
             )
+            self.register_buffer("initialized", torch.tensor(True))
 
     def append(self, item):
         """Append item(s) to the queue.
@@ -83,10 +86,14 @@ class UnsortedQueue(torch.nn.Module):
         """
         if self.max_length == 0:
             return item
-        if isinstance(self.out, torch.nn.parameter.UninitializedBuffer):
+
+        # Initialize buffer with correct shape on first use
+        if not self.initialized:
             shape = (self.max_length,) + item.shape[1:]
-            self.out.materialize(shape, dtype=item.dtype, device=item.device)
-            torch.nn.init.zeros_(self.out)
+            new_out = torch.zeros(shape, dtype=item.dtype, device=item.device)
+            self.out.resize_(shape)
+            self.out.copy_(new_out)
+            self.initialized.fill_(True)
         if self.pointer + item.size(0) < self.max_length:
             self.out[self.pointer : self.pointer + item.size(0)] = item
             self.pointer.add_(item.size(0))

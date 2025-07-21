@@ -14,6 +14,7 @@ from .autograd import (
     covariance,
     ordered_covariance,
 )
+from .batch_utils import get_data_from_batch_or_outputs
 from .config import (
     adapt_resnet_for_lowres,
     execute_from_config,
@@ -91,4 +92,6 @@ __all__ = [
     # visualization
     "imshow_with_grid",
     "visualize_images_graph",
+    # batch_utils
+    "get_data_from_batch_or_outputs",
 ]
