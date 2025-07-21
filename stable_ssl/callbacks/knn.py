@@ -1,4 +1,4 @@
-"""KNN callback using the new queue discovery architecture."""
+"""KNN callback."""
 
 from typing import Dict, List, Literal, Optional, Tuple, Union
 

@@ -1,4 +1,4 @@
-"""Simplified queue callback that only collects data without complex sharing logic."""
+"""Queue callback that collects data from batch or outputs."""
 
 from typing import Optional, Union
 

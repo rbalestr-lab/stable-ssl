@@ -110,18 +110,17 @@ module = ssl.Module(
 )
 
 # Configure callbacks
-# linear_probe = ssl.callbacks.OnlineProbe(
-#     "linear_probe",
-#     module,
-#     "embedding",
-#     "label",
-#     probe=torch.nn.Linear(512, 10),
-#     loss_fn=torch.nn.CrossEntropyLoss(),
-#     metrics={
-#         "top1": torchmetrics.classification.MulticlassAccuracy(10),
-#         "top5": torchmetrics.classification.MulticlassAccuracy(10, top_k=5),
-#     },
-# )
+linear_probe = ssl.callbacks.OnlineProbe(
+    name="linear_probe",
+    input="embedding",
+    target="label",
+    probe=torch.nn.Linear(512, 10),
+    loss_fn=torch.nn.CrossEntropyLoss(),
+    metrics={
+        "top1": torchmetrics.classification.MulticlassAccuracy(10),
+        "top5": torchmetrics.classification.MulticlassAccuracy(10, top_k=5),
+    },
+)
 
 knn_probe = ssl.callbacks.OnlineKNN(
     name="knn_probe",
@@ -139,8 +138,7 @@ wandb_logger = WandbLogger(project="simclr-cifar10_multigpu")
 trainer = pl.Trainer(
     max_epochs=10,  # Increased epochs for better results
     num_sanity_val_steps=0,  # Skip sanity check as queues need to be filled first
-    # callbacks=[linear_probe, knn_probe],
-    callbacks=[knn_probe],
+    callbacks=[linear_probe, knn_probe],
     precision="16-mixed",  # Use mixed precision for faster training
     logger=wandb_logger,
     enable_checkpointing=False,
