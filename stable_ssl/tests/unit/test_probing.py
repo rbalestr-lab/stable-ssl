@@ -15,26 +15,23 @@ class TestProbingUnit:
     def test_online_probe_initialization(self):
         """Test OnlineProbe callback initialization."""
         with patch("stable_ssl.callbacks.OnlineProbe") as mock_probe:
-            mock_module = Mock()
             mock_linear = Mock(spec=nn.Linear)
             mock_loss_fn = Mock(spec=nn.CrossEntropyLoss)
             mock_metrics = Mock(spec=torchmetrics.classification.MulticlassAccuracy)
 
             mock_probe(
-                "linear_probe",
-                mock_module,
-                "embedding",
-                "label",
+                name="linear_probe",
+                input="embedding",
+                target="label",
                 probe=mock_linear,
                 loss_fn=mock_loss_fn,
                 metrics=mock_metrics,
             )
 
             mock_probe.assert_called_once_with(
-                "linear_probe",
-                mock_module,
-                "embedding",
-                "label",
+                name="linear_probe",
+                input="embedding",
+                target="label",
                 probe=mock_linear,
                 loss_fn=mock_loss_fn,
                 metrics=mock_metrics,
@@ -43,29 +40,26 @@ class TestProbingUnit:
     def test_online_knn_initialization(self):
         """Test OnlineKNN callback initialization."""
         with patch("stable_ssl.callbacks.OnlineKNN") as mock_knn:
-            mock_module = Mock()
             mock_metrics = Mock(spec=torchmetrics.classification.MulticlassAccuracy)
 
             mock_knn(
-                mock_module,
-                "knn_probe",
-                "embedding",
-                "label",
-                50000,
+                name="knn_probe",
+                input="embedding",
+                target="label",
+                queue_length=50000,
                 metrics=mock_metrics,
                 k=10,
-                features_dim=512,
+                input_dim=512,
             )
 
             mock_knn.assert_called_once_with(
-                mock_module,
-                "knn_probe",
-                "embedding",
-                "label",
-                50000,
+                name="knn_probe",
+                input="embedding",
+                target="label",
+                queue_length=50000,
                 metrics=mock_metrics,
                 k=10,
-                features_dim=512,
+                input_dim=512,
             )
 
     def test_forward_function_with_eval_mode(self):
@@ -216,3 +210,31 @@ class TestProbingUnit:
             mock_module.assert_called_once_with(
                 backbone=mock_backbone, forward=mock_forward, optim=None
             )
+
+    def test_online_probe_lifecycle_methods(self):
+        """Test OnlineProbe callback lifecycle methods."""
+        from stable_ssl.callbacks import OnlineProbe
+
+        # Create probe with mock components
+        probe = OnlineProbe(
+            name="test_probe",
+            input="embedding",
+            target="label",
+            probe=nn.Linear(128, 10),
+            loss_fn=nn.CrossEntropyLoss(),
+            metrics={"accuracy": torchmetrics.classification.MulticlassAccuracy(10)},
+        )
+
+        # Test that lifecycle methods exist
+        assert hasattr(probe, "setup")
+        assert hasattr(probe, "on_train_batch_end")
+        assert hasattr(probe, "on_validation_batch_end")
+        assert hasattr(probe, "on_validation_epoch_end")
+        assert hasattr(probe, "state_dict")
+        assert hasattr(probe, "load_state_dict")
+
+        # Test probe module is created
+        assert hasattr(probe, "probe_module")
+        assert isinstance(probe.probe_module, nn.Linear)
+        assert probe.probe_module.in_features == 128
+        assert probe.probe_module.out_features == 10

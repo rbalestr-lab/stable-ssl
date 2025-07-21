@@ -85,10 +85,9 @@ class TestProbingIntegration:
 
         # Create linear probe callback
         linear_probe = ossl.callbacks.OnlineProbe(
-            "linear_probe",
-            module,
-            "embedding",
-            "label",
+            name="linear_probe",
+            input="embedding",
+            target="label",
             probe=torch.nn.Linear(512, 10),
             loss_fn=torch.nn.CrossEntropyLoss(),
             metrics=torchmetrics.classification.MulticlassAccuracy(10),
@@ -96,14 +95,13 @@ class TestProbingIntegration:
 
         # Create KNN probe callback
         knn_probe = ossl.callbacks.OnlineKNN(
-            module,
-            "knn_probe",
-            "embedding",
-            "label",
-            50000,
+            name="knn_probe",
+            input="embedding",
+            target="label",
+            queue_length=50000,
             metrics=torchmetrics.classification.MulticlassAccuracy(10),
             k=10,
-            features_dim=512,
+            input_dim=512,
         )
 
         # Create trainer
