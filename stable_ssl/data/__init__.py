@@ -1,4 +1,4 @@
-from . import transforms
+from . import transforms, noise
 from .collate import Collator
 from .module import DataModule
 from .sampler import RandomBatchSampler, RepeatedRandomSampler, SupervisedBatchSampler
@@ -36,4 +36,5 @@ __all__ = [
     GMM,
     download,
     bulk_download,
+    noise,
 ]
