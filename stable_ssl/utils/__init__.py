@@ -7,13 +7,7 @@ configuration management.
 """
 
 # Import from submodules for backward compatibility
-from .autograd import (
-    Covariance,
-    MyReLU,
-    OrderedCovariance,
-    covariance,
-    ordered_covariance,
-)
+
 from .batch_utils import get_data_from_batch_or_outputs
 from .config import (
     adapt_resnet_for_lowres,
@@ -44,7 +38,6 @@ from .inspection_utils import (
     dict_values,
     get_required_fn_parameters,
 )
-from .linalg import stable_eigh, stable_eigvalsh, stable_svd, stable_svdvals
 from .nn_modules import EMA, ImageToVideoEncoder, Normalize, UnsortedQueue
 from .visualization import imshow_with_grid, visualize_images_graph
 

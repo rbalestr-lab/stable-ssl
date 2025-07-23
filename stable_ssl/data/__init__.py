@@ -1,4 +1,4 @@
-from . import dataset, transforms
+from . import transforms
 from .collate import Collator
 from .module import DataModule
 from .sampler import RandomBatchSampler, RepeatedRandomSampler, SupervisedBatchSampler
@@ -20,7 +20,6 @@ from .utils import (
 __all__ = [
     Collator,
     transforms,
-    dataset,
     DataModule,
     SupervisedBatchSampler,
     RepeatedRandomSampler,
