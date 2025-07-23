@@ -1,5 +1,4 @@
-"""
-This example demonstrates how to use stable-SSL to train a supervised model on CIFAR10
+"""This example demonstrates how to use stable-SSL to train a supervised model on CIFAR10
 with class imbalance.
 """
 
@@ -62,7 +61,8 @@ class MyCustomSupervised(Supervised):
     def compute_loss(self):
         """The computer loss is called during training on each mini-batch
         stable-SSL automatically stores the output of the data loader as `self.data`
-        which you can access directly within that function"""
+        which you can access directly within that function
+        """
         preds = self.forward(self.data[0])
         print(self.data[1][:4])
         self.log(

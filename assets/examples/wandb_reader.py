@@ -1,6 +1,4 @@
-"""
-This script demonstrates how to retrieve data from wandb using the stable-SSL library.
-"""
+"""This script demonstrates how to retrieve data from wandb using the stable-SSL library."""
 
 import stable_ssl as ssl
 

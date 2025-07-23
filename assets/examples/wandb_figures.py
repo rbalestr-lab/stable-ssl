@@ -1,14 +1,13 @@
-"""
-This script demonstrates how to retrieve data from wandb using the stable-SSL library and create plots from it.
+"""This script demonstrates how to retrieve data from wandb using the stable-SSL library and create plots from it.
 To use, you should set the entity variable to your WandB entity and the project variable to the specific project within
 your WandB entity that you want to access runs from.
 
 """
 
-import stable_ssl as ssl
-import re
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+
+import stable_ssl as ssl
 
 entity = "[YOUR ENTITY HERE]"
 project = "[YOUR PROJECT HERE]"
