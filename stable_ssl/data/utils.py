@@ -316,8 +316,11 @@ class MinariStepsDataset(Dataset):
         super().__init__(transform)
         self.num_steps = num_steps
         self.dataset = dataset
-        self.bounds = self.dataset.episode_indices
+
+        episode_lengths = [len(dataset[idx]) for idx in dataset.episode_indices[:-1]]
+        self.bounds = np.cumsum([0] + episode_lengths)
         self.bounds -= np.arange(self.dataset.total_episodes) * (num_steps - 1)
+
         self._length = (
             self.dataset.total_steps - (num_steps - 1) * self.dataset.total_episodes
         )

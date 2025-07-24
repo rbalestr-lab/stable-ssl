@@ -2,6 +2,7 @@
 
 from unittest.mock import Mock, patch
 
+import numpy as np
 import pytest
 import torch
 from omegaconf import OmegaConf
@@ -197,3 +198,25 @@ class TestDatasetUnit:
 
         target_epoch_len = fake_data_source_len // num_replicas
         assert all(results[rank] == target_epoch_len for rank in range(num_replicas))
+
+    def test_minari_dataset_bounds_logic(self):
+        """Test bounds computation for MinariStepsDataset."""
+        episodes_indices = [0, 1, 2, 3]
+        episode_length = [10, 15, 5, 7]
+        num_steps = 2
+        num_episodes = len(episodes_indices)
+
+        episode_lengths = [episode_length[i] for i in range(num_episodes - 1)]
+        bounds = np.cumsum([0] + episode_lengths)
+        bounds -= np.arange(num_episodes) * (num_steps - 1)
+
+        assert len(episodes_indices) == len(episode_lengths) + 1
+        assert np.all(bounds >= 0)
+        assert len(bounds) == len(episodes_indices)
+
+        idx = 25
+        ep_idx = np.searchsorted(bounds, idx, side="right") - 1
+        frame_idx = idx - bounds[ep_idx]
+
+        assert ep_idx.item() == 2
+        assert frame_idx < episode_length[ep_idx]

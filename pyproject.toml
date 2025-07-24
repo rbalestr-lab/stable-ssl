@@ -28,7 +28,8 @@ dependencies = [
     "tabulate",
     "matplotlib",
     "requests-cache[all]",
-    "richuru"
+    "richuru",
+    "minari[hdf5]>=0.5.3",
 ]
 
 dynamic = ["version"]
