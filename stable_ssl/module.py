@@ -12,28 +12,35 @@ from .utils import get_required_fn_parameters
 
 
 class Module(pl.LightningModule):
-    """PyTorch Lightning module with callbacks support, user-defined forward and metrics."""
+    """PyTorch Lightning module with automatic optimization for SSL training."""
 
     def __init__(self, *args, forward: callable, hparams: dict = None, **kwargs):
         super().__init__()
-        logging.info("Configuring module! 🔧")
-        logging.info("Setting `automatic_optimization` to False! 🔧")
-        self.automatic_optimization = False
-        self._callbacks_modules = torch.nn.ModuleDict()
+        logging.info("Initializing Module configuration...")
+
+        self._callbacks_modules = torch.nsn.ModuleDict()
         self._callbacks_metrics = torch.nn.ModuleDict()
 
         if len(args) > 0:
-            raise ValueError("takes no args! this is to simplify logging")
+            raise ValueError(
+                "Module does not accept positional arguments (*args). Please use keyword arguments instead (e.g., Module(forward=my_forward, hparams=my_hparams))."
+            )
+
         if hparams is None:
-            logging.warning("No hparams given, none will be logged!")
+            logging.warning(
+                "No hyperparameters provided - hyperparameter logging is disabled."
+            )
         else:
-            logging.info("Saving user's hparams!")
+            logging.info("Saving provided hyperparameters.")
             self.save_hyperparameters(hparams)
-        logging.warning("Using forward method from user")
+
+        logging.info("Setting custom forward method.")
         setattr(self, "forward", types.MethodType(forward, self))
+
         for key, value in kwargs.items():
-            logging.info(f"Setting `self.{key}` with {type(value)} from user")
+            logging.info(f"Setting attribute: self.{key} = {type(value)}")
             setattr(self, key, value)
+
         headers = ["Stage", "Inputs", "Metric"]
         if hasattr(self, "metrics"):
             stats = []
@@ -50,50 +57,30 @@ class Module(pl.LightningModule):
             logging.info(f"\n{tabulate(stats, headers, tablefmt='heavy_outline')}")
         else:
             self.metrics = dict(train={}, validate={}, test={}, predict={})
-            logging.info("No `metrics` given, automatic metric disabled")
+            logging.info(
+                "No metrics configuration provided - automatic metric tracking is disabled."
+            )
 
     def forward(self, *args, **kwargs):
-        raise NotImplementedError()
+        raise NotImplementedError("The forward() method must be implemented.")
 
     def training_step(self, batch, batch_idx):
-        # self.toggle_optimizer(opt)
+        """Training step with automatic optimization."""
         state = self.forward(batch, stage="fit")
-        if "loss" in state:
-            self.manual_backward(state["loss"])
-        if hasattr(self, "callbacks_training_step"):
-            for fn in self.callbacks_training_step:
-                fn(batch_idx)
-        # if no optimization is happening we can leave early
-        if self.optim is None or self.optim is False:
-            return state
-        if "loss" not in state:
-            logging.error(
-                "the forward dictionary should contain `loss` otherwise use `optim=False` in your module"
-                "if you don't need training/optimization"
-            )
-        # self.untoggle_optimizer(opt)
-        # accumulate gradients of N batches
-        N = self.trainer.accumulate_grad_batches
-        if (batch_idx + 1) % N == 0:
-            # clip gradients
-            opt = self.optimizers()
-            if type(opt) is list:
-                opt = opt[0]
-            self.clip_gradients(
-                opt,
-                gradient_clip_val=self.trainer.gradient_clip_val,
-                gradient_clip_algorithm=self.trainer.gradient_clip_algorithm,
-            )
 
-            opt.step()
-            opt.zero_grad(set_to_none=True)
-            sch = self.lr_schedulers()
-            # TODO: should we always use 0?
-            if type(sch) is list:
-                sch = sch[0]
-            if sch is not None:
-                sch.step()
-        return state
+        # Return state directly - Lightning will extract 'loss' if present
+        if "loss" in state:
+            return state
+        elif self.optim is None or self.optim is False:
+            # No optimization needed
+            return state
+        else:
+            logging.error(
+                "Training step failed: The forward() method must return a dictionary containing a 'loss' key for optimization.\n"
+                "To fix this, either:\n"
+                "1. Add a 'loss' key to the dictionary returned by forward() to enable model training.\n"
+                "2. Set optim=False when creating the module to indicate inference-only mode (no training)."
+            )
 
     def validation_step(self, batch, batch_idx):
         state = self.forward(batch, stage="validate")
@@ -107,74 +94,140 @@ class Module(pl.LightningModule):
         state = self.forward(batch, stage="predict")
         return state
 
-    def create_scheduler(self, optim, name):
+    def _create_scheduler(self, optimizer, name: str = "CosineAnnealingLR"):
         if name == "CosineAnnealingLR":
             return torch.optim.lr_scheduler.CosineAnnealingLR(
-                optim, T_max=self.trainer.estimated_stepping_batches
+                optimizer, T_max=self.trainer.estimated_stepping_batches
             )
         elif name == "OneCycleLR":
             pct = min(10 / self.trainer.max_epochs, 0.01)
             return torch.optim.lr_scheduler.OneCycleLR(
-                optim,
-                max_lr=optim.param_groups[0]["lr"],
+                optimizer,
+                max_lr=optimizer.param_groups[0]["lr"],
                 total_steps=self.trainer.estimated_stepping_batches,
                 pct_start=pct,
             )
         else:
-            raise ValueError
+            raise ValueError(
+                f"Unsupported scheduler: {name}. Supported types: CosineAnnealingLR, OneCycleLR"
+            )
 
     def configure_optimizers(self):
-        logging.info("`configure_optimizers` (main) 🔧")
+        """Configure optimizers and schedulers for automatic optimization.
+
+        Returns:
+            dict or tuple: Optimizer configuration with optional learning rate scheduler.
+            For single optimizer: Returns a dict with optimizer and lr_scheduler.
+            For multiple optimizers: Returns a tuple of (optimizers, schedulers).
+        """
+        logging.info("Configuring optimizers and learning rate schedulers...")
+
+        # Early exit for disabled optimization
+        if hasattr(self, "optim") and not self.optim:
+            logging.info("Optimization disabled - skipping optimizer configuration.")
+            return None
+
         if not hasattr(self, "optim"):
             logging.info(
-                "No optimizer specified, using default AdamW and no scheduler!"
+                "Using default optimization setup: AdamW optimizer with CosineAnnealingLR scheduler."
             )
             self.optim = dict(optimizer=partial(torch.optim.AdamW))
-        elif self.optim is None or self.optim is False:
-            logging.warning("⚠️⚠️⚠️ No optimizer given! Skipping...")
-            return
-        if isinstance(self.optim.get("optimizer", None), partial):
-            logging.info("\tretreived a single optimizer with correct type!")
-            assert callable(self.optim["optimizer"])
-            assert get_required_fn_parameters(self.optim["optimizer"]) == ["params"]
-            params = self.named_parameters()
-            params = [u[1] for u in params if "_callbacks_modules" not in u[0]]
-            opt = [self.optim["optimizer"](params)]
+
+        # Single optimizer case
+        optimizer_fn = self.optim.get("optimizer")
+        if isinstance(optimizer_fn, partial):
+            logging.info("Configuring single optimizer.")
+            assert callable(optimizer_fn)
+            assert get_required_fn_parameters(optimizer_fn) == ["params"]
+
+            # Direct parameter extraction - single pass
+            params = [
+                p
+                for name, p in self.named_parameters()
+                if "_callbacks_modules" not in name
+            ]
+
+            opt = optimizer_fn(params)
+
+            # Create scheduler
             sched_name = self.optim.get("scheduler", "CosineAnnealingLR")
-            sched = self.create_scheduler(opt[0], sched_name)
-            opt_name = opt[0].__class__.__name__
+            sched = self._create_scheduler(opt, sched_name)
+
             logging.info(
-                f"\t\t- optimizer {opt_name}: with trainable parameters, {sched_name} sched. ✅"
+                f"Configured {opt.__class__.__name__} optimizer with {sched_name} scheduler."
             )
-            logging.info("Configuring optimizers, done!  ✅")
-            return opt, [{"scheduler": sched, "interval": "step"}]
-        elif not isinstance(self.optim, dict):
-            logging.info(
-                "\toptimizer specified by type (type(optimizer))..."
-                "we need a torch.optim.Optimizer type or dict!"
+
+            return {
+                "optimizer": opt,
+                "lr_scheduler": {
+                    "scheduler": sched,
+                    "interval": "step",
+                    "frequency": 1,
+                },
+            }
+
+        # Multiple optimizers case - check once
+        if not isinstance(self.optim, dict):
+            raise ValueError(
+                "Optimizer must be either a partial function or a dict of optimizer configs"
             )
-            raise ValueError
+
+        # Verify all values are dicts
+        optim_items = list(self.optim.items())
+        if not all(isinstance(v, dict) for _, v in optim_items):
+            raise ValueError("For multiple optimizers, all config values must be dicts")
+
         logging.info(
-            f"\toptimizer specified by Dict with keys {list(self.optim.keys())}... 🔧"
+            f"\tOptimizer specified by Dict with keys {[k for k, _ in optim_items]}... 🔧"
         )
-        regexes = [re.compile(u["modules"]) for u in self.optim.values()]
-        parameters = [[] for _ in range(len(regexes))]
-        for name, module in self.named_modules():
-            for i, regex in enumerate(regexes):
-                if regex.match(name):
-                    parameters[i].extend(module.parameters())
-                    break
-        optimizer = [
-            opti["optimizer"](params)
-            for opti, params in zip(self.optim.values(), parameters)
+
+        # Pre-compile regex patterns with their indices
+        regex_map = [
+            (i, re.compile(config["modules"]))
+            for i, (_, config) in enumerate(optim_items)
         ]
-        scheduler = []
-        for name, optim, params in zip(self.optim, optimizer, parameters):
-            sched_name = self.optim[name].get("scheduler", "CosineAnnealingLR")
-            sched = self.create_scheduler(optim, sched_name)
-            scheduler.append({"scheduler": sched, "interval": "step", "name": name})
-            logging.info(
-                f"\t\t- optimizer {name}: {len(params)} parameters, {sched_name} sched. ✅"
+        num_optimizers = len(optim_items)
+        parameters = [[] for _ in range(num_optimizers)]
+
+        # Single pass through modules with early matching
+        for name, module in self.named_modules():
+            if "_callbacks_modules" in name:
+                continue
+
+            # Use generator for params to avoid list creation if not needed
+            module_params = list(module.parameters(recurse=False))
+            if not module_params:
+                continue
+
+            for idx, regex in regex_map:
+                if regex.match(name):
+                    parameters[idx].extend(module_params)
+                    break
+
+        # Build optimizers and schedulers
+        optimizers = []
+        schedulers = []
+
+        for (name, config), params in zip(optim_items, parameters):
+            if not params:
+                logging.warning(f"No parameters matched for optimizer {name}")
+                continue
+
+            opt = config["optimizer"](params)
+            optimizers.append(opt)
+
+            sched_name = config.get("scheduler", "CosineAnnealingLR")
+            schedulers.append(
+                {
+                    "scheduler": self._create_scheduler(opt, sched_name),
+                    "interval": "step",
+                    "frequency": 1,
+                    "name": name,
+                }
             )
-        logging.info("Configuring optimizers, done!  ✅")
-        return optimizer, scheduler
+
+            logging.info(
+                f"Configured optimizer '{name}' ({len(params)} parameters) with {sched_name} scheduler."
+            )
+
+        return optimizers, schedulers

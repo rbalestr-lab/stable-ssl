@@ -107,6 +107,7 @@ module = ssl.Module(
     projector=projector,
     forward=forward,
     simclr_loss=ssl.losses.NTXEntLoss(temperature=0.5),
+    accumulate_grad_batches=2,  # Pass as module parameter
 )
 
 # Configure callbacks
