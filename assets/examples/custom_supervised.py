@@ -1,5 +1,4 @@
-"""
-This example demonstrates how to create a custom supervised model using the
+"""This example demonstrates how to create a custom supervised model using the
 `stable_ssl` library.
 """
 
@@ -55,7 +54,8 @@ class MyCustomSupervised(Supervised):
     def compute_loss(self):
         """The computer loss is called during training on each mini-batch
         stable-SSL automatically stores the output of the data loader as `self.data`
-        which you can access directly within that function"""
+        which you can access directly within that function
+        """
         preds = self.forward(self.data[0])
         return F.cross_entropy(preds, self.data[1])
 

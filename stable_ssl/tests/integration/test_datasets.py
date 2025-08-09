@@ -1,5 +1,7 @@
 """Integration tests for dataset functionality."""
 
+import minari
+import numpy as np
 import pytest
 import torch
 from omegaconf import OmegaConf
@@ -151,16 +153,32 @@ class TestDatasetIntegration:
 
     def test_fromtensor_dataset(self):
         """Test FromTensorDataset transform logic."""
-        from stable_ssl.data import transforms
-        from stable_ssl.data.utils import FromTorchDataset
-
         mock_data = torch.randn(128, 3, 32, 32)
-        trans = transforms.ToImage(mean=(0.5,), std=(0.5,))
+        trans = ossl.data.transforms.ToImage(mean=(0.5,), std=(0.5,))
 
         # fake torch dataset
         dataset = torch.utils.data.TensorDataset(mock_data)
-        data = FromTorchDataset(dataset, names=["image"])
-        data_trans = FromTorchDataset(dataset, names=["image"], transform=trans)
+        data = ossl.data.utils.FromTorchDataset(dataset, names=["image"])
+        data_trans = ossl.data.utils.FromTorchDataset(
+            dataset, names=["image"], transform=trans
+        )
 
         assert list(data[0].keys()) == ["image"]
         assert list(data_trans[0].keys()) == ["image"]
+
+    @pytest.mark.download
+    def test_minaristep_dataset_bounds(self):
+        """Test bounds computation for MinariStepsDataset util."""
+        # minari download D4RL/pen/human-v2
+        minari_dataset = minari.load_dataset("D4RL/pen/human-v2", download=True)
+        dataset = ossl.data.MinariStepsDataset(minari_dataset, num_steps=2)
+
+        assert np.all(dataset.bounds >= 0)
+        assert len(dataset.bounds) == minari_dataset.total_episodes
+        assert dataset.bounds[-1] < minari_dataset.total_steps
+        assert len(dataset) < minari_dataset.total_steps
+
+        for idx in range(16):
+            batch = dataset[idx]
+            assert len(batch["observations"]) == 2
+            assert list(batch.keys()) == dataset.NAMES
