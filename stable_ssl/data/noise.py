@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 
 
@@ -66,15 +67,12 @@ def generate_perlin_noise_2d(shape, res, octaves=1, persistence=0.5, lacunarity=
     return noise
 
 
-import numpy as np
-
-
 def fade(t):
     return t * t * t * (t * (t * 6 - 15) + 10)
 
 
-def lerp(a, b, t):
-    return a + t * (b - a)
+def lerp(a, b, x):
+    return a + x * (b - a)
 
 
 def grad(hash, x, y, z):
@@ -85,7 +83,6 @@ def grad(hash, x, y, z):
 
 
 def perlin_noise_3d(x, y, z):
-
     # Generate a permutation table
     perm = np.arange(256, dtype=int)
     np.random.shuffle(perm)

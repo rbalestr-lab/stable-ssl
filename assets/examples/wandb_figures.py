@@ -1,4 +1,5 @@
 """This script demonstrates how to retrieve data from wandb using the stable-SSL library and create plots from it.
+
 To use, you should set the entity variable to your WandB entity and the project variable to the specific project within
 your WandB entity that you want to access runs from.
 
@@ -66,7 +67,7 @@ for run_id, df in tqdm(dfs.items(), desc="Processing runs", unit="run"):
             and spurious_proportion >= 0
             and lora_rank is not None
             and use_spurious
-            and using_list == None
+            and using_list is None
         ):
             # Extract balanced accuracy from the run
             new_df, config = ssl.reader.wandb(entity, project, run_id)

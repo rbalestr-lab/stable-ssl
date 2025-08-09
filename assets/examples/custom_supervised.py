@@ -1,6 +1,4 @@
-"""This example demonstrates how to create a custom supervised model using the
-`stable_ssl` library.
-"""
+"""This example demonstrates how to create a custom supervised model using the `stable_ssl` library."""
 
 import hydra
 import torch
@@ -14,6 +12,8 @@ from stable_ssl.supervised import Supervised
 
 
 class MyCustomSupervised(Supervised):
+    """Custom supervised example model."""
+
     def initialize_train_loader(self):
         transform = transforms.Compose(
             [
@@ -52,9 +52,10 @@ class MyCustomSupervised(Supervised):
         return testloader
 
     def compute_loss(self):
-        """The computer loss is called during training on each mini-batch
-        stable-SSL automatically stores the output of the data loader as `self.data`
-        which you can access directly within that function
+        """The compute_loss method is called during training on each mini-batch.
+
+        stable-SSL automatically stores the output of the data loader as `self.data`,
+        which you can access directly within this function.
         """
         preds = self.forward(self.data[0])
         return F.cross_entropy(preds, self.data[1])
