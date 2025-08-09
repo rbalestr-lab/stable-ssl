@@ -12,13 +12,16 @@ from .utils import get_required_fn_parameters
 
 
 class Module(pl.LightningModule):
-    """PyTorch Lightning module with automatic optimization for SSL training."""
+    """Stable-SSL module with manual optimization for SSL training (supports multiple optimizers)."""
 
     def __init__(self, *args, forward: callable, hparams: dict = None, **kwargs):
         super().__init__()
         logging.info("Initializing Module configuration...")
 
-        self._callbacks_modules = torch.nsn.ModuleDict()
+        # Manual optimization to support multiple optimizers and custom stepping
+        self.automatic_optimization = False
+
+        self._callbacks_modules = torch.nn.ModuleDict()
         self._callbacks_metrics = torch.nn.ModuleDict()
 
         if len(args) > 0:
@@ -61,26 +64,163 @@ class Module(pl.LightningModule):
                 "No metrics configuration provided - automatic metric tracking is disabled."
             )
 
+        # Internal optimizer metadata filled in configure_optimizers
+        self._optimizer_names = None
+        self._optimizer_index_by_name = None
+        self._optimizer_frequencies = None
+
     def forward(self, *args, **kwargs):
         raise NotImplementedError("The forward() method must be implemented.")
 
     def training_step(self, batch, batch_idx):
-        """Training step with automatic optimization."""
+        """Manual optimization training step with support for multiple optimizers.
+
+        Expected outputs from forward during training (stage="fit"):
+        - Single optimizer or joint loss: state["loss"]: torch.Tensor
+          If multiple optimizers are configured and only `loss` is provided, it is treated
+          as a joint loss for all optimizers.
+        - Multiple optimizers with distinct losses: state["losses"]: Mapping where keys are
+          optimizer names matching self.optim keys (preferred), or integer indices matching
+          optimizer order.
+        """
         state = self.forward(batch, stage="fit")
 
-        # Return state directly - Lightning will extract 'loss' if present
-        if "loss" in state:
+        # Early exit if optimization disabled
+        if getattr(self, "optim", None) is None or self.optim is False:
             return state
-        elif self.optim is None or self.optim is False:
-            # No optimization needed
-            return state
-        else:
-            logging.error(
-                "Training step failed: The forward() method must return a dictionary containing a 'loss' key for optimization.\n"
-                "To fix this, either:\n"
-                "1. Add a 'loss' key to the dictionary returned by forward() to enable model training.\n"
-                "2. Set optim=False when creating the module to indicate inference-only mode (no training)."
+
+        if not ("loss" in state or "losses" in state):
+            raise ValueError(
+                "Training step requires 'loss' (single/joint) or 'losses' (multi-optimizer) in the output state."
             )
+
+        # Resolve optimizers and schedulers (can be single or list)
+        optimizers = self.optimizers()
+        if not isinstance(optimizers, (list, tuple)):
+            optimizers = [optimizers]
+
+        schedulers = self.lr_schedulers()
+        if schedulers is None:
+            schedulers = []
+        elif not isinstance(schedulers, (list, tuple)):
+            schedulers = [schedulers]
+
+        num_optimizers = len(optimizers)
+
+        # Build mapping from optimizer index -> loss tensor
+        losses_by_index = {}
+        if "losses" in state:
+            if "loss" in state:
+                logging.warning(
+                    "Both 'losses' and 'loss' provided; ignoring 'loss' and using 'losses'."
+                )
+            losses = state["losses"]
+            if isinstance(losses, dict):
+                for key, loss in losses.items():
+                    if isinstance(key, str):
+                        if (
+                            self._optimizer_index_by_name
+                            and key in self._optimizer_index_by_name
+                        ):
+                            idx = self._optimizer_index_by_name[key]
+                            if 0 <= idx < num_optimizers:
+                                losses_by_index[idx] = loss
+                            else:
+                                logging.warning(
+                                    f"Mapped index {idx} for optimizer '{key}' is out of range (have {num_optimizers})."
+                                )
+                        else:
+                            logging.warning(
+                                f"Loss for optimizer name '{key}' provided, but no matching optimizer was found."
+                            )
+                    elif isinstance(key, int):
+                        if 0 <= key < num_optimizers:
+                            losses_by_index[key] = loss
+                        else:
+                            logging.warning(
+                                f"Loss index {key} is out of range for {num_optimizers} optimizers."
+                            )
+                    else:
+                        logging.warning(
+                            f"Unsupported key type in 'losses': {type(key)}. Expected str (name) or int (index)."
+                        )
+            else:
+                raise TypeError(
+                    "state['losses'] must be a dict mapping optimizer name or index to a loss tensor."
+                )
+        elif "loss" in state:
+            # Treat as joint loss for all configured optimizers
+            for idx in range(num_optimizers):
+                losses_by_index[idx] = state["loss"]
+
+        if not losses_by_index:
+            raise ValueError(
+                "No valid losses could be mapped to configured optimizers."
+            )
+
+        # Gradient accumulation factor
+        accum = max(int(getattr(self.trainer, "accumulate_grad_batches", 1)), 1)
+        scale = 1.0 / float(accum)
+
+        # Deduplicate losses: map unique loss id -> (loss_tensor, representative_optimizer_idx)
+        unique_losses = []
+        seen = {}
+        for idx, loss in losses_by_index.items():
+            key = id(loss)
+            if key not in seen:
+                seen[key] = len(unique_losses)
+                unique_losses.append((loss, idx))
+        num_unique = len(unique_losses)
+
+        # Backward once per unique loss tensor, toggling a representative optimizer
+        for i, (loss, rep_idx) in enumerate(unique_losses):
+            opt = optimizers[rep_idx]
+            self.toggle_optimizer(opt)
+            retain = i < (num_unique - 1)
+            self.manual_backward(loss * scale, retain_graph=retain)
+            self.untoggle_optimizer(opt)
+
+        # Optional user-provided per-step callbacks
+        if hasattr(self, "callbacks_training_step"):
+            try:
+                for fn in self.callbacks_training_step:
+                    fn(batch_idx)
+            except Exception as e:
+                logging.warning(f"callbacks_training_step execution failed: {e}")
+
+        # Stepping and gradient clipping at accumulation boundary
+        if (batch_idx + 1) % accum == 0:
+            for idx, opt in enumerate(optimizers):
+                # Honor per-optimizer frequency if available
+                step_freq = 1
+                if self._optimizer_names and self._optimizer_frequencies:
+                    name = self._optimizer_names[idx]
+                    step_freq = int(self._optimizer_frequencies.get(name, 1))
+                if step_freq < 1:
+                    step_freq = 1
+
+                if (batch_idx + 1) % step_freq != 0:
+                    continue
+
+                # Clip gradients for this optimizer then step
+                self.clip_gradients(
+                    opt,
+                    gradient_clip_val=self.trainer.gradient_clip_val,
+                    gradient_clip_algorithm=self.trainer.gradient_clip_algorithm,
+                )
+                opt.step()
+                opt.zero_grad(set_to_none=True)
+
+                # Step matching scheduler if it exists
+                if idx < len(schedulers) and schedulers[idx] is not None:
+                    try:
+                        schedulers[idx].step()
+                    except Exception as e:
+                        logging.warning(
+                            f"Scheduler step failed for optimizer index {idx}: {e}"
+                        )
+
+        return state
 
     def validation_step(self, batch, batch_idx):
         state = self.forward(batch, stage="validate")
@@ -113,7 +253,7 @@ class Module(pl.LightningModule):
             )
 
     def configure_optimizers(self):
-        """Configure optimizers and schedulers for automatic optimization.
+        """Configure optimizers and schedulers for manual optimization.
 
         Returns:
             dict or tuple: Optimizer configuration with optional learning rate scheduler.
@@ -157,14 +297,21 @@ class Module(pl.LightningModule):
                 f"Configured {opt.__class__.__name__} optimizer with {sched_name} scheduler."
             )
 
-            return {
-                "optimizer": opt,
-                "lr_scheduler": {
+            # Track names/frequencies for training_step
+            self._optimizer_names = ["default"]
+            self._optimizer_index_by_name = {"default": 0}
+            self._optimizer_frequencies = {
+                "default": int(self.optim.get("frequency", 1))
+            }
+
+            # Return in list/dict style compatible with lr_schedulers() access
+            return [opt], [
+                {
                     "scheduler": sched,
                     "interval": "step",
                     "frequency": 1,
-                },
-            }
+                }
+            ]
 
         # Multiple optimizers case - check once
         if not isinstance(self.optim, dict):
@@ -189,28 +336,39 @@ class Module(pl.LightningModule):
         num_optimizers = len(optim_items)
         parameters = [[] for _ in range(num_optimizers)]
 
-        # Single pass through modules with early matching
+        # Build a map of module name -> assigned optimizer index using nearest ancestor match
+        assigned_group_by_module = {}
         for name, module in self.named_modules():
             if "_callbacks_modules" in name:
                 continue
-
-            # Use generator for params to avoid list creation if not needed
-            module_params = list(module.parameters(recurse=False))
-            if not module_params:
-                continue
-
+            # determine parent's assigned group
+            parent_name = name.rsplit(".", 1)[0] if "." in name else None
+            parent_group = assigned_group_by_module.get(parent_name, None)
+            # current match overrides parent if any
+            current_group = parent_group
             for idx, regex in regex_map:
                 if regex.match(name):
-                    parameters[idx].extend(module_params)
+                    current_group = idx
                     break
+            assigned_group_by_module[name] = current_group
+            # collect this module's direct parameters for the assigned group
+            if current_group is not None:
+                module_params = list(module.parameters(recurse=False))
+                if module_params:
+                    parameters[current_group].extend(module_params)
 
         # Build optimizers and schedulers
         optimizers = []
         schedulers = []
 
+        self._optimizer_names = []
+        self._optimizer_index_by_name = {}
+        self._optimizer_frequencies = {}
+
         for (name, config), params in zip(optim_items, parameters):
             if not params:
                 logging.warning(f"No parameters matched for optimizer {name}")
+                # skip registration when there are no parameters
                 continue
 
             opt = config["optimizer"](params)
@@ -229,5 +387,10 @@ class Module(pl.LightningModule):
             logging.info(
                 f"Configured optimizer '{name}' ({len(params)} parameters) with {sched_name} scheduler."
             )
+
+            # Track names and frequencies aligned to optimizer order
+            self._optimizer_names.append(name)
+            self._optimizer_index_by_name[name] = len(optimizers) - 1
+            self._optimizer_frequencies[name] = int(config.get("frequency", 1))
 
         return optimizers, schedulers
