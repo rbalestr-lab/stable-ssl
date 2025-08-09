@@ -85,7 +85,6 @@ def grad(hash, x, y, z):
 
 
 def perlin_noise_3d(x, y, z):
-
     # Generate a permutation table
     perm = np.arange(256, dtype=int)
     np.random.shuffle(perm)
