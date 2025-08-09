@@ -70,4 +70,3 @@ Modules
    :template: myclass_template.rst
 
    transforms
-   dataset
