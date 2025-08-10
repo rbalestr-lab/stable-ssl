@@ -1,25 +1,25 @@
 #!/usr/bin/env python
-"""Manual test script for SimCLR training with multi-optimizer configuration.
+"""Manual test script for SimCLR training with online probing.
 
-This script mirrors the single-optimizer example but assigns different optimizers
-and schedulers to `backbone` and `projector` via regex-based grouping to exercise
-and validate the logic implemented in `stable_ssl.module.Module`.
+This script is extracted from the integration tests to allow manual testing
+with different datasets when the default dataset is not available.
 """
+
+import os
 
 import lightning as pl
 import torch
+import torchmetrics
 import torchvision
+from lightning.pytorch.loggers import CSVLogger
 
 import stable_ssl as ssl
 from stable_ssl.data import transforms
 from stable_ssl.data.utils import Dataset
 
-# ------------------------------
-# Data
-# ------------------------------
+# without transform
 mean = [0.485, 0.456, 0.406]
 std = [0.229, 0.224, 0.225]
-
 train_transform = transforms.Compose(
     transforms.RGB(),
     transforms.RandomResizedCrop((32, 32)),  # CIFAR-10 is 32x32
@@ -32,22 +32,16 @@ train_transform = transforms.Compose(
     transforms.ToImage(mean=mean, std=std),
 )
 
-val_transform = transforms.Compose(
-    transforms.RGB(),
-    transforms.Resize((32, 32)),
-    transforms.CenterCrop((32, 32)),
-    transforms.ToImage(mean=mean, std=std),
+# Use torchvision CIFAR-10 wrapped in FromTorchDataset
+cifar_train = torchvision.datasets.CIFAR10(
+    root="/tmp/cifar10", train=True, download=True
 )
 
+# Create a custom wrapper that adds sample_idx
 
-# Use torchvision CIFAR-10 wrapped in an Indexed dataset that adds sample_idx
+
 class IndexedDataset(Dataset):
-    """Wrap a dataset to add `sample_idx` and apply optional transforms.
-
-    This adapter returns dict samples with keys: `image`, `label`, and
-    `sample_idx`, and delegates transform handling to
-    `stable_ssl.data.utils.Dataset`.
-    """
+    """Custom dataset wrapper that adds sample_idx to each sample."""
 
     def __init__(self, dataset, transform=None):
         super().__init__(transform)
@@ -62,18 +56,22 @@ class IndexedDataset(Dataset):
         return len(self.dataset)
 
 
-cifar_train = torchvision.datasets.CIFAR10(
-    root="/tmp/cifar10", train=True, download=True
-)
 train_dataset = IndexedDataset(cifar_train, transform=train_transform)
 train = torch.utils.data.DataLoader(
     dataset=train_dataset,
     sampler=ssl.data.sampler.RepeatedRandomSampler(train_dataset, n_views=2),
-    batch_size=64,
-    num_workers=8,
+    batch_size=1024,
+    num_workers=20,
     drop_last=True,
 )
+val_transform = transforms.Compose(
+    transforms.RGB(),
+    transforms.Resize((32, 32)),
+    transforms.CenterCrop((32, 32)),
+    transforms.ToImage(mean=mean, std=std),
+)
 
+# Use torchvision CIFAR-10 for validation
 cifar_val = torchvision.datasets.CIFAR10(
     root="/tmp/cifar10", train=False, download=True
 )
@@ -81,45 +79,32 @@ val_dataset = IndexedDataset(cifar_val, transform=val_transform)
 val = torch.utils.data.DataLoader(
     dataset=val_dataset,
     batch_size=128,
-    num_workers=4,
+    num_workers=10,
 )
-
 data = ssl.data.DataModule(train=train, val=val)
 
 
-# ------------------------------
-# Model
-# ------------------------------
-# A very small backbone to keep the demo quick; 512-dim penultimate features
+def forward(self, batch, stage):
+    out = {}
+    out["embedding"] = self.backbone(batch["image"])
+    if self.training:
+        proj = self.projector(out["embedding"])
+        views = ssl.data.fold_views(proj, batch["sample_idx"])
+        out["loss"] = self.simclr_loss(views[0], views[1])
+    return out
+
+
 backbone = torchvision.models.resnet18(weights=None, num_classes=10)
-# Remove classifier, expose penultimate features as logits for simplicity
 backbone.fc = torch.nn.Identity()
 projector = torch.nn.Linear(512, 128)
-
-
-def forward(self, batch, stage):
-    state = {}
-    feats = self.backbone(batch["image"])  # shape [B, 512]
-    state["embedding"] = feats
-    if self.training:
-        proj = self.projector(feats)
-        views = ssl.data.fold_views(proj, batch["sample_idx"])  # two views
-        state["loss"] = self.simclr_loss(views[0], views[1])
-    return state
-
 
 module = ssl.Module(
     backbone=backbone,
     projector=projector,
     forward=forward,
-    simclr_loss=ssl.losses.NTXEntLoss(temperature=0.2),
+    simclr_loss=ssl.losses.NTXEntLoss(temperature=0.1),
 )
 
-# ------------------------------
-# Multi-optimizer configuration using regex patterns
-# ------------------------------
-# - Assign "backbone" params to AdamW with a cosine schedule, step every step
-# - Assign "projector" params to SGD with StepLR, step every 2 steps (frequency=2)
 module.optim = {
     "encoder_opt": {
         "modules": r"^backbone(\.|$)",
@@ -137,25 +122,39 @@ module.optim = {
     },
 }
 
-# Optional: demonstrate probing helper listing modules by regex
-matched = module.get_modules_by_regex(r"^(backbone|projector)(\.|$)")
-print("Matched modules:")
-for name, _ in matched[:20]:
-    print(" -", name)
-
-
-# ------------------------------
-# Training
-# ------------------------------
-pl.seed_everything(42)
-trainer = pl.Trainer(
-    max_epochs=1,
-    num_sanity_val_steps=0,
-    precision="16-mixed",
-    enable_checkpointing=False,
-    log_every_n_steps=10,
+linear_probe = ssl.callbacks.OnlineProbe(
+    name="linear_probe",
+    input="embedding",
+    target="label",
+    probe=torch.nn.Linear(512, 10),
+    loss_fn=torch.nn.CrossEntropyLoss(),
+    metrics={
+        "top1": torchmetrics.classification.MulticlassAccuracy(10),
+        "top5": torchmetrics.classification.MulticlassAccuracy(10, top_k=5),
+    },
+)
+knn_probe = ssl.callbacks.OnlineKNN(
+    name="knn_probe",
+    input="embedding",
+    target="label",
+    queue_length=20000,
+    metrics={"accuracy": torchmetrics.classification.MulticlassAccuracy(10)},
+    input_dim=512,
+    k=10,
 )
 
+# Use CSV logger for local logging without W&B
+csv_logger = CSVLogger(
+    save_dir=os.environ.get("LOG_DIR", "./logs"), name="simclr-cifar10"
+)
+
+trainer = pl.Trainer(
+    max_epochs=6,
+    num_sanity_val_steps=0,  # Skip sanity check as queues need to be filled first
+    callbacks=[knn_probe],
+    precision="16-mixed",
+    logger=csv_logger,
+    enable_checkpointing=False,
+)
 manager = ssl.Manager(trainer=trainer, module=module, data=data)
-if __name__ == "__main__":
-    manager()
+manager()

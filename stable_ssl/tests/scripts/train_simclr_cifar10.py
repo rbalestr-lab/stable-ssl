@@ -10,15 +10,12 @@ import torch
 import torchmetrics
 import torchvision
 from lightning.pytorch.loggers import WandbLogger
-from transformers import AutoConfig, AutoModelForImageClassification
 
 import stable_ssl as ssl
 from stable_ssl.data import transforms
 from stable_ssl.data.utils import Dataset
 
 # without transform
-mean = [0.485, 0.456, 0.406]
-std = [0.229, 0.224, 0.225]
 train_transform = transforms.Compose(
     transforms.RGB(),
     transforms.RandomResizedCrop((32, 32)),  # CIFAR-10 is 32x32
@@ -27,16 +24,13 @@ train_transform = transforms.Compose(
         brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8
     ),
     transforms.RandomGrayscale(p=0.2),
-    transforms.GaussianBlur(kernel_size=(5, 5), p=1.0),
-    transforms.ToImage(mean=mean, std=std),
+    transforms.ToImage(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 )
 
 # Use torchvision CIFAR-10 wrapped in FromTorchDataset
 cifar_train = torchvision.datasets.CIFAR10(
     root="/tmp/cifar10", train=True, download=True
 )
-
-# Create a custom wrapper that adds sample_idx
 
 
 class IndexedDataset(Dataset):
@@ -59,7 +53,7 @@ train_dataset = IndexedDataset(cifar_train, transform=train_transform)
 train = torch.utils.data.DataLoader(
     dataset=train_dataset,
     sampler=ssl.data.sampler.RepeatedRandomSampler(train_dataset, n_views=2),
-    batch_size=64,
+    batch_size=1024,
     num_workers=20,
     drop_last=True,
 )
@@ -67,7 +61,7 @@ val_transform = transforms.Compose(
     transforms.RGB(),
     transforms.Resize((32, 32)),
     transforms.CenterCrop((32, 32)),
-    transforms.ToImage(mean=mean, std=std),
+    transforms.ToImage(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 )
 
 # Use torchvision CIFAR-10 for validation
@@ -85,7 +79,7 @@ data = ssl.data.DataModule(train=train, val=val)
 
 def forward(self, batch, stage):
     out = {}
-    out["embedding"] = self.backbone(batch["image"])["logits"]
+    out["embedding"] = self.backbone(batch["image"])
     if self.training:
         proj = self.projector(out["embedding"])
         views = ssl.data.fold_views(proj, batch["sample_idx"])
@@ -93,28 +87,27 @@ def forward(self, batch, stage):
     return out
 
 
-config = AutoConfig.from_pretrained("microsoft/resnet-18")
-backbone = AutoModelForImageClassification.from_config(config)
+backbone = torchvision.models.resnet18(weights=None, num_classes=10)
+backbone.fc = torch.nn.Identity()
 projector = torch.nn.Linear(512, 128)
-backbone.classifier[1] = torch.nn.Identity()
+
 module = ssl.Module(
     backbone=backbone,
     projector=projector,
     forward=forward,
     simclr_loss=ssl.losses.NTXEntLoss(temperature=0.1),
 )
-# linear_probe = ssl.callbacks.OnlineProbe(
-#     "linear_probe",
-#     module,
-#     "embedding",
-#     "label",
-#     probe=torch.nn.Linear(512, 10),
-#     loss_fn=torch.nn.CrossEntropyLoss(),
-#     metrics={
-#         "top1": torchmetrics.classification.MulticlassAccuracy(10),
-#         "top5": torchmetrics.classification.MulticlassAccuracy(10, top_k=5),
-#     },
-# )
+linear_probe = ssl.callbacks.OnlineProbe(
+    name="linear_probe",
+    input="embedding",
+    target="label",
+    probe=torch.nn.Linear(512, 10),
+    loss_fn=torch.nn.CrossEntropyLoss(),
+    metrics={
+        "top1": torchmetrics.classification.MulticlassAccuracy(10),
+        "top5": torchmetrics.classification.MulticlassAccuracy(10, top_k=5),
+    },
+)
 knn_probe = ssl.callbacks.OnlineKNN(
     name="knn_probe",
     input="embedding",
@@ -125,19 +118,17 @@ knn_probe = ssl.callbacks.OnlineKNN(
     k=10,
 )
 
-# Initialize W&B logger with explicit settings
+# Initialize W&B logger (team stable-ssl)
 wandb_logger = WandbLogger(
-    project="simclr-cifar10",
-    entity="badass",  # Your W&B entity
-    name="simclr-cifar10-run",
-    log_model=False,  # Set to True if you want to save model artifacts
-    offline=False,  # Ensure online mode
+    entity="stable-ssl",
+    project="cifar10-resnet18",
+    log_model=False,
 )
 
 trainer = pl.Trainer(
-    max_epochs=6,
+    max_epochs=500,
     num_sanity_val_steps=0,  # Skip sanity check as queues need to be filled first
-    callbacks=[knn_probe],
+    callbacks=[knn_probe, linear_probe],
     precision="16-mixed",
     logger=wandb_logger,
     enable_checkpointing=False,

@@ -190,6 +190,18 @@ class Module(pl.LightningModule):
         # Get the joint loss
         loss = state["loss"]
 
+        # Log training loss each step (and aggregate per epoch)
+        log_value = loss.detach() if torch.is_tensor(loss) else float(loss)
+        self.log(
+            "train/loss",
+            log_value,
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True,
+            logger=True,
+            sync_dist=True,
+        )
+
         # Gradient accumulation factor
         accum = max(int(getattr(self.trainer, "accumulate_grad_batches", 1)), 1)
         scale = 1.0 / float(accum)
