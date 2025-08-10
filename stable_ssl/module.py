@@ -8,11 +8,75 @@ import torchmetrics
 from loguru import logger as logging
 from tabulate import tabulate
 
-from .utils import get_required_fn_parameters
-
 
 class Module(pl.LightningModule):
-    """Stable-SSL module with manual optimization for SSL training (supports multiple optimizers)."""
+    """PyTorch Lightning module using manual optimization with multi-optimizer support.
+
+    Core usage
+    - Provide a custom `forward(self, batch, stage)` via the `forward` argument at init.
+    - During training, `forward` must return a dict with `state["loss"]` (a single joint loss).
+      When multiple optimizers are configured, this joint loss is used for all optimizers.
+
+    Optimizer configuration (`self.optim`)
+    - Single optimizer:
+      {"optimizer": str|dict|partial|Class, "scheduler": <see below>, "interval": "step"|"epoch", "frequency": int}
+      - Optimizer accepted forms:
+        * string name (e.g., "AdamW", "SGD") from torch.optim
+        * dict: {"type": "AdamW", "lr": 1e-3, ...}
+        * functools.partial: partial(torch.optim.AdamW, lr=1e-3)
+        * optimizer class: torch.optim.AdamW
+    - Multiple optimizers:
+      {
+        name: {
+          "modules": "regex",                # assign params by module-name pattern (children inherit)
+          "optimizer": str|dict|partial|Class, # optimizer factory (same accepted forms as above)
+          "scheduler": str|dict|partial|Class, # flexible scheduler config (see below)
+          "interval": "step"|"epoch",       # scheduler interval
+          "frequency": int,                   # optimizer step frequency
+          "monitor": str                      # for ReduceLROnPlateau
+        }, ...
+      }
+
+    Parameter assignment (multi-optimizer)
+    - Modules are matched by regex on their qualified name. Children inherit the parent's assignment
+      unless they match a more specific pattern. Only direct parameters of each module are collected
+      to avoid duplication.
+
+    Schedulers (flexible)
+    - Accepted forms: string name (e.g., "CosineAnnealingLR", "StepLR"), dict with {"type": "...", ...},
+      functools.partial, or a scheduler class. Smart defaults are applied when params are omitted for
+      common schedulers (CosineAnnealingLR, OneCycleLR, StepLR, ExponentialLR, ReduceLROnPlateau,
+      LinearLR, ConstantLR). For ReduceLROnPlateau, a `monitor` key is added (default: "val_loss").
+    - The resulting Lightning scheduler dict includes `interval` and `frequency` (or `scheduler_frequency`).
+
+    Training loop behavior
+    - Manual optimization (`automatic_optimization = False`).
+    - Gradient accumulation: scales loss by 1/N where N = Trainer.accumulate_grad_batches and steps on the boundary.
+    - Per-optimizer step frequency: each optimizer steps only when its frequency boundary is met (in addition to accumulation boundary).
+    - Gradient clipping: uses Trainer's `gradient_clip_val` and `gradient_clip_algorithm` before each step.
+    - Returns the `state` dict from `forward` unchanged for logging/inspection.
+    """
+
+    # Centralized defaults for common schedulers (callables receive self and optimizer)
+    _SCHEDULER_DEFAULT_FACTORIES = {
+        "CosineAnnealingLR": lambda self, opt: {
+            "T_max": self.trainer.estimated_stepping_batches
+        },
+        "OneCycleLR": lambda self, opt: {
+            "max_lr": opt.param_groups[0]["lr"],
+            "total_steps": self.trainer.estimated_stepping_batches,
+            "pct_start": min(10 / self.trainer.max_epochs, 0.01),
+        },
+        "StepLR": lambda self, opt: {"step_size": 30, "gamma": 0.1},
+        "ExponentialLR": lambda self, opt: {"gamma": 0.9},
+        "ReduceLROnPlateau": lambda self, opt: {
+            "mode": "min",
+            "patience": 10,
+            "factor": 0.1,
+        },
+        "LinearLR": lambda self, opt: {},
+        "ConstantLR": lambda self, opt: {},
+    }
 
     def __init__(self, *args, forward: callable, hparams: dict = None, **kwargs):
         super().__init__()
@@ -75,13 +139,11 @@ class Module(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         """Manual optimization training step with support for multiple optimizers.
 
-        Expected outputs from forward during training (stage="fit"):
-        - Single optimizer or joint loss: state["loss"]: torch.Tensor
-          If multiple optimizers are configured and only `loss` is provided, it is treated
-          as a joint loss for all optimizers.
-        - Multiple optimizers with distinct losses: state["losses"]: Mapping where keys are
-          optimizer names matching self.optim keys (preferred), or integer indices matching
-          optimizer order.
+        Expected output from forward during training (stage="fit"):
+        - state["loss"]: torch.Tensor - Single joint loss for all optimizers
+
+        When multiple optimizers are configured, the same loss is used for all of them.
+        Each optimizer updates its assigned parameters based on gradients from this joint loss.
         """
         state = self.forward(batch, stage="fit")
 
@@ -89,10 +151,8 @@ class Module(pl.LightningModule):
         if getattr(self, "optim", None) is None or self.optim is False:
             return state
 
-        if not ("loss" in state or "losses" in state):
-            raise ValueError(
-                "Training step requires 'loss' (single/joint) or 'losses' (multi-optimizer) in the output state."
-            )
+        if "loss" not in state:
+            raise ValueError("Training step requires 'loss' in the output state.")
 
         # Resolve optimizers and schedulers (can be single or list)
         optimizers = self.optimizers()
@@ -105,88 +165,15 @@ class Module(pl.LightningModule):
         elif not isinstance(schedulers, (list, tuple)):
             schedulers = [schedulers]
 
-        num_optimizers = len(optimizers)
-
-        # Build mapping from optimizer index -> loss tensor
-        losses_by_index = {}
-        if "losses" in state:
-            if "loss" in state:
-                logging.warning(
-                    "Both 'losses' and 'loss' provided; ignoring 'loss' and using 'losses'."
-                )
-            losses = state["losses"]
-            if isinstance(losses, dict):
-                for key, loss in losses.items():
-                    if isinstance(key, str):
-                        if (
-                            self._optimizer_index_by_name
-                            and key in self._optimizer_index_by_name
-                        ):
-                            idx = self._optimizer_index_by_name[key]
-                            if 0 <= idx < num_optimizers:
-                                losses_by_index[idx] = loss
-                            else:
-                                logging.warning(
-                                    f"Mapped index {idx} for optimizer '{key}' is out of range (have {num_optimizers})."
-                                )
-                        else:
-                            logging.warning(
-                                f"Loss for optimizer name '{key}' provided, but no matching optimizer was found."
-                            )
-                    elif isinstance(key, int):
-                        if 0 <= key < num_optimizers:
-                            losses_by_index[key] = loss
-                        else:
-                            logging.warning(
-                                f"Loss index {key} is out of range for {num_optimizers} optimizers."
-                            )
-                    else:
-                        logging.warning(
-                            f"Unsupported key type in 'losses': {type(key)}. Expected str (name) or int (index)."
-                        )
-            else:
-                raise TypeError(
-                    "state['losses'] must be a dict mapping optimizer name or index to a loss tensor."
-                )
-        elif "loss" in state:
-            # Treat as joint loss for all configured optimizers
-            for idx in range(num_optimizers):
-                losses_by_index[idx] = state["loss"]
-
-        if not losses_by_index:
-            raise ValueError(
-                "No valid losses could be mapped to configured optimizers."
-            )
+        # Get the joint loss
+        loss = state["loss"]
 
         # Gradient accumulation factor
         accum = max(int(getattr(self.trainer, "accumulate_grad_batches", 1)), 1)
         scale = 1.0 / float(accum)
 
-        # Deduplicate losses: map unique loss id -> (loss_tensor, representative_optimizer_idx)
-        unique_losses = []
-        seen = {}
-        for idx, loss in losses_by_index.items():
-            key = id(loss)
-            if key not in seen:
-                seen[key] = len(unique_losses)
-                unique_losses.append((loss, idx))
-        num_unique = len(unique_losses)
-
-        # Backward once per unique loss tensor, toggling a representative optimizer
-        for i, (loss, rep_idx) in enumerate(unique_losses):
-            opt = optimizers[rep_idx]
-            self.toggle_optimizer(opt)
-            retain = i < (num_unique - 1)
-            self.manual_backward(loss * scale, retain_graph=retain)
-            self.untoggle_optimizer(opt)
-
-        # Optional user-provided per-step callbacks
-        if hasattr(self, "callbacks_training_step"):
-            try:
-                for fn in self.callbacks_training_step:
-                    fn(batch_idx)
-            except Exception as e:
-                logging.warning(f"callbacks_training_step execution failed: {e}")
+        # Compute gradients once for the joint loss
+        self.manual_backward(loss * scale)
 
         # Stepping and gradient clipping at accumulation boundary
         if (batch_idx + 1) % accum == 0:
@@ -234,22 +221,184 @@ class Module(pl.LightningModule):
         state = self.forward(batch, stage="predict")
         return state
 
-    def _create_scheduler(self, optimizer, name: str = "CosineAnnealingLR"):
-        if name == "CosineAnnealingLR":
-            return torch.optim.lr_scheduler.CosineAnnealingLR(
-                optimizer, T_max=self.trainer.estimated_stepping_batches
-            )
-        elif name == "OneCycleLR":
-            pct = min(10 / self.trainer.max_epochs, 0.01)
-            return torch.optim.lr_scheduler.OneCycleLR(
-                optimizer,
-                max_lr=optimizer.param_groups[0]["lr"],
-                total_steps=self.trainer.estimated_stepping_batches,
-                pct_start=pct,
-            )
+    def _get_scheduler_name(self, scheduler_config, scheduler_instance=None):
+        """Extract scheduler name from various config formats."""
+        if isinstance(scheduler_config, str):
+            return scheduler_config
+        elif isinstance(scheduler_config, dict):
+            return scheduler_config.get("type", "CosineAnnealingLR")
+        elif hasattr(scheduler_config, "func"):  # partial
+            return scheduler_config.func.__name__
+        elif scheduler_instance:
+            return scheduler_instance.__class__.__name__
         else:
-            raise ValueError(
-                f"Unsupported scheduler: {name}. Supported types: CosineAnnealingLR, OneCycleLR"
+            return "Unknown"
+
+    def _build_scheduler_config(self, scheduler, config, name=None):
+        """Build scheduler config dict for Lightning."""
+        scheduler_dict = {
+            "scheduler": scheduler,
+            "interval": config.get("interval", "step"),
+            "frequency": config.get("scheduler_frequency", config.get("frequency", 1)),
+        }
+
+        if name:
+            scheduler_dict["name"] = name
+
+        # Add monitor for ReduceLROnPlateau
+        scheduler_name = self._get_scheduler_name(
+            config.get("scheduler", "CosineAnnealingLR"), scheduler
+        )
+        if scheduler_name == "ReduceLROnPlateau":
+            scheduler_dict["monitor"] = config.get("monitor", "val_loss")
+
+        return scheduler_dict
+
+    def _create_optimizer(self, params, optimizer_config):
+        """Create an optimizer from flexible configuration.
+
+        Accepts:
+        - str: optimizer name from torch.optim (e.g., "AdamW", "SGD")
+        - dict: {"type": "AdamW", "lr": 1e-3, ...}
+        - partial: pre-configured optimizer factory
+        - class: optimizer class (e.g., torch.optim.AdamW)
+        """
+        import inspect
+        from functools import partial
+
+        # partial -> call with params
+        if isinstance(optimizer_config, partial):
+            return optimizer_config(params)
+
+        # dict -> extract type and kwargs
+        if isinstance(optimizer_config, dict):
+            config_copy = optimizer_config.copy()
+            opt_type = config_copy.pop("type", "AdamW")
+            kwargs = config_copy
+        else:
+            opt_type = optimizer_config
+            kwargs = {}
+
+        # resolve class
+        if isinstance(opt_type, str):
+            if hasattr(torch.optim, opt_type):
+                opt_class = getattr(torch.optim, opt_type)
+            else:
+                raise ValueError(
+                    f"Optimizer '{opt_type}' not found in torch.optim. Available: "
+                    + ", ".join([n for n in dir(torch.optim) if n[0].isupper()])
+                )
+        else:
+            opt_class = opt_type
+
+        try:
+            return opt_class(params, **kwargs)
+        except TypeError as e:
+            sig = inspect.signature(opt_class.__init__)
+            required = [
+                p.name
+                for p in sig.parameters.values()
+                if p.default == inspect.Parameter.empty
+                and p.name not in ["self", "params"]
+            ]
+            raise TypeError(
+                f"Failed to create {opt_class.__name__}. Required parameters: {required}. "
+                f"Provided: {list(kwargs.keys())}. Original error: {e}"
+            )
+
+    def _create_scheduler(self, optimizer, scheduler_config):
+        """Create a learning rate scheduler with flexible configuration.
+
+        Args:
+            optimizer: The optimizer to attach the scheduler to
+            scheduler_config: Can be:
+                - str: Name of scheduler (e.g., "CosineAnnealingLR")
+                - partial: Pre-configured scheduler (e.g., partial(CosineAnnealingLR, T_max=1000))
+                - dict: {"type": "CosineAnnealingLR", "T_max": 1000, ...}
+                - class: Direct scheduler class (will use smart defaults)
+
+        Returns:
+            Configured scheduler instance
+
+        Examples:
+            >>> # Simple string (uses smart defaults)
+            >>> scheduler = self._create_scheduler(opt, "CosineAnnealingLR")
+
+            >>> # With custom parameters
+            >>> scheduler = self._create_scheduler(
+            ...     opt, {"type": "StepLR", "step_size": 30, "gamma": 0.1}
+            ... )
+
+            >>> # Using partial for full control
+            >>> from functools import partial
+            >>> scheduler = self._create_scheduler(
+            ...     opt, partial(torch.optim.lr_scheduler.ExponentialLR, gamma=0.95)
+            ... )
+        """
+        import inspect
+        from functools import partial
+
+        # Handle partial - already configured, just call it
+        if isinstance(scheduler_config, partial):
+            return scheduler_config(optimizer)
+
+        # Handle dict format
+        if isinstance(scheduler_config, dict):
+            config_copy = scheduler_config.copy()
+            scheduler_type = config_copy.pop("type", "CosineAnnealingLR")
+            params = config_copy
+        # Handle string or class
+        else:
+            scheduler_type = scheduler_config
+            params = {}
+
+        # Get scheduler class
+        if isinstance(scheduler_type, str):
+            # Try to get from torch.optim.lr_scheduler
+            if hasattr(torch.optim.lr_scheduler, scheduler_type):
+                scheduler_class = getattr(torch.optim.lr_scheduler, scheduler_type)
+            else:
+                raise ValueError(
+                    f"Scheduler '{scheduler_type}' not found in torch.optim.lr_scheduler. "
+                    f"Available schedulers: {', '.join([s for s in dir(torch.optim.lr_scheduler) if not s.startswith('_')])}"
+                )
+        else:
+            scheduler_class = scheduler_type
+
+        # Apply smart defaults for common schedulers if params not provided
+        if not params:
+            scheduler_name = scheduler_class.__name__
+            if scheduler_name in self._SCHEDULER_DEFAULT_FACTORIES:
+                try:
+                    params = self._SCHEDULER_DEFAULT_FACTORIES[scheduler_name](
+                        self, optimizer
+                    )
+                except Exception as e:
+                    logging.warning(
+                        f"Failed to build default params for {scheduler_name}: {e}. Using library defaults."
+                    )
+                    params = {}
+            else:
+                # Unknown scheduler: rely on library defaults
+                params = {}
+
+        # Create scheduler
+        try:
+            return scheduler_class(optimizer, **params)
+        except TypeError as e:
+            # Provide helpful error message
+            sig = inspect.signature(scheduler_class.__init__)
+            required_params = [
+                p.name
+                for p in sig.parameters.values()
+                if p.default == inspect.Parameter.empty
+                and p.name not in ["self", "optimizer"]
+            ]
+            raise TypeError(
+                f"Failed to create {scheduler_class.__name__}. "
+                f"Required parameters: {required_params}. "
+                f"Provided: {list(params.keys())}. "
+                f"Original error: {e}"
             )
 
     def configure_optimizers(self):
@@ -259,6 +408,53 @@ class Module(pl.LightningModule):
             dict or tuple: Optimizer configuration with optional learning rate scheduler.
             For single optimizer: Returns a dict with optimizer and lr_scheduler.
             For multiple optimizers: Returns a tuple of (optimizers, schedulers).
+
+        Example:
+            Multi-optimizer configuration with module pattern matching and schedulers:
+
+            >>> # Simple single optimizer with scheduler
+            >>> self.optim = {
+            ...     "optimizer": partial(torch.optim.AdamW, lr=1e-3),
+            ...     "scheduler": "CosineAnnealingLR",  # Uses smart defaults
+            ...     "interval": "step",
+            ...     "frequency": 1,
+            ... }
+
+            >>> # Multi-optimizer with custom scheduler configs
+            >>> self.optim = {
+            ...     "encoder_opt": {
+            ...         "modules": "encoder",  # Matches 'encoder' and all children
+            ...         "optimizer": {"type": "AdamW", "lr": 1e-3},
+            ...         "scheduler": {
+            ...             "type": "OneCycleLR",
+            ...             "max_lr": 1e-3,
+            ...             "total_steps": 10000,
+            ...         },
+            ...         "interval": "step",
+            ...         "frequency": 1,
+            ...     },
+            ...     "head_opt": {
+            ...         "modules": ".*head$",  # Matches modules ending with 'head'
+            ...         "optimizer": "SGD",
+            ...         "scheduler": {
+            ...             "type": "ReduceLROnPlateau",
+            ...             "mode": "max",
+            ...             "patience": 5,
+            ...             "factor": 0.5,
+            ...         },
+            ...         "monitor": "val_accuracy",  # Required for ReduceLROnPlateau
+            ...         "interval": "epoch",
+            ...         "frequency": 2,
+            ...     },
+            ... }
+
+            With model structure:
+            - encoder                 -> encoder_opt (matches "encoder")
+            - encoder.layer1          -> encoder_opt (inherits from parent)
+            - encoder.layer1.conv     -> encoder_opt (inherits from encoder.layer1)
+            - classifier_head         -> head_opt (matches ".*head$")
+            - classifier_head.linear  -> head_opt (inherits from parent)
+            - decoder                 -> None (no match, no parameters collected)
         """
         logging.info("Configuring optimizers and learning rate schedulers...")
 
@@ -274,11 +470,9 @@ class Module(pl.LightningModule):
             self.optim = dict(optimizer=partial(torch.optim.AdamW))
 
         # Single optimizer case
-        optimizer_fn = self.optim.get("optimizer")
-        if isinstance(optimizer_fn, partial):
+        optimizer_cfg = self.optim.get("optimizer")
+        if isinstance(optimizer_cfg, (str, dict)) or hasattr(optimizer_cfg, "__call__"):
             logging.info("Configuring single optimizer.")
-            assert callable(optimizer_fn)
-            assert get_required_fn_parameters(optimizer_fn) == ["params"]
 
             # Direct parameter extraction - single pass
             params = [
@@ -287,11 +481,12 @@ class Module(pl.LightningModule):
                 if "_callbacks_modules" not in name
             ]
 
-            opt = optimizer_fn(params)
+            opt = self._create_optimizer(params, optimizer_cfg or "AdamW")
 
             # Create scheduler
-            sched_name = self.optim.get("scheduler", "CosineAnnealingLR")
-            sched = self._create_scheduler(opt, sched_name)
+            sched_config = self.optim.get("scheduler", "CosineAnnealingLR")
+            sched = self._create_scheduler(opt, sched_config)
+            sched_name = self._get_scheduler_name(sched_config, sched)
 
             logging.info(
                 f"Configured {opt.__class__.__name__} optimizer with {sched_name} scheduler."
@@ -304,14 +499,11 @@ class Module(pl.LightningModule):
                 "default": int(self.optim.get("frequency", 1))
             }
 
+            # Build scheduler config dict for Lightning
+            scheduler_dict = self._build_scheduler_config(sched, self.optim)
+
             # Return in list/dict style compatible with lr_schedulers() access
-            return [opt], [
-                {
-                    "scheduler": sched,
-                    "interval": "step",
-                    "frequency": 1,
-                }
-            ]
+            return [opt], [scheduler_dict]
 
         # Multiple optimizers case - check once
         if not isinstance(self.optim, dict):
@@ -336,26 +528,36 @@ class Module(pl.LightningModule):
         num_optimizers = len(optim_items)
         parameters = [[] for _ in range(num_optimizers)]
 
-        # Build a map of module name -> assigned optimizer index using nearest ancestor match
-        assigned_group_by_module = {}
+        # Assign each module to an optimizer group
+        # Child modules inherit their parent's group unless they match a specific pattern
+        module_to_group = {}
+
         for name, module in self.named_modules():
+            # Callbacks handle their own optimizers
             if "_callbacks_modules" in name:
                 continue
-            # determine parent's assigned group
-            parent_name = name.rsplit(".", 1)[0] if "." in name else None
-            parent_group = assigned_group_by_module.get(parent_name, None)
-            # current match overrides parent if any
-            current_group = parent_group
+
+            # Step 1: Inherit optimizer group from parent module
+            if "." in name:
+                parent_name = name.rsplit(".", 1)[0]
+                group = module_to_group.get(parent_name)
+            else:
+                group = None
+
+            # Step 2: Override with explicit pattern match if found
             for idx, regex in regex_map:
                 if regex.match(name):
-                    current_group = idx
+                    group = idx
                     break
-            assigned_group_by_module[name] = current_group
-            # collect this module's direct parameters for the assigned group
-            if current_group is not None:
-                module_params = list(module.parameters(recurse=False))
-                if module_params:
-                    parameters[current_group].extend(module_params)
+
+            # Step 3: Store assignment for child modules to inherit
+            module_to_group[name] = group
+
+            # Step 4: Collect this module's direct parameters
+            if group is not None:
+                params = list(module.parameters(recurse=False))
+                if params:
+                    parameters[group].extend(params)
 
         # Build optimizers and schedulers
         optimizers = []
@@ -371,18 +573,16 @@ class Module(pl.LightningModule):
                 # skip registration when there are no parameters
                 continue
 
-            opt = config["optimizer"](params)
+            opt = self._create_optimizer(params, config["optimizer"])
             optimizers.append(opt)
 
-            sched_name = config.get("scheduler", "CosineAnnealingLR")
-            schedulers.append(
-                {
-                    "scheduler": self._create_scheduler(opt, sched_name),
-                    "interval": "step",
-                    "frequency": 1,
-                    "name": name,
-                }
-            )
+            sched_config = config.get("scheduler", "CosineAnnealingLR")
+            scheduler = self._create_scheduler(opt, sched_config)
+            sched_name = self._get_scheduler_name(sched_config, scheduler)
+
+            # Build scheduler config dict for Lightning
+            scheduler_dict = self._build_scheduler_config(scheduler, config, name)
+            schedulers.append(scheduler_dict)
 
             logging.info(
                 f"Configured optimizer '{name}' ({len(params)} parameters) with {sched_name} scheduler."
