@@ -434,41 +434,6 @@ class Module(pl.LightningModule):
                 f"Original error: {e}"
             )
 
-    def get_modules_by_regex(self, pattern: str, inherit: bool = True):
-        """Return modules whose qualified names match a regex.
-
-        Args:
-            pattern: Python regex to match module qualified names.
-            inherit: If True, children inherit their parent's match assignment (same logic
-                used in multi-optimizer parameter grouping).
-
-        Returns:
-            List of (qualified_name, module) tuples.
-        """
-        regex = re.compile(pattern)
-
-        # Assignment with inheritance
-        matched = []
-        module_to_match = {}
-        for name, module in self.named_modules():
-            if "_callbacks_modules" in name or "_callbacks_metrics" in name:
-                continue
-
-            if "." in name:
-                parent_name = name.rsplit(".", 1)[0]
-                group = module_to_match.get(parent_name)
-            else:
-                group = None
-
-            if regex.match(name):
-                group = True
-
-            module_to_match[name] = group
-            if group or (not inherit and regex.match(name)):
-                matched.append((name, module))
-
-        return matched
-
     def _collect_parameters_by_optimizer_groups(self, optim_items):
         """Assign modules and collect parameters per optimizer group defined by regex.
 
@@ -550,19 +515,6 @@ class Module(pl.LightningModule):
             logging.info(
                 "\n" + tabulate(rows, headers=headers, tablefmt="heavy_outline")
             )
-
-        # Optional per-group module listing at debug level
-        for group_name, config in optim_items:
-            mods = modules_by_name[group_name]
-            if not mods:
-                logging.debug(
-                    f"Group '{group_name}' pattern='{config.get('modules')}' matched 0 modules"
-                )
-            else:
-                sample = ", ".join(mods[:10]) + (" ..." if len(mods) > 10 else "")
-                logging.debug(
-                    f"Group '{group_name}' pattern='{config.get('modules')}' matched {len(mods)} modules: {sample}"
-                )
 
         return params_by_name, modules_by_name
 
