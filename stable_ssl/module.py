@@ -1,3 +1,4 @@
+import inspect
 import re
 import types
 from functools import partial
@@ -33,7 +34,7 @@ class Module(pl.LightningModule):
           "scheduler": str|dict|partial|Class, # flexible scheduler config (see below)
           "interval": "step"|"epoch",       # scheduler interval
           "frequency": int,                   # optimizer step frequency
-          "monitor": str                      # for ReduceLROnPlateau
+          "monitor": str                      # (optional) for ReduceLROnPlateau; alternatively set inside scheduler dict
         }, ...
       }
 
@@ -47,6 +48,8 @@ class Module(pl.LightningModule):
       functools.partial, or a scheduler class. Smart defaults are applied when params are omitted for
       common schedulers (CosineAnnealingLR, OneCycleLR, StepLR, ExponentialLR, ReduceLROnPlateau,
       LinearLR, ConstantLR). For ReduceLROnPlateau, a `monitor` key is added (default: "val_loss").
+      You may specify `monitor` either alongside the optimizer config (top level) or inside the
+      scheduler dict itself.
     - The resulting Lightning scheduler dict includes `interval` and `frequency` (or `scheduler_frequency`).
 
     Training loop behavior
@@ -135,6 +138,25 @@ class Module(pl.LightningModule):
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError("The forward() method must be implemented.")
+
+    def named_parameters(self, prefix: str = "", recurse: bool = True):
+        """Override to globally exclude callback-related parameters.
+
+        Excludes parameters that belong to `self._callbacks_modules` or `self._callbacks_metrics`.
+        This prevents accidental optimization of callback/metric internals, even if external code
+        calls `self.parameters()` or `self.named_parameters()` directly.
+        """
+        for name, param in super().named_parameters(prefix=prefix, recurse=recurse):
+            if name.startswith("_callbacks_modules.") or name.startswith(
+                "_callbacks_metrics."
+            ):
+                continue
+            yield name, param
+
+    def parameters(self, recurse: bool = True):
+        """Override to route through the filtered `named_parameters` implementation."""
+        for _, param in self.named_parameters(recurse=recurse):
+            yield param
 
     def training_step(self, batch, batch_idx):
         """Manual optimization training step with support for multiple optimizers.
@@ -246,11 +268,16 @@ class Module(pl.LightningModule):
             scheduler_dict["name"] = name
 
         # Add monitor for ReduceLROnPlateau
-        scheduler_name = self._get_scheduler_name(
-            config.get("scheduler", "CosineAnnealingLR"), scheduler
-        )
+        scheduler_cfg = config.get("scheduler", "CosineAnnealingLR")
+        scheduler_name = self._get_scheduler_name(scheduler_cfg, scheduler)
         if scheduler_name == "ReduceLROnPlateau":
-            scheduler_dict["monitor"] = config.get("monitor", "val_loss")
+            # Prefer nested monitor inside scheduler dict, fallback to top-level
+            nested_monitor = None
+            if isinstance(scheduler_cfg, dict):
+                nested_monitor = scheduler_cfg.get("monitor")
+            scheduler_dict["monitor"] = nested_monitor or config.get(
+                "monitor", "val_loss"
+            )
 
         return scheduler_dict
 
@@ -263,9 +290,6 @@ class Module(pl.LightningModule):
         - partial: pre-configured optimizer factory
         - class: optimizer class (e.g., torch.optim.AdamW)
         """
-        import inspect
-        from functools import partial
-
         # partial -> call with params
         if isinstance(optimizer_config, partial):
             return optimizer_config(params)
@@ -335,9 +359,6 @@ class Module(pl.LightningModule):
             ...     opt, partial(torch.optim.lr_scheduler.ExponentialLR, gamma=0.95)
             ... )
         """
-        import inspect
-        from functools import partial
-
         # Handle partial - already configured, just call it
         if isinstance(scheduler_config, partial):
             return scheduler_config(optimizer)
@@ -400,6 +421,138 @@ class Module(pl.LightningModule):
                 f"Provided: {list(params.keys())}. "
                 f"Original error: {e}"
             )
+
+    def get_modules_by_regex(self, pattern: str, inherit: bool = True):
+        """Return modules whose qualified names match a regex.
+
+        Args:
+            pattern: Python regex to match module qualified names.
+            inherit: If True, children inherit their parent's match assignment (same logic
+                used in multi-optimizer parameter grouping).
+
+        Returns:
+            List of (qualified_name, module) tuples.
+        """
+        regex = re.compile(pattern)
+
+        # Assignment with inheritance
+        matched = []
+        module_to_match = {}
+        for name, module in self.named_modules():
+            if "_callbacks_modules" in name or "_callbacks_metrics" in name:
+                continue
+
+            if "." in name:
+                parent_name = name.rsplit(".", 1)[0]
+                group = module_to_match.get(parent_name)
+            else:
+                group = None
+
+            if regex.match(name):
+                group = True
+
+            module_to_match[name] = group
+            if group or (not inherit and regex.match(name)):
+                matched.append((name, module))
+
+        return matched
+
+    def _collect_parameters_by_optimizer_groups(self, optim_items):
+        """Assign modules and collect parameters per optimizer group defined by regex.
+
+        Args:
+            optim_items: list of (name, config) where config contains a "modules" regex
+                describing group membership.
+
+        Returns:
+            params_by_name: dict[name, List[nn.Parameter]]
+            modules_by_name: dict[name, List[str]]
+        """
+        # Pre-compile regex with stable order from optim_items
+        compiled = [
+            (name, re.compile(config["modules"])) for name, config in optim_items
+        ]
+
+        # Initialize containers
+        params_by_name = {name: [] for name, _ in compiled}
+        modules_by_name = {name: [] for name, _ in compiled}
+
+        # Map module -> group index with inheritance
+        module_to_group = {}
+        for qual_name, module in self.named_modules():
+            if "_callbacks_modules" in qual_name or "_callbacks_metrics" in qual_name:
+                continue
+
+            # inherit parent's group if any
+            if "." in qual_name:
+                parent_name = qual_name.rsplit(".", 1)[0]
+                group_idx = module_to_group.get(parent_name)
+            else:
+                group_idx = None
+
+            # override if explicit match
+            for idx, (_, regex) in enumerate(compiled):
+                if regex.match(qual_name):
+                    group_idx = idx
+                    break
+
+            module_to_group[qual_name] = group_idx
+
+            if group_idx is not None:
+                group_name = compiled[group_idx][0]
+                # record module name
+                modules_by_name[group_name].append(qual_name)
+                # collect direct parameters only to avoid duplication
+                direct_params = list(module.parameters(recurse=False))
+                if direct_params:
+                    params_by_name[group_name].extend(direct_params)
+
+        # Logging summary
+        rows = []
+        for group_name, config in optim_items:
+            pattern = config.get("modules", "")
+            tensors = params_by_name[group_name]
+            num_tensors = len(tensors)
+            num_elements = sum(int(p.numel()) for p in tensors)
+            num_requires_grad = sum(int(p.requires_grad) for p in tensors)
+            rows.append(
+                [
+                    group_name,
+                    pattern,
+                    len(modules_by_name[group_name]),
+                    num_tensors,
+                    num_elements,
+                    num_requires_grad,
+                ]
+            )
+
+        if rows:
+            headers = [
+                "Optimizer",
+                "Pattern",
+                "Matched Modules",
+                "Param Tensors",
+                "Total Params",
+                "RequiresGrad Tensors",
+            ]
+            logging.info(
+                "\n" + tabulate(rows, headers=headers, tablefmt="heavy_outline")
+            )
+
+        # Optional per-group module listing at debug level
+        for group_name, config in optim_items:
+            mods = modules_by_name[group_name]
+            if not mods:
+                logging.debug(
+                    f"Group '{group_name}' pattern='{config.get('modules')}' matched 0 modules"
+                )
+            else:
+                sample = ", ".join(mods[:10]) + (" ..." if len(mods) > 10 else "")
+                logging.debug(
+                    f"Group '{group_name}' pattern='{config.get('modules')}' matched {len(mods)} modules: {sample}"
+                )
+
+        return params_by_name, modules_by_name
 
     def configure_optimizers(self):
         """Configure optimizers and schedulers for manual optimization.
@@ -474,12 +627,8 @@ class Module(pl.LightningModule):
         if isinstance(optimizer_cfg, (str, dict)) or hasattr(optimizer_cfg, "__call__"):
             logging.info("Configuring single optimizer.")
 
-            # Direct parameter extraction - single pass
-            params = [
-                p
-                for name, p in self.named_parameters()
-                if "_callbacks_modules" not in name
-            ]
+            # Direct parameter extraction - use globally filtered parameters
+            params = list(self.parameters())
 
             opt = self._create_optimizer(params, optimizer_cfg or "AdamW")
 
@@ -520,44 +669,10 @@ class Module(pl.LightningModule):
             f"\tOptimizer specified by Dict with keys {[k for k, _ in optim_items]}... 🔧"
         )
 
-        # Pre-compile regex patterns with their indices
-        regex_map = [
-            (i, re.compile(config["modules"]))
-            for i, (_, config) in enumerate(optim_items)
-        ]
-        num_optimizers = len(optim_items)
-        parameters = [[] for _ in range(num_optimizers)]
-
-        # Assign each module to an optimizer group
-        # Child modules inherit their parent's group unless they match a specific pattern
-        module_to_group = {}
-
-        for name, module in self.named_modules():
-            # Callbacks handle their own optimizers
-            if "_callbacks_modules" in name:
-                continue
-
-            # Step 1: Inherit optimizer group from parent module
-            if "." in name:
-                parent_name = name.rsplit(".", 1)[0]
-                group = module_to_group.get(parent_name)
-            else:
-                group = None
-
-            # Step 2: Override with explicit pattern match if found
-            for idx, regex in regex_map:
-                if regex.match(name):
-                    group = idx
-                    break
-
-            # Step 3: Store assignment for child modules to inherit
-            module_to_group[name] = group
-
-            # Step 4: Collect this module's direct parameters
-            if group is not None:
-                params = list(module.parameters(recurse=False))
-                if params:
-                    parameters[group].extend(params)
+        # Build grouping with detailed logging
+        params_by_name, modules_by_name = self._collect_parameters_by_optimizer_groups(
+            optim_items
+        )
 
         # Build optimizers and schedulers
         optimizers = []
@@ -567,7 +682,8 @@ class Module(pl.LightningModule):
         self._optimizer_index_by_name = {}
         self._optimizer_frequencies = {}
 
-        for (name, config), params in zip(optim_items, parameters):
+        for name, config in optim_items:
+            params = params_by_name.get(name, [])
             if not params:
                 logging.warning(f"No parameters matched for optimizer {name}")
                 # skip registration when there are no parameters
@@ -585,7 +701,9 @@ class Module(pl.LightningModule):
             schedulers.append(scheduler_dict)
 
             logging.info(
-                f"Configured optimizer '{name}' ({len(params)} parameters) with {sched_name} scheduler."
+                f"Configured optimizer '{name}' (modules={len(modules_by_name.get(name, []))}, "
+                f"param_tensors={len(params)}, total_params={sum(int(p.numel()) for p in params)}) "
+                f"with {sched_name} scheduler."
             )
 
             # Track names and frequencies aligned to optimizer order
