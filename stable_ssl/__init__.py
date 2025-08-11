@@ -13,6 +13,7 @@ from .__about__ import (
     __url__,
     __version__,
 )
+from .backbone.utils import TeacherStudentWrapper
 from .callbacks import (
     EarlyStopping,
     ImageRetrieval,
@@ -24,6 +25,7 @@ from .callbacks import (
     OnlineWriter,
     RankMe,
     SklearnCheckpoint,
+    TeacherStudentCallback,
     TrainerInfo,
 )
 from .manager import Manager
@@ -41,6 +43,7 @@ __all__ = [
     RankMe,
     LiDAR,
     ImageRetrieval,
+    TeacherStudentCallback,
     utils,
     data,
     module,
@@ -52,6 +55,7 @@ __all__ = [
     Manager,
     backbone,
     Module,
+    TeacherStudentWrapper,
     __author__,
     __license__,
     __summary__,

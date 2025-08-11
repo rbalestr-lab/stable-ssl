@@ -4,6 +4,7 @@ from .knn import OnlineKNN
 from .lidar import LiDAR
 from .probe import OnlineProbe
 from .rankme import RankMe
+from .teacher_student import TeacherStudentCallback
 from .trainer_info import LoggingCallback, ModuleSummary, TrainerInfo
 from .utils import EarlyStopping
 from .writer import OnlineWriter
@@ -20,4 +21,5 @@ __all__ = [
     RankMe,
     LiDAR,
     ImageRetrieval,
+    TeacherStudentCallback,
 ]

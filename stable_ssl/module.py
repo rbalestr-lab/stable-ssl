@@ -9,6 +9,8 @@ import torchmetrics
 from loguru import logger as logging
 from tabulate import tabulate
 
+import stable_ssl.optim.lr_scheduler as ssl_lr
+
 
 class Module(pl.LightningModule):
     """PyTorch Lightning module using manual optimization with multi-optimizer support.
@@ -59,27 +61,6 @@ class Module(pl.LightningModule):
     - Gradient clipping: uses Trainer's `gradient_clip_val` and `gradient_clip_algorithm` before each step.
     - Returns the `state` dict from `forward` unchanged for logging/inspection.
     """
-
-    # Centralized defaults for common schedulers (callables receive self and optimizer)
-    _SCHEDULER_DEFAULT_FACTORIES = {
-        "CosineAnnealingLR": lambda self, opt: {
-            "T_max": self.trainer.estimated_stepping_batches
-        },
-        "OneCycleLR": lambda self, opt: {
-            "max_lr": opt.param_groups[0]["lr"],
-            "total_steps": self.trainer.estimated_stepping_batches,
-            "pct_start": min(10 / self.trainer.max_epochs, 0.01),
-        },
-        "StepLR": lambda self, opt: {"step_size": 30, "gamma": 0.1},
-        "ExponentialLR": lambda self, opt: {"gamma": 0.9},
-        "ReduceLROnPlateau": lambda self, opt: {
-            "mode": "min",
-            "patience": 10,
-            "factor": 0.1,
-        },
-        "LinearLR": lambda self, opt: {},
-        "ConstantLR": lambda self, opt: {},
-    }
 
     def __init__(self, *args, forward: callable, hparams: dict = None, **kwargs):
         super().__init__()
@@ -371,68 +352,8 @@ class Module(pl.LightningModule):
             ...     opt, partial(torch.optim.lr_scheduler.ExponentialLR, gamma=0.95)
             ... )
         """
-        # Handle partial - already configured, just call it
-        if isinstance(scheduler_config, partial):
-            return scheduler_config(optimizer)
-
-        # Handle dict format
-        if isinstance(scheduler_config, dict):
-            config_copy = scheduler_config.copy()
-            scheduler_type = config_copy.pop("type", "CosineAnnealingLR")
-            params = config_copy
-        # Handle string or class
-        else:
-            scheduler_type = scheduler_config
-            params = {}
-
-        # Get scheduler class
-        if isinstance(scheduler_type, str):
-            # Try to get from torch.optim.lr_scheduler
-            if hasattr(torch.optim.lr_scheduler, scheduler_type):
-                scheduler_class = getattr(torch.optim.lr_scheduler, scheduler_type)
-            else:
-                raise ValueError(
-                    f"Scheduler '{scheduler_type}' not found in torch.optim.lr_scheduler. "
-                    f"Available schedulers: {', '.join([s for s in dir(torch.optim.lr_scheduler) if not s.startswith('_')])}"
-                )
-        else:
-            scheduler_class = scheduler_type
-
-        # Apply smart defaults for common schedulers if params not provided
-        if not params:
-            scheduler_name = scheduler_class.__name__
-            if scheduler_name in self._SCHEDULER_DEFAULT_FACTORIES:
-                try:
-                    params = self._SCHEDULER_DEFAULT_FACTORIES[scheduler_name](
-                        self, optimizer
-                    )
-                except Exception as e:
-                    logging.warning(
-                        f"Failed to build default params for {scheduler_name}: {e}. Using library defaults."
-                    )
-                    params = {}
-            else:
-                # Unknown scheduler: rely on library defaults
-                params = {}
-
-        # Create scheduler
-        try:
-            return scheduler_class(optimizer, **params)
-        except TypeError as e:
-            # Provide helpful error message
-            sig = inspect.signature(scheduler_class.__init__)
-            required_params = [
-                p.name
-                for p in sig.parameters.values()
-                if p.default == inspect.Parameter.empty
-                and p.name not in ["self", "optimizer"]
-            ]
-            raise TypeError(
-                f"Failed to create {scheduler_class.__name__}. "
-                f"Required parameters: {required_params}. "
-                f"Provided: {list(params.keys())}. "
-                f"Original error: {e}"
-            )
+        # Delegate to central factory in stable_ssl.optim.lr_scheduler
+        return ssl_lr.create_scheduler(optimizer, scheduler_config, module=self)
 
     def _collect_parameters_by_optimizer_groups(self, optim_items):
         """Assign modules and collect parameters per optimizer group defined by regex.

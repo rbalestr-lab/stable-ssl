@@ -114,6 +114,31 @@ class NegativeCosineSimilarity(torch.nn.Module):
         return -sim(z_i, z_j).mean()
 
 
+class BYOLLoss(torch.nn.Module):
+    """Normalized MSE objective used in BYOL :cite:`grill2020bootstrap`.
+
+    Computes the mean squared error between L2-normalized online predictions
+    and L2-normalized target projections.
+    """
+
+    def forward(
+        self, online_pred: torch.Tensor, target_proj: torch.Tensor
+    ) -> torch.Tensor:
+        """Compute BYOL loss.
+
+        Args:
+            online_pred: Predictions from the online network predictor.
+            target_proj: Projections from the target network (no gradient).
+
+        Returns:
+            torch.Tensor: Scalar loss value.
+        """
+        online_pred = F.normalize(online_pred, dim=-1, p=2)
+        target_proj = F.normalize(target_proj, dim=-1, p=2)
+        loss = 2 - 2 * (online_pred * target_proj).sum(dim=-1)
+        return loss.mean()
+
+
 class VICRegLoss(torch.nn.Module):
     """SSL objective used in VICReg :cite:`bardes2021vicreg`.
 

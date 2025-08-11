@@ -12,44 +12,46 @@ import torchvision
 from lightning.pytorch.loggers import WandbLogger
 
 import stable_ssl as ssl
-from stable_ssl.data import transforms
-from stable_ssl.data.utils import Dataset
+from ssl.data import transforms
 
-# without transform
-train_transform = transforms.Compose(
+# Best SimCLR augmentations for CIFAR-10 based on original paper and research
+# Using symmetric augmentations (same for both views) as per SimCLR paper
+
+simclr_transform = transforms.Compose(
     transforms.RGB(),
-    transforms.RandomResizedCrop((32, 32)),  # CIFAR-10 is 32x32
+    transforms.RandomResizedCrop(
+        (32, 32), scale=(0.08, 1.0)
+    ),  # Original SimCLR uses 0.08-1.0
     transforms.RandomHorizontalFlip(p=0.5),
     transforms.ColorJitter(
-        brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8
+        brightness=0.4,
+        contrast=0.4,
+        saturation=0.4,
+        hue=0.1,
+        p=0.8,  # Standard SimCLR values
     ),
     transforms.RandomGrayscale(p=0.2),
-    transforms.ToImage(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    # Note: Gaussian blur often omitted for CIFAR-10 due to low resolution
+    transforms.ToImage(
+        **ssl.data.static.CIFAR10
+    ),  # Use CIFAR-10 normalization from static
 )
 
-# Use torchvision CIFAR-10 wrapped in FromTorchDataset
+# Use the same transform for both views (symmetric augmentation)
+train_transform = simclr_transform
+
+# Use torchvision CIFAR-10 with the enhanced FromTorchDataset
 cifar_train = torchvision.datasets.CIFAR10(
     root="/tmp/cifar10", train=True, download=True
 )
 
-
-class IndexedDataset(Dataset):
-    """Custom dataset wrapper that adds sample_idx to each sample."""
-
-    def __init__(self, dataset, transform=None):
-        super().__init__(transform)
-        self.dataset = dataset
-
-    def __getitem__(self, idx):
-        image, label = self.dataset[idx]
-        sample = {"image": image, "label": label, "sample_idx": idx}
-        return self.process_sample(sample)
-
-    def __len__(self):
-        return len(self.dataset)
-
-
-train_dataset = IndexedDataset(cifar_train, transform=train_transform)
+# Now using FromTorchDataset which automatically adds sample_idx
+train_dataset = ssl.data.FromTorchDataset(
+    cifar_train,
+    names=["image", "label"],
+    transform=train_transform,
+    add_sample_idx=True,  # This is True by default
+)
 train = torch.utils.data.DataLoader(
     dataset=train_dataset,
     sampler=ssl.data.sampler.RepeatedRandomSampler(train_dataset, n_views=2),
@@ -61,14 +63,21 @@ val_transform = transforms.Compose(
     transforms.RGB(),
     transforms.Resize((32, 32)),
     transforms.CenterCrop((32, 32)),
-    transforms.ToImage(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    transforms.ToImage(
+        **ssl.data.static.CIFAR10
+    ),  # Use CIFAR-10 normalization from static
 )
 
-# Use torchvision CIFAR-10 for validation
+# Use torchvision CIFAR-10 for validation with FromTorchDataset
 cifar_val = torchvision.datasets.CIFAR10(
     root="/tmp/cifar10", train=False, download=True
 )
-val_dataset = IndexedDataset(cifar_val, transform=val_transform)
+val_dataset = ssl.data.FromTorchDataset(
+    cifar_val,
+    names=["image", "label"],
+    transform=val_transform,
+    add_sample_idx=True,  # This is True by default
+)
 val = torch.utils.data.DataLoader(
     dataset=val_dataset,
     batch_size=128,
@@ -87,9 +96,14 @@ def forward(self, batch, stage):
     return out
 
 
-backbone = torchvision.models.resnet18(weights=None, num_classes=10)
-backbone.fc = torch.nn.Identity()
-projector = torch.nn.Linear(512, 128)
+# Use from_torchvision to load ResNet18 adapted for CIFAR-10 (low resolution)
+backbone = ssl.backbone.from_torchvision(
+    "resnet18",
+    low_resolution=True,  # Adapts for CIFAR-10's 32x32 resolution
+    weights=None,
+)
+backbone.fc = torch.nn.Identity()  # Remove classification head
+projector = torch.nn.Linear(512, 128)  # ResNet18 outputs 512-dim features
 
 module = ssl.Module(
     backbone=backbone,

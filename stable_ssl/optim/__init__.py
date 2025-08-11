@@ -5,6 +5,7 @@ from .lr_scheduler import (
     LinearWarmupCosineAnnealing,
     LinearWarmupCyclicAnnealing,
     LinearWarmupThreeStepsAnnealing,
+    create_scheduler,
 )
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     LinearWarmupCosineAnnealing,
     LinearWarmupCyclicAnnealing,
     LinearWarmupThreeStepsAnnealing,
+    create_scheduler,
 ]

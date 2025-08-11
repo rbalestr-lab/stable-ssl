@@ -711,26 +711,34 @@ class Compose(v2.Transform):
         return sample
 
 
-# class MultiTransforms(v2.Transform):
-#     def __init__(self, transforms, repeats: list = None):
-#         super().__init__()
-#         if repeats is None:
-#             repeats = [1 for _ in range(len(transforms))]
+class MultiViewTransform(v2.Transform):
+    """Apply different transforms to different views of the same sample.
 
-#         assert hasattr(transforms, "__len__")
-#         assert hasattr(repeats, "__len__")
-#         assert len(repeats) == len(transforms)
+    When using RepeatedRandomSampler with n_views=2, this allows you to apply
+    different augmentations to each view. It alternates between transforms
+    based on a simple counter.
 
-#         self.transforms = []
-#         for t, r in zip(transforms, repeats):
-#             self.transforms.extend([t for _ in range(r)])
+    Args:
+        transforms: List of transforms, one for each view
 
-#     def __call__(self, sample):
-#         views = [t(copy.deepcopy(sample)) for t in self.transforms]
-#         sample = dict()
-#         for name in views[0]:
-#             sample[name] = [v[name] for v in views]
-#         return sample
+    Example:
+        transform = MultiViewTransform([
+            strong_augmentation,  # Applied to first view
+            weak_augmentation,    # Applied to second view
+        ])
+    """
+
+    def __init__(self, transforms):
+        super().__init__()
+        self.transforms = transforms
+        self.n_transforms = len(transforms)
+        self.counter = 0
+
+    def __call__(self, sample):
+        # Use round-robin to apply transforms
+        transform_idx = self.counter % self.n_transforms
+        self.counter += 1
+        return self.transforms[transform_idx](sample)
 
 
 # class RandomClassSwitch(v2.Transform):

@@ -1,6 +1,7 @@
 import math
 
 import numpy as np
+import torch
 from torch.optim.lr_scheduler import (
     CosineAnnealingLR,
     LambdaLR,
@@ -9,6 +10,143 @@ from torch.optim.lr_scheduler import (
     SequentialLR,
     _LRScheduler,
 )
+
+# Default parameter factories for common schedulers (both torch and custom)
+# These callables receive the calling module (for trainer context) and optimizer
+DEFAULT_SCHEDULER_FACTORIES = {
+    # torch schedulers
+    "CosineAnnealingLR": lambda module, opt: {
+        "T_max": getattr(module.trainer, "estimated_stepping_batches", None),
+    },
+    "OneCycleLR": lambda module, opt: {
+        "max_lr": opt.param_groups[0]["lr"],
+        "total_steps": getattr(module.trainer, "estimated_stepping_batches", None),
+        "pct_start": min(10 / getattr(module.trainer, "max_epochs", 1), 0.01),
+    },
+    "StepLR": lambda module, opt: {"step_size": 30, "gamma": 0.1},
+    "ExponentialLR": lambda module, opt: {"gamma": 0.9},
+    "ReduceLROnPlateau": lambda module, opt: {
+        "mode": "min",
+        "patience": 10,
+        "factor": 0.1,
+    },
+    "LinearLR": lambda module, opt: {},
+    "ConstantLR": lambda module, opt: {},
+    # custom schedulers (defined below)
+    "LinearWarmup": lambda module, opt: {
+        "total_steps": getattr(module.trainer, "estimated_stepping_batches", None),
+        "start_factor": 0.01,
+        "peak_step": max(
+            1, int(0.01 * getattr(module.trainer, "estimated_stepping_batches", 1))
+        ),
+    },
+    "LinearWarmupCosineAnnealing": lambda module, opt: {
+        "total_steps": getattr(module.trainer, "estimated_stepping_batches", None),
+        "start_factor": 0.01,
+        "end_lr": 0.0,
+        "peak_step": max(
+            1, int(0.01 * getattr(module.trainer, "estimated_stepping_batches", 1))
+        ),
+    },
+    "LinearWarmupCyclicAnnealing": lambda module, opt: {
+        "total_steps": getattr(module.trainer, "estimated_stepping_batches", None),
+        "start_factor": 0.01,
+        "peak_step": max(
+            1, int(0.1 * getattr(module.trainer, "estimated_stepping_batches", 1))
+        ),
+    },
+    "LinearWarmupThreeStepsAnnealing": lambda module, opt: {
+        "total_steps": getattr(module.trainer, "estimated_stepping_batches", None),
+        "start_factor": 0.001,
+        "gamma": 0.3,
+        "peak_step": max(
+            1, int(0.05 * getattr(module.trainer, "estimated_stepping_batches", 1))
+        ),
+    },
+    "LinearWarmupCosineAnnealingLR": lambda module, opt: {
+        "warmup_steps": max(
+            1, int(0.01 * getattr(module.trainer, "estimated_stepping_batches", 1))
+        ),
+        "max_steps": getattr(module.trainer, "estimated_stepping_batches", None),
+        "warmup_start_lr": 0.0,
+        "eta_min": 0.0,
+    },
+}
+
+
+def _resolve_scheduler_callable(name_or_class):
+    """Resolve a scheduler by name from torch or this module.
+
+    Accepts a string name, class, or callable. Returns a callable to construct the scheduler.
+    """
+    if not isinstance(name_or_class, str):
+        return name_or_class
+
+    # Try torch.optim.lr_scheduler first
+    if hasattr(torch.optim.lr_scheduler, name_or_class):
+        return getattr(torch.optim.lr_scheduler, name_or_class)
+
+    # Then try this module (custom functions/classes)
+    if name_or_class in globals():
+        return globals()[name_or_class]
+
+    raise ValueError(
+        f"Scheduler '{name_or_class}' not found in torch.optim.lr_scheduler or stable_ssl.optim.lr_scheduler."
+    )
+
+
+def _build_default_params(name: str, module, optimizer):
+    factory = DEFAULT_SCHEDULER_FACTORIES.get(name)
+    if factory is None:
+        return {}
+    params = factory(module, optimizer)
+    # Remove None in case trainer context is missing
+    return {k: v for k, v in params.items() if v is not None}
+
+
+def create_scheduler(optimizer, scheduler_config, module=None):
+    """Create a learning rate scheduler instance from a flexible config.
+
+    Args:
+        optimizer: torch optimizer
+        scheduler_config: str | dict | partial | Class | callable
+        module: optional calling module for defaults (expects module.trainer)
+
+    Returns:
+        Instantiated scheduler
+    """
+    # partial -> call directly
+    if isinstance(scheduler_config, type(lambda: None)) and hasattr(
+        scheduler_config, "func"
+    ):
+        # It's a functools.partial (duck-typing), call with optimizer
+        return scheduler_config(optimizer)
+
+    # dict -> pop type + params
+    if isinstance(scheduler_config, dict):
+        cfg = dict(scheduler_config)
+        scheduler_type = cfg.pop("type", "CosineAnnealingLR")
+        params = cfg
+    else:
+        scheduler_type = scheduler_config
+        params = {}
+
+    scheduler_ctor = _resolve_scheduler_callable(scheduler_type)
+
+    # If no params provided, use smart defaults if known
+    if not params:
+        name = (
+            scheduler_ctor.__name__
+            if hasattr(scheduler_ctor, "__name__")
+            else str(scheduler_ctor)
+        )
+        try:
+            params = _build_default_params(name, module, optimizer)
+        except Exception:
+            params = {}
+
+    # Instantiate. Works for both torch classes and our function factories.
+    return scheduler_ctor(optimizer, **params)
 
 
 class CosineDecayer:
