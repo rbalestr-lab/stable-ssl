@@ -32,8 +32,7 @@ class EvalOnly(nn.Module):
 class TeacherStudentWrapper(nn.Module):
     """Backbone wrapper that implements teacher-student distillation via EMA.
 
-    This is NOT a standalone SSL module but a wrapper for backbones that creates
-    a teacher model as an exponential moving average (EMA) of the student model.
+    This is a wrapper for backbones that creates a teacher model as an exponential moving average (EMA) of the student model.
     It should be passed as the backbone to stable_ssl.Module and accessed via
     forward_student() and forward_teacher() methods in your custom forward function.
 
@@ -89,11 +88,6 @@ class TeacherStudentWrapper(nn.Module):
         self.base_ema_coefficient = torch.Tensor([base_ema_coefficient])[0]
         self.final_ema_coefficient = torch.Tensor([final_ema_coefficient])[0]
 
-        # Warning system to detect missing updates
-        self._forward_count = 0
-        self._update_count = 0
-        self._has_warned = False
-
         if self.base_ema_coefficient == 0.0 and self.final_ema_coefficient == 0.0:
             # No need to create a teacher network if the EMA coefficient is 0.0.
             self.teacher = student
@@ -102,7 +96,7 @@ class TeacherStudentWrapper(nn.Module):
             self.teacher = copy.deepcopy(student)
             self.teacher.requires_grad_(False)  # Teacher should not require gradients.
 
-            if warm_init:  # Initialization step to match the student's parameters.
+            if warm_init:  # Initialization step to match the student’s parameters.
                 self.ema_coefficient = torch.zeros(())
                 self.update_teacher()
 
@@ -110,19 +104,17 @@ class TeacherStudentWrapper(nn.Module):
 
     @torch.no_grad
     def update_teacher(self):
-        """Perform one EMA update step on the teacher's parameters.
+        """Perform one EMA update step on the teacher’s parameters.
 
         The update rule is:
             teacher_param = ema_coefficient * teacher_param
             + (1 - ema_coefficient) * student_param
 
-        This is done in a `no_grad` context to ensure the teacher's parameters do
+        This is done in a `no_grad` context to ensure the teacher’s parameters do
         not accumulate gradients, but the student remains fully trainable.
 
         Everything is updated, including buffers (e.g. batch norm running averages).
         """
-        self._update_count += 1  # Track that updates are happening
-
         if self.ema_coefficient.item() == 0.0:
             return  # Nothing to update when the teacher is the student.
         elif self.ema_coefficient.item() == 1.0:
@@ -136,10 +128,6 @@ class TeacherStudentWrapper(nn.Module):
                 ty = t.dtype
                 t.mul_(self.ema_coefficient.to(dtype=ty))
                 t.add_((1.0 - self.ema_coefficient).to(dtype=ty) * s)
-
-    def _mark_updated(self):
-        """Mark that the teacher has been updated (called by callbacks)."""
-        self._update_count += 1
 
     @torch.no_grad
     def update_ema_coefficient(self, epoch: int, total_epochs: int):
@@ -160,23 +148,6 @@ class TeacherStudentWrapper(nn.Module):
 
     def forward_student(self, *args, **kwargs):
         """Forward pass through the student network. Gradients will flow normally."""
-        self._forward_count += 1
-
-        # Warn if training but not receiving updates
-        if (
-            self.training
-            and self._forward_count > 50
-            and self._update_count == 0
-            and not self._has_warned
-        ):
-            logging.warning(
-                "TeacherStudentWrapper: No teacher updates detected after 50 forward passes! "
-                "The teacher model is not being updated. Please add TeacherStudentCallback to "
-                "your trainer: trainer = Trainer(callbacks=[TeacherStudentCallback()]) or "
-                "manually call update_teacher() in your forward function."
-            )
-            self._has_warned = True
-
         return self.student(*args, **kwargs)
 
     def forward_teacher(self, *args, **kwargs):

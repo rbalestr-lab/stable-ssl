@@ -4,7 +4,7 @@ from .mlp import MLP
 from .resnet9 import Resnet9
 from .utils import (
     EvalOnly,
-    TeacherStudentModule,
+    TeacherStudentWrapper,
     from_timm,
     from_torchvision,
     set_embedding_dim,
@@ -12,7 +12,7 @@ from .utils import (
 
 __all__ = [
     MLP,
-    TeacherStudentModule,
+    TeacherStudentWrapper,
     Resnet9,
     from_timm,
     from_torchvision,
