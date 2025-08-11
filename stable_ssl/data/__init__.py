@@ -1,4 +1,4 @@
-from . import noise, transforms
+from . import noise, sampler, static, transforms
 from .collate import Collator
 from .module import DataModule
 from .sampler import RandomBatchSampler, RepeatedRandomSampler, SupervisedBatchSampler
@@ -20,6 +20,8 @@ from .utils import (
 __all__ = [
     Collator,
     transforms,
+    static,
+    sampler,
     DataModule,
     SupervisedBatchSampler,
     RepeatedRandomSampler,

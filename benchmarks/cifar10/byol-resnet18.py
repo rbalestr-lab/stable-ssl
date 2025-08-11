@@ -202,12 +202,6 @@ knn_probe = ssl.callbacks.OnlineKNN(
     k=20,
 )
 
-# RankMe to monitor representation quality
-rankme = ssl.callbacks.RankMe(
-    name="rankme",
-    input="embedding",
-)
-
 # Initialize W&B logger
 wandb_logger = WandbLogger(
     entity="stable-ssl",
@@ -218,18 +212,17 @@ wandb_logger = WandbLogger(
 
 # Trainer with TeacherStudentCallback (will be auto-added by Manager)
 trainer = pl.Trainer(
-    max_epochs=200,  # BYOL typically needs more epochs
+    max_epochs=500,  # BYOL typically needs more epochs
     num_sanity_val_steps=0,
     callbacks=[
         linear_probe,
         knn_probe,
-        rankme,
         # TeacherStudentCallback will be auto-added by Manager
     ],
     precision="16-mixed",
     logger=wandb_logger,
     enable_checkpointing=True,
-    gradient_clip_val=1.0,  # BYOL benefits from gradient clipping
+    # gradient_clip_val=1.0,  # BYOL benefits from gradient clipping
 )
 
 # Manager will auto-detect TeacherStudentWrapper and add the callback

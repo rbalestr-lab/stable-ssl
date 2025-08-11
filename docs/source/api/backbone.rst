@@ -34,7 +34,7 @@ Specialized Modules
    :toctree: gen_modules/
    :template: myclass_template.rst
 
-   TeacherStudentModule
+   TeacherStudentWrapper
    EvalOnly
 
 Modules
