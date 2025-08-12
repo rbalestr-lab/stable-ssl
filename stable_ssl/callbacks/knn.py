@@ -101,6 +101,11 @@ class OnlineKNN(Callback):
         self._input_queue = None
         self._target_queue = None
 
+    @property
+    def state_key(self) -> str:
+        """Unique identifier for this callback's state during checkpointing."""
+        return f"OnlineKNN[name={self.name}]"
+
     def setup(self, trainer: Trainer, pl_module: LightningModule, stage: str) -> None:
         """Find or create queue callbacks and setup metrics."""
         if self._input_queue is None or self._target_queue is None:

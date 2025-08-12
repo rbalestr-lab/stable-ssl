@@ -114,6 +114,11 @@ class ImageRetrieval(Callback):
         #
         pl_module.embeds = None
 
+    @property
+    def state_key(self) -> str:
+        """Unique identifier for this callback's state during checkpointing."""
+        return f"ImageRetrieval[name={self.name}]"
+
     def on_validation_epoch_start(
         self, trainer: Trainer, pl_module: LightningModule
     ) -> None:

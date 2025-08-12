@@ -321,7 +321,6 @@ class OnlineProbe(Callback):
 
     @property
     def state_key(self) -> str:
-        # note: we do not include `verbose` here on purpose
         return f"OnlineProbe[name={self.name}]"
 
     def state_dict(self) -> Dict:

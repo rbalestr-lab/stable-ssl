@@ -43,6 +43,11 @@ class RankMe(Callback):
 
         self._target_queue = None
 
+    @property
+    def state_key(self) -> str:
+        """Unique identifier for this callback's state during checkpointing."""
+        return f"RankMe[name={self.name}]"
+
     def setup(self, trainer: Trainer, pl_module: LightningModule, stage: str) -> None:
         """Find or create the queue callback for target features."""
         if self._target_queue is None:
