@@ -64,7 +64,32 @@ def wrap_validation_step(fn, target, input, name):
 
 
 class LiDAR(OnlineQueue):
-    """LiDAR (Linear Discriminant Analysis Rank) monitor from :cite`thilak2023lidar`."""
+    """LiDAR (Linear Discriminant Analysis Rank) monitor for detecting dimensional collapse.
+
+    LiDAR measures the effective rank of learned representations using Linear Discriminant
+    Analysis (LDA). It computes the exponential of the entropy of the eigenvalue distribution
+    from the LDA transformation, providing a metric between 1 and the feature dimension that
+    indicates how many dimensions are effectively being used.
+
+    This implementation is based on Thilak et al. "The Pitfalls of Next-Token Prediction"
+    (arXiv:2403.06963).
+
+    The metric helps detect:
+    - Dimensional collapse in self-supervised learning
+    - Loss of representational capacity
+    - Over-regularization effects
+
+    Args:
+        pl_module: The Lightning module to attach the callback to
+        name: Unique identifier for this callback instance
+        target: Key in batch dict containing the feature embeddings to monitor
+        queue_length: Size of the circular buffer for caching embeddings
+        target_shape: Shape of the target embeddings (e.g., 768 for 768-dim features)
+
+    Note:
+        This callback extends OnlineQueue to maintain a buffer of embeddings and
+        computes LiDAR only on the first validation batch to avoid redundant computation.
+    """
 
     def __init__(
         self,

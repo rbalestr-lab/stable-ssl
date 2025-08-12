@@ -233,8 +233,9 @@ class TestProbingUnit:
         assert hasattr(probe, "state_dict")
         assert hasattr(probe, "load_state_dict")
 
-        # Test probe module is created
+        # Test that probe_module property exists but is not accessible before setup
         assert hasattr(probe, "probe_module")
-        assert isinstance(probe.probe_module, nn.Linear)
-        assert probe.probe_module.in_features == 128
-        assert probe.probe_module.out_features == 10
+        with pytest.raises(
+            AttributeError, match="probe_module not accessible before setup"
+        ):
+            _ = probe.probe_module

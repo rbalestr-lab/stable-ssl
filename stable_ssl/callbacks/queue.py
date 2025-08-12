@@ -1,5 +1,3 @@
-"""Queue callback that collects data from batch or outputs."""
-
 from typing import Optional, Union
 
 import torch
@@ -10,18 +8,42 @@ from stable_ssl.utils import UnsortedQueue, get_data_from_batch_or_outputs
 
 
 class OnlineQueue(Callback):
-    """Maintain a circular buffer for a single batch key during training.
+    """Circular buffer callback for accumulating batch data during training.
 
-    This callback creates a circular buffer that accumulates data during training
-    and provides snapshots during validation. Other callbacks can discover and
-    use this queue based on the data key and properties.
+    This callback maintains a circular buffer (queue) that accumulates data from
+    specified batch keys during training. It provides snapshots of the accumulated
+    data during validation, which other callbacks can discover and use for evaluation
+    purposes (e.g., KNN evaluation, RankMe computation).
+
+    The queue operates in two modes:
+    1. Training: Continuously appends new batch data to the circular buffer
+    2. Validation: Creates a snapshot of the buffer contents for evaluation
+
+    Key features:
+    - Automatic buffer initialization from first batch if dimensions not specified
+    - Support for distributed training through optional data gathering
+    - Discovery mechanism allowing other callbacks to find and use queues
+    - Memory-efficient circular buffer implementation
 
     Args:
-        key: The batch key whose tensor will be queued every training step.
-        queue_length: Maximum number of elements to keep in the queue.
-        dim: Pre-allocate buffer with this shape. If None, inferred from first batch.
-        dtype: Pre-allocate buffer with this dtype. If None, inferred from first batch.
-        gather_distributed: If True, gather data across distributed processes during validation.
+        key: The batch key whose tensor values will be queued at every training step.
+            Can be any key present in the batch dict or outputs dict.
+        queue_length: Maximum number of elements to keep in the circular buffer.
+            Older elements are overwritten when the buffer is full.
+        dim: Pre-allocate buffer with this shape. Can be int or tuple. If None,
+            dimensions are inferred from the first batch.
+        dtype: Pre-allocate buffer with this dtype (e.g., torch.float32). If None,
+            dtype is inferred from the first batch.
+        gather_distributed: If True, gather queue data across all distributed processes
+            during validation. This creates a global view of the accumulated data.
+
+    Attributes:
+        data: Property that returns the current snapshot during validation, None otherwise.
+
+    Note:
+        - The queue is registered in pl_module._callbacks_modules for consistency
+        - Snapshots are only available during validation epochs
+        - The callback handles single-dimension data by adding a dimension if needed
     """
 
     def __init__(

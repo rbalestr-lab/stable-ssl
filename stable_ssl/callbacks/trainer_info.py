@@ -9,7 +9,20 @@ from ..data.module import DataModule
 
 
 class ModuleSummary(pl.Callback):
-    """Callback for logging module summaries in a formatted table."""
+    """Logs detailed module parameter statistics in a formatted table.
+
+    This callback provides a comprehensive overview of all modules in the model,
+    showing the number of trainable, non-trainable, uninitialized parameters,
+    and buffers for each module. This helps understand model architecture and
+    parameter distribution.
+
+    The summary is displayed during the setup phase and includes:
+    - Module name and hierarchy
+    - Trainable parameter count
+    - Non-trainable (frozen) parameter count
+    - Uninitialized parameter count (for lazy modules)
+    - Buffer count (non-parameter persistent state)
+    """
 
     @rank_zero_only
     def setup(self, trainer, pl_module, stage):
@@ -53,13 +66,23 @@ class ModuleSummary(pl.Callback):
             table.add_row(
                 [name, num_trainable, num_nontrainable, num_uninitialized, num_buffer]
             )
-        print(table)
+        logging.info(f"\\n{table}")
 
         return super().setup(trainer, pl_module, stage)
 
 
 class LoggingCallback(pl.Callback):
-    """Callback for logging validation metrics in a formatted table."""
+    """Displays validation metrics in a color-coded formatted table.
+
+    This callback creates a visually appealing table of all validation metrics
+    at the end of each validation epoch. Metrics are color-coded for better
+    readability in terminal outputs.
+
+    Features:
+    - Automatic sorting of metrics by name
+    - Color coding: blue for metric names, green for values
+    - Filters out internal metrics (log, progress_bar)
+    """
 
     @rank_zero_only
     def on_validation_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule):
@@ -74,11 +97,25 @@ class LoggingCallback(pl.Callback):
                         "\033[0;32;40m" + str(metrics[key].item()) + "\033[0m",
                     ]
                 )
-        print(table)
+        logging.info(f"\\n{table}")
 
 
 class TrainerInfo(Callback):
-    """Callback for linking trainer to DataModule and providing extra information."""
+    """Links the trainer to the DataModule for enhanced functionality.
+
+    This callback establishes a bidirectional connection between the trainer
+    and DataModule, enabling the DataModule to access trainer information
+    such as device placement, distributed training state, and other runtime
+    configurations.
+
+    This is particularly useful for DataModules that need to adapt their
+    behavior based on trainer configuration (e.g., device-aware data loading,
+    distributed sampling adjustments).
+
+    Note:
+        Only works with DataModule instances that have a set_pl_trainer method.
+        A warning is logged if using a custom DataModule without this method.
+    """
 
     def setup(self, trainer, pl_module, stage):
         logging.info("\t linking trainer to DataModule! 🔧")

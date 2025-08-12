@@ -7,7 +7,29 @@ from loguru import logger as logging
 
 
 class OnlineWriter(Callback):
-    """Attaches an OnlineWriter callback."""
+    """Writes specified batch data to disk during training and validation.
+
+    This callback enables selective saving of batch data (e.g., features, predictions,
+    embeddings) to disk at specified intervals during training. It's useful for
+    debugging, visualization, and analysis of model behavior during training.
+
+    Features:
+    - Flexible saving schedule (every k epochs, last epoch, sanity check)
+    - Support for distributed training with optional all_gather
+    - Automatic directory creation
+    - Configurable for different training phases (train, val, test)
+
+    Args:
+        names: Name(s) of the batch keys to save. Can be string or list of strings.
+        path: Directory path where files will be saved.
+        during: Training phase(s) when to save ('train', 'val', 'test', or list).
+        every_k_epochs: Save every k epochs. -1 means every epoch.
+        save_last_epoch: Whether to save on the last training epoch.
+        save_sanity_check: Whether to save during sanity check phase.
+        all_gather: Whether to gather data across all distributed processes.
+
+    Files are saved with naming pattern: {phase}_{name}_epoch{epoch}_batch{batch}.pt
+    """
 
     def __init__(
         self,
@@ -38,15 +60,12 @@ class OnlineWriter(Callback):
         self.path = path
         self.during = during
 
-        # -- writing conditions
         self.every_k_epochs = every_k_epochs
         self.save_last_epoch = save_last_epoch
 
-        # -- writing in sanity check
         self.save_sanity_check = save_sanity_check
         self.is_sanity_check = False
 
-        # -- writing device
         self.all_gather = all_gather
 
         if not path.is_dir():
@@ -66,7 +85,6 @@ class OnlineWriter(Callback):
         current_epoch = pl_module.current_epoch
         max_epochs = pl_module.trainer.max_epochs
 
-        # -- writing conditions
         save_every_epoch = self.every_k_epochs == -1
         save_k_epoch = (
             current_epoch % self.every_k_epochs == 0
@@ -74,7 +92,6 @@ class OnlineWriter(Callback):
             else False
         )
 
-        # last epoch condition
         is_last_epoch = current_epoch == max_epochs - 1
         save_last_epoch = self.save_last_epoch and is_last_epoch
 
@@ -87,11 +104,9 @@ class OnlineWriter(Callback):
         outputs,
         batch_idx,
     ):
-        # skip sanity check writing if necessary
         if self.is_sanity_check and not self.save_sanity_check:
             return
 
-        # check if we are writing at this phase
         if not self.is_writing_epoch(pl_module) or phase_name not in self.during:
             return
 

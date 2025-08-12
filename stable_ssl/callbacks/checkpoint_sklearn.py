@@ -8,7 +8,24 @@ from tabulate import tabulate
 
 
 class SklearnCheckpoint(Callback):
-    """Callback for saving and loading sklearn models in PyTorch Lightning checkpoints."""
+    """Callback for saving and loading sklearn models in PyTorch Lightning checkpoints.
+
+    This callback automatically detects sklearn models (Regressors and Classifiers)
+    attached to the Lightning module and handles their serialization/deserialization
+    during checkpoint save/load operations. This is necessary because sklearn models
+    are not natively supported by PyTorch's checkpoint system.
+
+    The callback will:
+    1. Automatically discover sklearn models attached to the Lightning module
+    2. Save them to the checkpoint dictionary during checkpoint saving
+    3. Restore them from the checkpoint during checkpoint loading
+    4. Log information about discovered sklearn modules during setup
+
+    Note:
+        - Only attributes that are sklearn RegressorMixin or ClassifierMixin instances are saved
+        - Private attributes (starting with '_') are ignored
+        - The callback will raise an error if a sklearn model name conflicts with existing checkpoint keys
+    """
 
     def setup(
         self, trainer: Trainer, pl_module: LightningModule, stage: Optional[str] = None
@@ -22,8 +39,7 @@ class SklearnCheckpoint(Callback):
         logging.info(f"\n{tabulate(stats, headers, tablefmt='heavy_outline')}")
 
     def on_save_checkpoint(self, trainer, pl_module, checkpoint):
-        # Modify the checkpoint dictionary before saving
-        print("\tChecking for non PyTorch modules to save... 🔧", flush=True)
+        logging.info("Checking for non PyTorch modules to save... 🔧")
         modules = _get_sklearn_modules(pl_module)
         for name, module in modules.items():
             if name in checkpoint:
@@ -31,15 +47,14 @@ class SklearnCheckpoint(Callback):
                     f"Can't pickle {name}, already present in checkpoint"
                 )
             checkpoint[name] = module
-            print(f"\t\tsaving non PyTorch system: {name} 🔧", flush=True)
+            logging.info(f"Saving non PyTorch system: {name} 🔧")
 
     def on_load_checkpoint(self, trainer, pl_module, checkpoint):
-        # Access and use data from the loaded checkpoint
-        print("\tChecking for non PyTorch modules to load... 🔧", flush=True)
+        logging.info("Checking for non PyTorch modules to load... 🔧")
         for name, item in checkpoint.items():
             if isinstance(item, RegressorMixin) or isinstance(item, ClassifierMixin):
                 setattr(pl_module, name, item)
-                print(f"\t\tloading non PyTorch system: {name} 🔧", flush=True)
+                logging.info(f"Loading non PyTorch system: {name} 🔧")
 
 
 def _contains_sklearn_module(item):

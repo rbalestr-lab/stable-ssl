@@ -37,6 +37,9 @@ dynamic = ["version"]
 # [project.entry-points."console_scripts"]
 # stable-ssl = "stable_ssl.cli:entry"
 
+[project.entry-points."lightning.pytorch.callbacks_factory"]
+stablessl_callbacks = "stable_ssl.callbacks.factories:default"
+
 [tool.setuptools]
 packages = ["stable_ssl"]
 

@@ -3,7 +3,25 @@ import torchmetrics
 
 
 class EarlyStopping(torch.nn.Module):
-    """Early stopping module that can stop training based on metric milestones."""
+    """Early stopping mechanism with support for metric milestones and patience.
+
+    This module provides flexible early stopping capabilities that can halt training
+    based on metric performance. It supports both milestone-based stopping (stop if
+    metric doesn't reach target by specific epochs) and patience-based stopping
+    (stop if metric doesn't improve for N epochs).
+
+    Args:
+        mode: Optimization direction - 'min' for metrics to minimize (e.g., loss),
+            'max' for metrics to maximize (e.g., accuracy).
+        milestones: Dict mapping epoch numbers to target metric values. Training
+            stops if targets are not met at specified epochs.
+        metric_name: Name of the metric to monitor if metric is a dict.
+        patience: Number of epochs with no improvement before stopping.
+
+    Example:
+        >>> early_stop = EarlyStopping(mode="max", milestones={10: 0.8, 20: 0.9})
+        >>> # Stops if accuracy < 0.8 at epoch 10 or < 0.9 at epoch 20
+    """
 
     def __init__(
         self,
@@ -34,6 +52,26 @@ class EarlyStopping(torch.nn.Module):
 
 
 def format_metrics_as_dict(metrics):
+    """Formats various metric input formats into a standardized dictionary structure.
+
+    This utility function handles multiple input formats for metrics and converts
+    them into a consistent ModuleDict structure with separate train and validation
+    metrics. This standardization simplifies metric handling across callbacks.
+
+    Args:
+        metrics: Can be:
+            - None: Returns empty train and val dicts
+            - Single torchmetrics.Metric: Applied to validation only
+            - Dict with 'train' and 'val' keys: Separated accordingly
+            - Dict of metrics: All applied to validation
+            - List/tuple of metrics: All applied to validation
+
+    Returns:
+        ModuleDict with '_train' and '_val' keys, each containing metric ModuleDicts.
+
+    Raises:
+        ValueError: If metrics format is invalid or contains non-torchmetric objects.
+    """
     if metrics is None:
         train = {}
         eval = {}
@@ -73,7 +111,6 @@ def format_metrics_as_dict(metrics):
         raise ValueError(
             "metrics can only be a torchmetric of list/tuple of torchmetrics"
         )
-    print(train, eval)
     return torch.nn.ModuleDict(
         {
             "_train": torch.nn.ModuleDict(train),

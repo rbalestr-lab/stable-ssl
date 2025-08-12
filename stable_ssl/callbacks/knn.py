@@ -1,5 +1,3 @@
-"""KNN callback."""
-
 from typing import Dict, List, Literal, Optional, Tuple, Union
 
 import numpy as np
@@ -17,23 +15,47 @@ from .utils import format_metrics_as_dict
 
 
 class OnlineKNN(Callback):
-    """Weighted KNN online evaluator using queue discovery.
+    """Weighted K-Nearest Neighbors online evaluator using queue discovery.
 
-    This callback finds OnlineQueue callbacks that track the required features
-    and labels, then uses that data for KNN evaluation during validation.
+    This callback implements a weighted KNN classifier that evaluates the quality of
+    learned representations during training. It automatically discovers or creates
+    OnlineQueue callbacks to maintain circular buffers of features and labels, then
+    uses this cached data to compute KNN predictions during validation.
+
+    The KNN evaluation is performed by:
+    1. Finding k nearest neighbors in the feature space
+    2. Weighting neighbors by inverse distance with temperature scaling
+    3. Using weighted voting to produce class predictions
+    4. Computing specified metrics on the predictions
 
     Args:
-        name: Unique identifier for this callback instance
-        input: Key in batch dict containing input features
-        target: Key in batch dict containing target labels
-        queue_length: Required queue length for both input and target
-        metrics: Dictionary of metrics to compute during validation
-        input_dim: Dimensionality of input features (None to accept any)
-        target_dim: Dimensionality of targets (None to accept any)
-        k: Number of nearest neighbors to consider
-        temperature: Temperature parameter for distance weighting
-        chunk_size: Batch size for memory-efficient distance computation (-1 for no chunking)
-        distance_metric: Distance metric to use for KNN computation
+        name: Unique identifier for this callback instance. Used for logging and
+            storing metrics.
+        input: Key in batch dict containing input features to evaluate.
+        target: Key in batch dict containing ground truth target labels.
+        queue_length: Size of the circular buffer for caching features and labels.
+            Larger values provide more representative samples but use more memory.
+        metrics: Dictionary of metrics to compute during validation. Keys are metric
+            names, values are metric instances (e.g., torchmetrics.Accuracy).
+        input_dim: Expected dimensionality of input features. Can be int, tuple/list
+            (will be flattened to product), or None to accept any dimension.
+        target_dim: Expected dimensionality of targets. None accepts any dimension.
+        k: Number of nearest neighbors to consider for voting. Default is 5.
+        temperature: Temperature parameter for distance weighting. Lower values give
+            more weight to closer neighbors. Default is 0.07.
+        chunk_size: Batch size for memory-efficient distance computation. Set to -1
+            to compute all distances at once. Default is -1.
+        distance_metric: Distance metric for finding nearest neighbors. Options are
+            'euclidean', 'squared_euclidean', 'cosine', 'manhattan'. Default is 'euclidean'.
+
+    Raises:
+        ValueError: If k <= 0, temperature <= 0, or chunk_size is invalid.
+
+    Note:
+        - The callback automatically handles distributed training by gathering data
+        - Mixed precision is supported through automatic dtype conversion
+        - Predictions are stored in batch dict with key '{name}_preds'
+        - Metrics are logged with prefix 'eval/{name}_'
     """
 
     def __init__(
@@ -54,7 +76,6 @@ class OnlineKNN(Callback):
     ) -> None:
         super().__init__()
 
-        # Validate inputs
         if k <= 0:
             raise ValueError(f"k must be positive, got {k}")
         if temperature <= 0:
@@ -62,7 +83,6 @@ class OnlineKNN(Callback):
         if chunk_size == 0 or chunk_size < -1:
             raise ValueError(f"chunk_size must be positive or -1, got {chunk_size}")
 
-        # Process input_dim
         if input_dim is not None and isinstance(input_dim, (list, tuple)):
             input_dim = int(np.prod(input_dim))
 
@@ -78,39 +98,34 @@ class OnlineKNN(Callback):
         self.distance_metric = distance_metric
         self.metrics = metrics
 
-        # Queue references will be set in setup
         self._input_queue = None
         self._target_queue = None
 
     def setup(self, trainer: Trainer, pl_module: LightningModule, stage: str) -> None:
         """Find or create queue callbacks and setup metrics."""
-        # Setup is needed for all stages, not just fit
         if self._input_queue is None or self._target_queue is None:
-            # Find or create queue for input features
             self._input_queue = find_or_create_queue_callback(
                 trainer,
                 self.input,
                 self.queue_length,
                 self.input_dim,
                 torch.float32 if self.input_dim is not None else None,
-                gather_distributed=True,  # KNN typically needs gathering
+                gather_distributed=True,
                 create_if_missing=True,
             )
             logging.info(f"{self.name}: Using queue for input '{self.input}'")
 
-            # Find or create queue for target labels
             self._target_queue = find_or_create_queue_callback(
                 trainer,
                 self.target,
                 self.queue_length,
                 self.target_dim,
                 torch.long if self.target_dim is not None else None,
-                gather_distributed=True,  # KNN typically needs gathering
+                gather_distributed=True,
                 create_if_missing=True,
             )
             logging.info(f"{self.name}: Using queue for target '{self.target}'")
 
-            # Setup metrics
             logging.info(f"{self.name}: Setting up metrics")
             if not hasattr(pl_module, "_callbacks_metrics"):
                 pl_module._callbacks_metrics = {}
@@ -128,7 +143,6 @@ class OnlineKNN(Callback):
         dataloader_idx: int = 0,
     ) -> None:
         """Compute KNN predictions during validation."""
-        # Get input and target data from batch or outputs
         input_data = get_data_from_batch_or_outputs(
             self.input, batch, outputs, caller_name=self.name
         )
@@ -141,7 +155,6 @@ class OnlineKNN(Callback):
         if target_data is None:
             return
 
-        # Get cached data from queues
         cached_features = self._input_queue.data
         cached_labels = self._target_queue.data
 
@@ -151,26 +164,22 @@ class OnlineKNN(Callback):
             )
             return
 
-        # Check if cached data is empty
         if cached_features.numel() == 0 or cached_labels.numel() == 0:
             logging.warning(
                 f"{self.name}: Queue data is empty, skipping KNN computation"
             )
             return
 
-        # Compute predictions
         predictions = self._compute_knn_predictions(
             input_data, cached_features, cached_labels
         )
 
         if predictions is not None:
-            # Store predictions
             prediction_key = f"{self.name}_preds"
             if prediction_key in batch:
                 raise ValueError(f"Key '{prediction_key}' already exists in batch")
             batch[prediction_key] = predictions
 
-            # Log metrics
             self._log_metrics(pl_module, predictions, batch[self.target])
 
     @torch.no_grad()
@@ -188,20 +197,16 @@ class OnlineKNN(Callback):
             batch_size, num_classes, device=features.device, dtype=torch.float32
         )
 
-        # Ensure tensors are on same device
         if cached_features.device != features.device:
             cached_features = cached_features.to(features.device)
             cached_labels = cached_labels.to(features.device)
 
         k_actual = min(self.k, cached_features.size(0))
 
-        # Ensure both tensors have the same dtype for distance computation
         if cached_features.dtype != features.dtype:
-            # Convert both to float32 for accurate distance computation
             cached_features = cached_features.float()
             features = features.float()
 
-        # Compute distances
         chunk_size = batch_size if self.chunk_size == -1 else self.chunk_size
         dist_matrix = compute_pairwise_distances_chunked(
             cached_features,
@@ -210,23 +215,16 @@ class OnlineKNN(Callback):
             chunk_size=chunk_size,
         )
 
-        # Get k nearest neighbors
         dist_weight, sim_indices = dist_matrix.topk(k=k_actual, dim=0, largest=False)
 
-        # Weight by inverse distance
         dist_weight = 1 / dist_weight.add_(self.temperature)
 
-        # One-hot encode labels
-        # sim_indices has shape [k_actual, batch_size], cached_labels has shape [N, 1]
-        # We need to squeeze cached_labels to 1D before indexing
         labels_1d = (
             cached_labels.squeeze(-1) if cached_labels.dim() > 1 else cached_labels
         )
-        # Ensure labels are LongTensor for one_hot
         selected_labels = labels_1d[sim_indices].long()
         one_hot_labels = F.one_hot(selected_labels, num_classes=num_classes)
 
-        # Weighted voting
         predictions = (dist_weight.unsqueeze(-1) * one_hot_labels).sum(0)
         return predictions
 
