@@ -5,6 +5,8 @@ This script is extracted from the integration tests to allow manual testing
 with different datasets when the default dataset is not available.
 """
 
+from ssl.data import transforms
+
 import lightning as pl
 import torch
 import torchmetrics
@@ -12,7 +14,6 @@ import torchvision
 from lightning.pytorch.loggers import WandbLogger
 
 import stable_ssl as ssl
-from ssl.data import transforms
 
 # Best SimCLR augmentations for CIFAR-10 based on original paper and research
 # Using symmetric augmentations (same for both views) as per SimCLR paper

@@ -11,7 +11,6 @@ from lightning.pytorch.loggers import WandbLogger
 import stable_ssl as ssl
 from stable_ssl.data import transforms
 
-
 # BYOL augmentations - stronger than SimCLR as BYOL benefits from aggressive augmentation
 byol_transform = transforms.MultiViewTransform(
     [
