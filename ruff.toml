@@ -8,6 +8,7 @@ convention = "google"
 [lint.isort]
 known-first-party = ["stable_ssl"]
 section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+from-first = false
 
 [format]
 # Enable reformatting of code snippets in docstrings.
