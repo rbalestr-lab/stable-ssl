@@ -273,20 +273,6 @@ class Module(pl.LightningModule):
 
         return scheduler_dict
 
-    def _create_optimizer(self, params, optimizer_config):
-        """Create an optimizer from flexible configuration.
-
-        Delegates to shared utility function for consistency across the codebase.
-        """
-        return create_optimizer(params, optimizer_config)
-
-    def _create_scheduler(self, optimizer, scheduler_config):
-        """Create a learning rate scheduler with flexible configuration.
-
-        Delegates to shared utility function for consistency across the codebase.
-        """
-        return create_scheduler(optimizer, scheduler_config, module=self)
-
     def _collect_parameters_by_optimizer_groups(self, optim_items):
         """Assign modules and collect parameters per optimizer group defined by regex.
 
@@ -447,11 +433,11 @@ class Module(pl.LightningModule):
             # Direct parameter extraction - use globally filtered parameters
             params = list(self.parameters())
 
-            opt = self._create_optimizer(params, optimizer_cfg or "AdamW")
+            opt = create_optimizer(params, optimizer_cfg or "AdamW")
 
             # Create scheduler
             sched_config = self.optim.get("scheduler", "CosineAnnealingLR")
-            sched = self._create_scheduler(opt, sched_config)
+            sched = create_scheduler(opt, sched_config, module=self)
             sched_name = self._get_scheduler_name(sched_config, sched)
 
             logging.info(
@@ -506,11 +492,11 @@ class Module(pl.LightningModule):
                 # skip registration when there are no parameters
                 continue
 
-            opt = self._create_optimizer(params, config["optimizer"])
+            opt = create_optimizer(params, config["optimizer"])
             optimizers.append(opt)
 
             sched_config = config.get("scheduler", "CosineAnnealingLR")
-            scheduler = self._create_scheduler(opt, sched_config)
+            scheduler = create_scheduler(opt, sched_config, module=self)
             sched_name = self._get_scheduler_name(sched_config, scheduler)
 
             # Build scheduler config dict for Lightning

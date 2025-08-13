@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """BYOL training on CIFAR-10."""
 
 import lightning as pl
