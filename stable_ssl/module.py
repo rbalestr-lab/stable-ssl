@@ -9,6 +9,7 @@ import torchmetrics
 from loguru import logger as logging
 from tabulate import tabulate
 
+import stable_ssl.optim as ssl_optim
 import stable_ssl.optim.lr_scheduler as ssl_lr
 
 
@@ -300,10 +301,16 @@ class Module(pl.LightningModule):
         if isinstance(opt_type, str):
             if hasattr(torch.optim, opt_type):
                 opt_class = getattr(torch.optim, opt_type)
+            elif hasattr(ssl_optim, opt_type):
+                opt_class = getattr(ssl_optim, opt_type)
             else:
+                torch_opts = [n for n in dir(torch.optim) if n[0].isupper()]
+                ssl_opts = [n for n in dir(ssl_optim) if n[0].isupper()]
                 raise ValueError(
-                    f"Optimizer '{opt_type}' not found in torch.optim. Available: "
-                    + ", ".join([n for n in dir(torch.optim) if n[0].isupper()])
+                    f"Optimizer '{opt_type}' not found. Available in torch.optim: "
+                    + ", ".join(torch_opts)
+                    + ". Available in stable_ssl.optim: "
+                    + ", ".join(ssl_opts)
                 )
         else:
             opt_class = opt_type

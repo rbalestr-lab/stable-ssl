@@ -3,7 +3,7 @@ from .teacher_student import TeacherStudentCallback
 from .trainer_info import LoggingCallback, ModuleSummary, TrainerInfo
 
 
-def default(pl_module):
+def default(pl_module=None):
     callbacks = [
         # RichProgressBar(),
         LoggingCallback(),
@@ -13,9 +13,10 @@ def default(pl_module):
     ]
 
     # Auto-detect TeacherStudentWrapper and add callback if needed
-    for module in pl_module.modules():
-        if hasattr(module, "update_teacher") and hasattr(module, "teacher"):
-            callbacks.append(TeacherStudentCallback())
-            break
+    if pl_module is not None:
+        for module in pl_module.modules():
+            if hasattr(module, "update_teacher") and hasattr(module, "teacher"):
+                callbacks.append(TeacherStudentCallback())
+                break
 
     return callbacks

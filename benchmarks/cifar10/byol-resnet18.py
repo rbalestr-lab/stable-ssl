@@ -11,7 +11,6 @@ from lightning.pytorch.loggers import WandbLogger
 import stable_ssl as ssl
 from stable_ssl.data import transforms
 
-# BYOL augmentations - stronger than SimCLR as BYOL benefits from aggressive augmentation
 byol_transform = transforms.MultiViewTransform(
     [
         transforms.Compose(
@@ -41,18 +40,18 @@ byol_transform = transforms.MultiViewTransform(
     ]
 )
 
-# Dataset setup
 cifar_train = torchvision.datasets.CIFAR10(
     root="/tmp/cifar10", train=True, download=True
 )
 train_dataset = ssl.data.FromTorchDataset(
     cifar_train, names=["image", "label"], transform=byol_transform, add_sample_idx=True
 )
+batch_size = 512
 train = torch.utils.data.DataLoader(
     dataset=train_dataset,
     sampler=ssl.data.sampler.RepeatedRandomSampler(train_dataset, n_views=2),
-    batch_size=512,  # BYOL typically uses larger batches
-    num_workers=20,
+    batch_size=batch_size,
+    num_workers=8,
     drop_last=True,
 )
 
@@ -69,10 +68,11 @@ cifar_val = torchvision.datasets.CIFAR10(
 val_dataset = ssl.data.FromTorchDataset(
     cifar_val, names=["image", "label"], transform=val_transform, add_sample_idx=True
 )
+
 val = torch.utils.data.DataLoader(
     dataset=val_dataset,
-    batch_size=256,
-    num_workers=10,
+    batch_size=batch_size,
+    num_workers=8,
 )
 data = ssl.data.DataModule(train=train, val=val)
 
@@ -125,8 +125,8 @@ backbone.fc = nn.Identity()
 wrapped_backbone = ssl.TeacherStudentWrapper(
     backbone,
     warm_init=True,
-    base_ema_coefficient=0.996,  # BYOL typically starts with 0.996
-    final_ema_coefficient=1.0,  # and increases to 1.0
+    base_ema_coefficient=0.996,
+    final_ema_coefficient=1.0,
 )
 
 # Projector (MLP) - used by both online and target networks
@@ -166,13 +166,14 @@ module = ssl.Module(
     byol_loss=ssl.losses.BYOLLoss(),
     optim={
         "optimizer": {
-            "type": "AdamW",
-            "lr": 1e-3,
-            "weight_decay": 1e-5,
+            "type": "LARS",
+            "lr": 5
+            * batch_size
+            / 256,  # Linear scaling rule: lr = base_lr * (batch_size / 256)
+            "weight_decay": 1e-6,
         },
         "scheduler": {
-            "type": "CosineAnnealingLR",
-            "T_max": 200,
+            "type": "LinearWarmupCosineAnnealing",
         },
         "interval": "epoch",
     },
@@ -209,23 +210,17 @@ wandb_logger = WandbLogger(
     log_model=False,
 )
 
-# Trainer with TeacherStudentCallback (will be auto-added by Manager)
 trainer = pl.Trainer(
-    max_epochs=500,  # BYOL typically needs more epochs
+    max_epochs=500,
     num_sanity_val_steps=0,
     callbacks=[
         linear_probe,
         knn_probe,
-        # TeacherStudentCallback will be auto-added by Manager
     ],
     precision="16-mixed",
     logger=wandb_logger,
     enable_checkpointing=True,
-    # gradient_clip_val=1.0,  # BYOL benefits from gradient clipping
 )
 
-# Manager will auto-detect TeacherStudentWrapper and add the callback
 manager = ssl.Manager(trainer=trainer, module=module, data=data)
 manager()
-
-print("BYOL training completed!")
