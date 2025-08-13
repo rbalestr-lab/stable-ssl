@@ -14,4 +14,4 @@ jobs:
       - uses: actions/setup-python@v3
       - run: pip install setuptools
       - run: pip install pre-commit
-      - run: pre-commit run --all-files
+      - run: pre-commit run --all-files --verbose --show-diff-on-failure
