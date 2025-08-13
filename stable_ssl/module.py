@@ -1,4 +1,3 @@
-import inspect
 import re
 import types
 from functools import partial
@@ -9,8 +8,7 @@ import torchmetrics
 from loguru import logger as logging
 from tabulate import tabulate
 
-import stable_ssl.optim as ssl_optim
-import stable_ssl.optim.lr_scheduler as ssl_lr
+from stable_ssl.optim.utils import create_optimizer, create_scheduler
 
 
 class Module(pl.LightningModule):
@@ -278,89 +276,16 @@ class Module(pl.LightningModule):
     def _create_optimizer(self, params, optimizer_config):
         """Create an optimizer from flexible configuration.
 
-        Accepts:
-        - str: optimizer name from torch.optim (e.g., "AdamW", "SGD")
-        - dict: {"type": "AdamW", "lr": 1e-3, ...}
-        - partial: pre-configured optimizer factory
-        - class: optimizer class (e.g., torch.optim.AdamW)
+        Delegates to shared utility function for consistency across the codebase.
         """
-        # partial -> call with params
-        if isinstance(optimizer_config, partial):
-            return optimizer_config(params)
-
-        # dict -> extract type and kwargs
-        if isinstance(optimizer_config, dict):
-            config_copy = optimizer_config.copy()
-            opt_type = config_copy.pop("type", "AdamW")
-            kwargs = config_copy
-        else:
-            opt_type = optimizer_config
-            kwargs = {}
-
-        # resolve class
-        if isinstance(opt_type, str):
-            if hasattr(torch.optim, opt_type):
-                opt_class = getattr(torch.optim, opt_type)
-            elif hasattr(ssl_optim, opt_type):
-                opt_class = getattr(ssl_optim, opt_type)
-            else:
-                torch_opts = [n for n in dir(torch.optim) if n[0].isupper()]
-                ssl_opts = [n for n in dir(ssl_optim) if n[0].isupper()]
-                raise ValueError(
-                    f"Optimizer '{opt_type}' not found. Available in torch.optim: "
-                    + ", ".join(torch_opts)
-                    + ". Available in stable_ssl.optim: "
-                    + ", ".join(ssl_opts)
-                )
-        else:
-            opt_class = opt_type
-
-        try:
-            return opt_class(params, **kwargs)
-        except TypeError as e:
-            sig = inspect.signature(opt_class.__init__)
-            required = [
-                p.name
-                for p in sig.parameters.values()
-                if p.default == inspect.Parameter.empty
-                and p.name not in ["self", "params"]
-            ]
-            raise TypeError(
-                f"Failed to create {opt_class.__name__}. Required parameters: {required}. "
-                f"Provided: {list(kwargs.keys())}. Original error: {e}"
-            )
+        return create_optimizer(params, optimizer_config)
 
     def _create_scheduler(self, optimizer, scheduler_config):
         """Create a learning rate scheduler with flexible configuration.
 
-        Args:
-            optimizer: The optimizer to attach the scheduler to
-            scheduler_config: Can be:
-                - str: Name of scheduler (e.g., "CosineAnnealingLR")
-                - partial: Pre-configured scheduler (e.g., partial(CosineAnnealingLR, T_max=1000))
-                - dict: {"type": "CosineAnnealingLR", "T_max": 1000, ...}
-                - class: Direct scheduler class (will use smart defaults)
-
-        Returns:
-            Configured scheduler instance
-
-        Examples:
-            >>> # Simple string (uses smart defaults)
-            >>> scheduler = self._create_scheduler(opt, "CosineAnnealingLR")
-
-            >>> # With custom parameters
-            >>> scheduler = self._create_scheduler(
-            ...     opt, {"type": "StepLR", "step_size": 30, "gamma": 0.1}
-            ... )
-
-            >>> # Using partial for full control
-            >>> from functools import partial
-            >>> scheduler = self._create_scheduler(
-            ...     opt, partial(torch.optim.lr_scheduler.ExponentialLR, gamma=0.95)
-            ... )
+        Delegates to shared utility function for consistency across the codebase.
         """
-        # Delegate to central factory in stable_ssl.optim.lr_scheduler
-        return ssl_lr.create_scheduler(optimizer, scheduler_config, module=self)
+        return create_scheduler(optimizer, scheduler_config, module=self)
 
     def _collect_parameters_by_optimizer_groups(self, optim_items):
         """Assign modules and collect parameters per optimizer group defined by regex.

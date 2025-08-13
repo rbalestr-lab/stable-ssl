@@ -190,6 +190,7 @@ linear_probe = ssl.callbacks.OnlineProbe(
         "top1": torchmetrics.classification.MulticlassAccuracy(10),
         "top5": torchmetrics.classification.MulticlassAccuracy(10, top_k=5),
     },
+    # optimizer and scheduler will be inherited from main module
 )
 
 knn_probe = ssl.callbacks.OnlineKNN(
