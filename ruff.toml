@@ -5,6 +5,10 @@ ignore = ["D100", "D102", "D103", "D104", "D105", "D107"]
 [lint.pydocstyle]
 convention = "google"
 
+[lint.isort]
+known-first-party = ["stable_ssl"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
 [format]
 # Enable reformatting of code snippets in docstrings.
 docstring-code-format = true
