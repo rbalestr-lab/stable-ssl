@@ -190,6 +190,13 @@ linear_probe = ssl.callbacks.OnlineProbe(
         "top1": torchmetrics.classification.MulticlassAccuracy(10),
         "top5": torchmetrics.classification.MulticlassAccuracy(10, top_k=5),
     },
+    optimizer_config={
+        "type": "LARS",
+        "lr": 5
+        * batch_size
+        / 256,  # Linear scaling rule: lr = base_lr * (batch_size / 256)
+        "weight_decay": 1e-6,
+    },
 )
 
 knn_probe = ssl.callbacks.OnlineKNN(
