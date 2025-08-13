@@ -1,3 +1,4 @@
+from functools import partial
 from typing import Dict, Optional, Union
 
 import torch
@@ -6,6 +7,7 @@ from hydra.utils import instantiate
 from lightning.pytorch import Callback, LightningModule, Trainer
 from loguru import logger as logging
 
+from stable_ssl.optim.utils import create_optimizer, create_scheduler
 from stable_ssl.utils import get_data_from_batch_or_outputs
 
 from ..optim import LARS
@@ -37,10 +39,18 @@ class OnlineProbe(Callback):
         probe: The probe module to train. Can be a nn.Module instance, callable that
             returns a module, or Hydra config to instantiate.
         loss_fn: Loss function for probe training (e.g., nn.CrossEntropyLoss()).
-        optimizer: Optimizer configuration for the probe. Can be optimizer instance,
-            callable, or Hydra config. Defaults to LARS if not specified.
-        scheduler: Learning rate scheduler configuration. Can be scheduler instance,
-            callable, or Hydra config. Defaults to ConstantLR if not specified.
+        optimizer: Optimizer configuration for the probe. Can be:
+            - str: optimizer name (e.g., "AdamW", "SGD", "LARS")
+            - dict: {"type": "AdamW", "lr": 1e-3, ...}
+            - partial: pre-configured optimizer factory
+            - optimizer instance or callable
+            - None: inherits from main Module's optimizer config (default)
+        scheduler: Learning rate scheduler configuration. Can be:
+            - str: scheduler name (e.g., "CosineAnnealingLR", "StepLR")
+            - dict: {"type": "CosineAnnealingLR", "T_max": 1000, ...}
+            - partial: pre-configured scheduler factory
+            - scheduler instance or callable
+            - None: inherits from main Module's scheduler config (default)
         accumulate_grad_batches: Number of batches to accumulate gradients before
             optimizer step. Default is 1 (no accumulation).
         metrics: Metrics to track during training/validation. Can be dict, list, tuple,
@@ -63,8 +73,10 @@ class OnlineProbe(Callback):
         target: str,
         probe: torch.nn.Module,
         loss_fn: callable,
-        optimizer: Optional[torch.optim.Optimizer] = None,
-        scheduler: Optional[torch.optim.lr_scheduler.LRScheduler] = None,
+        optimizer: Optional[Union[str, dict, partial, torch.optim.Optimizer]] = None,
+        scheduler: Optional[
+            Union[str, dict, partial, torch.optim.lr_scheduler.LRScheduler]
+        ] = None,
         accumulate_grad_batches: int = 1,
         metrics: Optional[Union[dict, tuple, list, torchmetrics.Metric]] = None,
         early_stopping: Optional[EarlyStopping] = None,
@@ -126,40 +138,111 @@ class OnlineProbe(Callback):
             pl_module._callbacks_modules = {}
         pl_module._callbacks_modules[self.name] = probe_module
 
-        # Initialize optimizer using the stored module
+        # Initialize optimizer - inherit from main module if not specified
         if self._optimizer_config is None:
-            logging.warning(f"{self.name}: No optimizer given, using default LARS")
-            self.optimizer = LARS(
-                self.probe_module.parameters(),
-                lr=0.1,
-                clip_lr=True,
-                eta=0.02,
-                exclude_bias_n_norm=True,
-                weight_decay=0,
-            )
-        else:
-            if callable(self._optimizer_config):
-                self.optimizer = self._optimizer_config(self.probe_module.parameters())
-            else:
-                self.optimizer = instantiate(
-                    self._optimizer_config,
-                    params=self.probe_module.parameters(),
-                    _convert_="object",
-                )
+            # Try to inherit from main module's optimizer config
+            if hasattr(pl_module, "optim") and pl_module.optim:
+                # Extract optimizer config from main module
+                if isinstance(pl_module.optim, dict):
+                    # Check if it's a single optimizer config
+                    if "optimizer" in pl_module.optim:
+                        main_opt_config = pl_module.optim["optimizer"]
+                        logging.info(
+                            f"{self.name}: Inheriting optimizer config from main module"
+                        )
+                    else:
+                        # It's a multi-optimizer config, use the first one or a default
+                        first_opt_key = next(iter(pl_module.optim.keys()))
+                        main_opt_config = pl_module.optim[first_opt_key].get(
+                            "optimizer", "LARS"
+                        )
+                        logging.info(
+                            f"{self.name}: Inheriting optimizer config from '{first_opt_key}'"
+                        )
 
-        # Initialize scheduler
-        if self._scheduler_config is None:
-            logging.warning(f"{self.name}: No scheduler given, using ConstantLR")
-            self.scheduler = torch.optim.lr_scheduler.ConstantLR(
-                self.optimizer, factor=1.0
-            )
-        else:
-            if callable(self._scheduler_config):
-                self.scheduler = self._scheduler_config(self.optimizer)
+                    # Create optimizer with inherited config
+                    self.optimizer = create_optimizer(
+                        self.probe_module.parameters(), main_opt_config
+                    )
+                else:
+                    # Fallback to LARS
+                    logging.info(
+                        f"{self.name}: Main module optim format not recognized, using LARS"
+                    )
+                    self.optimizer = LARS(
+                        self.probe_module.parameters(),
+                        lr=0.1,
+                        clip_lr=True,
+                        eta=0.02,
+                        exclude_bias_n_norm=True,
+                        weight_decay=0,
+                    )
             else:
-                self.scheduler = instantiate(
-                    self._scheduler_config, optimizer=self.optimizer, _convert_="object"
+                # No main module config, use default LARS
+                logging.info(
+                    f"{self.name}: No main module optimizer config found, using default LARS"
                 )
+                self.optimizer = LARS(
+                    self.probe_module.parameters(),
+                    lr=0.1,
+                    clip_lr=True,
+                    eta=0.02,
+                    exclude_bias_n_norm=True,
+                    weight_decay=0,
+                )
+        else:
+            # Use explicitly provided optimizer config
+            self.optimizer = create_optimizer(
+                self.probe_module.parameters(), self._optimizer_config
+            )
+
+        # Initialize scheduler - inherit from main module if not specified
+        if self._scheduler_config is None:
+            # Try to inherit from main module's scheduler config
+            if hasattr(pl_module, "optim") and pl_module.optim:
+                if isinstance(pl_module.optim, dict):
+                    # Check if it's a single optimizer config
+                    if "scheduler" in pl_module.optim:
+                        main_sched_config = pl_module.optim.get(
+                            "scheduler", "CosineAnnealingLR"
+                        )
+                        logging.info(
+                            f"{self.name}: Inheriting scheduler config from main module"
+                        )
+                        self.scheduler = create_scheduler(
+                            self.optimizer, main_sched_config, module=pl_module
+                        )
+                    else:
+                        # It's a multi-optimizer config, use the first one
+                        first_opt_key = next(iter(pl_module.optim.keys()))
+                        main_sched_config = pl_module.optim[first_opt_key].get(
+                            "scheduler", "CosineAnnealingLR"
+                        )
+                        logging.info(
+                            f"{self.name}: Inheriting scheduler config from '{first_opt_key}'"
+                        )
+                        self.scheduler = create_scheduler(
+                            self.optimizer, main_sched_config, module=pl_module
+                        )
+                else:
+                    # Fallback to ConstantLR
+                    logging.info(f"{self.name}: Using default ConstantLR scheduler")
+                    self.scheduler = torch.optim.lr_scheduler.ConstantLR(
+                        self.optimizer, factor=1.0
+                    )
+            else:
+                # No main module config, use default
+                logging.info(
+                    f"{self.name}: No main module scheduler config found, using ConstantLR"
+                )
+                self.scheduler = torch.optim.lr_scheduler.ConstantLR(
+                    self.optimizer, factor=1.0
+                )
+        else:
+            # Use explicitly provided scheduler config
+            self.scheduler = create_scheduler(
+                self.optimizer, self._scheduler_config, module=pl_module
+            )
 
         logging.info(f"{self.name}: Setting up metrics")
         if not hasattr(pl_module, "_callbacks_metrics"):
