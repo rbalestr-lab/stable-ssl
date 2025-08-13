@@ -9,6 +9,7 @@ repos:
       - id: ruff
         types_or: [ python, pyi ]
         args:
+          - --config=ruff.toml
           - --fix
           - --exclude=examples/
       # Run the formatter.
