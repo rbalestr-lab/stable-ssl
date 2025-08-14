@@ -9,6 +9,11 @@ from lightning.pytorch.loggers import WandbLogger
 
 import stable_ssl as ssl
 from stable_ssl.data import transforms
+import sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).parent.parent))
+from utils import get_data_dir
 
 vicreg_transform = transforms.MultiViewTransform(
     [
@@ -43,12 +48,11 @@ val_transform = transforms.Compose(
     transforms.ToImage(**ssl.data.static.CIFAR10),
 )
 
+data_dir = get_data_dir("cifar10")
 cifar_train = torchvision.datasets.CIFAR10(
-    root="/tmp/cifar10", train=True, download=True
+    root=str(data_dir), train=True, download=True
 )
-cifar_val = torchvision.datasets.CIFAR10(
-    root="/tmp/cifar10", train=False, download=True
-)
+cifar_val = torchvision.datasets.CIFAR10(root=str(data_dir), train=False, download=True)
 
 train_dataset = ssl.data.FromTorchDataset(
     cifar_train,
@@ -116,8 +120,8 @@ module = ssl.Module(
     optim={
         "optimizer": {
             "type": "LARS",
-            "lr": 0.3,
-            "weight_decay": 1e-4,
+            "lr": 5,
+            "weight_decay": 1e-6,
         },
         "scheduler": {
             "type": "LinearWarmupCosineAnnealing",

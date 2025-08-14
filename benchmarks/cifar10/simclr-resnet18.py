@@ -9,20 +9,37 @@ from torch import nn
 
 import stable_ssl as ssl
 from stable_ssl.data import transforms
+import sys
+from pathlib import Path
 
-simclr_transform = transforms.Compose(
-    transforms.RGB(),
-    transforms.RandomResizedCrop((32, 32), scale=(0.2, 1.0)),
-    transforms.RandomHorizontalFlip(p=0.5),
-    transforms.ColorJitter(
-        brightness=0.4,
-        contrast=0.4,
-        saturation=0.2,
-        hue=0.1,
-        p=0.8,
-    ),
-    transforms.RandomGrayscale(p=0.2),
-    transforms.ToImage(**ssl.data.static.CIFAR10),
+sys.path.append(str(Path(__file__).parent.parent))
+from utils import get_data_dir
+
+simclr_transform = transforms.MultiViewTransform(
+    [
+        transforms.Compose(
+            transforms.RGB(),
+            transforms.RandomResizedCrop((32, 32), scale=(0.2, 1.0)),
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.ColorJitter(
+                brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8
+            ),
+            transforms.RandomGrayscale(p=0.2),
+            transforms.RandomSolarize(threshold=0.5, p=0.0),
+            transforms.ToImage(**ssl.data.static.CIFAR10),
+        ),
+        transforms.Compose(
+            transforms.RGB(),
+            transforms.RandomResizedCrop((32, 32), scale=(0.08, 1.0)),
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.ColorJitter(
+                brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8
+            ),
+            transforms.RandomGrayscale(p=0.2),
+            transforms.RandomSolarize(threshold=0.5, p=0.2),
+            transforms.ToImage(**ssl.data.static.CIFAR10),
+        ),
+    ]
 )
 
 val_transform = transforms.Compose(
@@ -31,12 +48,11 @@ val_transform = transforms.Compose(
     transforms.ToImage(**ssl.data.static.CIFAR10),
 )
 
+data_dir = get_data_dir("cifar10")
 cifar_train = torchvision.datasets.CIFAR10(
-    root="/tmp/cifar10", train=True, download=True
+    root=str(data_dir), train=True, download=True
 )
-cifar_val = torchvision.datasets.CIFAR10(
-    root="/tmp/cifar10", train=False, download=True
-)
+cifar_val = torchvision.datasets.CIFAR10(root=str(data_dir), train=False, download=True)
 
 train_dataset = ssl.data.FromTorchDataset(
     cifar_train,
@@ -85,6 +101,9 @@ projector = nn.Sequential(
     nn.Linear(512, 2048),
     nn.BatchNorm1d(2048),
     nn.ReLU(inplace=True),
+    nn.Linear(2048, 2048),
+    nn.BatchNorm1d(2048),
+    nn.ReLU(inplace=True),
     nn.Linear(2048, 256),
 )
 
@@ -92,12 +111,12 @@ module = ssl.Module(
     backbone=backbone,
     projector=projector,
     forward=forward,
-    simclr_loss=ssl.losses.NTXEntLoss(temperature=0.2),
+    simclr_loss=ssl.losses.NTXEntLoss(temperature=0.5),
     optim={
         "optimizer": {
             "type": "LARS",
-            "lr": 0.4,
-            "weight_decay": 1e-4,
+            "lr": 5,
+            "weight_decay": 1e-6,
         },
         "scheduler": {
             "type": "LinearWarmupCosineAnnealing",
