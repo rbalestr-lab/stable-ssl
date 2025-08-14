@@ -2,7 +2,6 @@ import lightning as pl
 import torch
 import torch.nn as nn
 import torchmetrics
-from datasets import load_dataset
 from lightning.pytorch.loggers import WandbLogger
 
 import stable_ssl as ssl
@@ -49,19 +48,18 @@ val_transform = transforms.Compose(
 )
 
 data_dir = get_data_dir("imagenet100")
-dataset = load_dataset("randall-lab/imagenet100", cache_dir=str(data_dir))
 
-train_dataset = ssl.data.FromHuggingFace(
-    dataset["train"],
-    names=["image", "label"],
+train_dataset = ssl.data.HFDataset(
+    "clane9/imagenet-100",
+    split="train",
+    cache_dir=str(data_dir),
     transform=byol_transform,
-    add_sample_idx=True,
 )
-val_dataset = ssl.data.FromHuggingFace(
-    dataset["validation"],
-    names=["image", "label"],
+val_dataset = ssl.data.HFDataset(
+    "clane9/imagenet-100",
+    split="validation",
+    cache_dir=str(data_dir),
     transform=val_transform,
-    add_sample_idx=True,
 )
 
 batch_size = 256

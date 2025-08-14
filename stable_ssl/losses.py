@@ -178,8 +178,8 @@ class VICRegLoss(torch.nn.Module):
         """
         repr_loss = F.mse_loss(z_i, z_j)
 
-        z_i = all_gather(z_i)
-        z_j = all_gather(z_j)
+        z_i = torch.cat(all_gather(z_i), 0)
+        z_j = torch.cat(all_gather(z_j), 0)
 
         z_i = z_i - z_i.mean(dim=0)
         z_j = z_j - z_j.mean(dim=0)

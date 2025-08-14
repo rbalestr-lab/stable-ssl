@@ -1,8 +1,9 @@
 import lightning as pl
 import torch
+import torch.nn as nn
 import torchmetrics
+from datasets import load_dataset
 from lightning.pytorch.loggers import WandbLogger
-from torch import nn
 
 import stable_ssl as ssl
 from stable_ssl.data import transforms
@@ -12,7 +13,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 from utils import get_data_dir
 
-simclr_transform = transforms.MultiViewTransform(
+byol_transform = transforms.MultiViewTransform(
     [
         transforms.Compose(
             transforms.RGB(),
@@ -47,19 +48,20 @@ val_transform = transforms.Compose(
     transforms.ToImage(**ssl.data.static.ImageNet),
 )
 
-data_dir = get_data_dir("imagenet100")
+data_dir = get_data_dir("imagenet1k")
+dataset = load_dataset("randall-lab/face-obfuscated-imagenet", cache_dir=str(data_dir))
 
-train_dataset = ssl.data.HFDataset(
-    "clane9/imagenet-100",
-    split="train",
-    cache_dir=str(data_dir),
-    transform=simclr_transform,
+train_dataset = ssl.data.FromHuggingFace(
+    dataset["train"],
+    names=["image", "label"],
+    transform=byol_transform,
+    add_sample_idx=True,
 )
-val_dataset = ssl.data.HFDataset(
-    "clane9/imagenet-100",
-    split="validation",
-    cache_dir=str(data_dir),
+val_dataset = ssl.data.FromHuggingFace(
+    dataset["validation"],
+    names=["image", "label"],
     transform=val_transform,
+    add_sample_idx=True,
 )
 
 batch_size = 256
@@ -82,40 +84,76 @@ data = ssl.data.DataModule(train=train_dataloader, val=val_dataloader)
 
 
 def forward(self, batch, stage):
-    out = {}
-    out["embedding"] = self.backbone(batch["image"])
     if self.training:
-        proj = self.projector(out["embedding"])
-        views = ssl.data.fold_views(proj, batch["sample_idx"])
-        out["loss"] = self.simclr_loss(views[0], views[1])
-    return out
+        images = batch["image"]
+        sample_idx = batch["sample_idx"]
+
+        online_features = self.backbone.forward_student(images)
+        online_proj = self.projector(online_features)
+        online_pred = self.predictor(online_proj)
+
+        with torch.no_grad():
+            target_features = self.backbone.forward_teacher(images)
+            target_proj = self.projector_target(target_features)
+
+        online_pred_views = ssl.data.fold_views(online_pred, sample_idx)
+        target_proj_views = ssl.data.fold_views(target_proj, sample_idx)
+
+        loss_1 = self.byol_loss(online_pred_views[0], target_proj_views[1])
+        loss_2 = self.byol_loss(online_pred_views[1], target_proj_views[0])
+        batch["loss"] = (loss_1 + loss_2) / 2
+
+        batch["embedding"] = online_features.detach()
+    else:
+        batch["embedding"] = self.backbone.forward_student(batch["image"])
+
+    return batch
 
 
-backbone = ssl.backbone.from_torchvision(
-    "resnet50",
-    low_resolution=False,
+backbone = ssl.backbone.from_torchvision("resnet50", low_resolution=False, weights=None)
+backbone.fc = nn.Identity()
+
+wrapped_backbone = ssl.TeacherStudentWrapper(
+    backbone,
+    warm_init=True,
+    base_ema_coefficient=0.996,
+    final_ema_coefficient=1.0,
 )
-backbone.fc = torch.nn.Identity()
 
 projector = nn.Sequential(
-    nn.Linear(2048, 2048),
-    nn.BatchNorm1d(2048),
+    nn.Linear(2048, 4096),
+    nn.BatchNorm1d(4096),
     nn.ReLU(inplace=True),
-    nn.Linear(2048, 2048),
-    nn.BatchNorm1d(2048),
+    nn.Linear(4096, 256),
+)
+
+projector_target = nn.Sequential(
+    nn.Linear(2048, 4096),
+    nn.BatchNorm1d(4096),
     nn.ReLU(inplace=True),
-    nn.Linear(2048, 128),
+    nn.Linear(4096, 256),
+)
+projector_target.load_state_dict(projector.state_dict())
+projector_target.requires_grad_(False)
+
+predictor = nn.Sequential(
+    nn.Linear(256, 4096),
+    nn.BatchNorm1d(4096),
+    nn.ReLU(inplace=True),
+    nn.Linear(4096, 256),
 )
 
 module = ssl.Module(
-    backbone=backbone,
+    backbone=wrapped_backbone,
     projector=projector,
+    projector_target=projector_target,
+    predictor=predictor,
     forward=forward,
-    simclr_loss=ssl.losses.NTXEntLoss(temperature=0.1),
+    byol_loss=ssl.losses.BYOLLoss(),
     optim={
         "optimizer": {
             "type": "LARS",
-            "lr": 0.3 * batch_size / 256,
+            "lr": 0.2 * batch_size / 256,
             "weight_decay": 1e-6,
         },
         "scheduler": {
@@ -129,11 +167,11 @@ linear_probe = ssl.callbacks.OnlineProbe(
     name="linear_probe",
     input="embedding",
     target="label",
-    probe=torch.nn.Linear(2048, 100),
-    loss_fn=torch.nn.CrossEntropyLoss(),
+    probe=nn.Linear(2048, 1000),
+    loss_fn=nn.CrossEntropyLoss(),
     metrics={
-        "top1": torchmetrics.classification.MulticlassAccuracy(100),
-        "top5": torchmetrics.classification.MulticlassAccuracy(100, top_k=5),
+        "top1": torchmetrics.classification.MulticlassAccuracy(1000),
+        "top5": torchmetrics.classification.MulticlassAccuracy(1000, top_k=5),
     },
 )
 
@@ -142,25 +180,24 @@ knn_probe = ssl.callbacks.OnlineKNN(
     input="embedding",
     target="label",
     queue_length=20000,
-    metrics={"accuracy": torchmetrics.classification.MulticlassAccuracy(100)},
+    metrics={"accuracy": torchmetrics.classification.MulticlassAccuracy(1000)},
     input_dim=2048,
     k=20,
 )
 
 wandb_logger = WandbLogger(
     entity="stable-ssl",
-    project="imagenet100-simclr",
-    name="simclr-resnet50",
+    project="imagenet1k-byol",
+    name="byol-resnet50",
     log_model=False,
 )
 
 trainer = pl.Trainer(
     max_epochs=200,
     num_sanity_val_steps=0,
-    callbacks=[knn_probe, linear_probe],
+    callbacks=[linear_probe, knn_probe],
     precision="16-mixed",
     logger=wandb_logger,
-    enable_checkpointing=False,
 )
 
 manager = ssl.Manager(trainer=trainer, module=module, data=data)

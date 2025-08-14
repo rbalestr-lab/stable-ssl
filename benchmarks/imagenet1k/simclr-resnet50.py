@@ -47,19 +47,23 @@ val_transform = transforms.Compose(
     transforms.ToImage(**ssl.data.static.ImageNet),
 )
 
-data_dir = get_data_dir("imagenet100")
+data_dir = get_data_dir("imagenet1k")
 
 train_dataset = ssl.data.HFDataset(
-    "clane9/imagenet-100",
+    "randall-lab/face-obfuscated-imagenet",
+    name="1k",
     split="train",
     cache_dir=str(data_dir),
     transform=simclr_transform,
+    trust_remote_code=True,
 )
 val_dataset = ssl.data.HFDataset(
-    "clane9/imagenet-100",
+    "randall-lab/face-obfuscated-imagenet",
+    name="1k",
     split="validation",
     cache_dir=str(data_dir),
     transform=val_transform,
+    trust_remote_code=True,
 )
 
 batch_size = 256
@@ -129,11 +133,11 @@ linear_probe = ssl.callbacks.OnlineProbe(
     name="linear_probe",
     input="embedding",
     target="label",
-    probe=torch.nn.Linear(2048, 100),
+    probe=torch.nn.Linear(2048, 1000),
     loss_fn=torch.nn.CrossEntropyLoss(),
     metrics={
-        "top1": torchmetrics.classification.MulticlassAccuracy(100),
-        "top5": torchmetrics.classification.MulticlassAccuracy(100, top_k=5),
+        "top1": torchmetrics.classification.MulticlassAccuracy(1000),
+        "top5": torchmetrics.classification.MulticlassAccuracy(1000, top_k=5),
     },
 )
 
@@ -142,14 +146,14 @@ knn_probe = ssl.callbacks.OnlineKNN(
     input="embedding",
     target="label",
     queue_length=20000,
-    metrics={"accuracy": torchmetrics.classification.MulticlassAccuracy(100)},
+    metrics={"accuracy": torchmetrics.classification.MulticlassAccuracy(1000)},
     input_dim=2048,
     k=20,
 )
 
 wandb_logger = WandbLogger(
     entity="stable-ssl",
-    project="imagenet100-simclr",
+    project="imagenet1k-simclr",
     name="simclr-resnet50",
     log_model=False,
 )
