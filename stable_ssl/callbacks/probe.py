@@ -115,6 +115,7 @@ class OnlineProbe(Callback):
 
     def setup(self, trainer: Trainer, pl_module: LightningModule, stage: str) -> None:
         """Initialize optimizer, scheduler, and metrics."""
+        logging.info(f"Setting up {self.state_key} callback!")
         if stage != "fit":
             return
 

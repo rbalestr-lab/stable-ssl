@@ -209,7 +209,7 @@ class PILGaussianBlur(Transform):
         if self.p < 1 and torch.rand(1) >= self.p:
             x[self.get_name(x)] = torch.zeros((1,))
             return x
-        sigma = torch.rand((1,)) * (self.sigma[1] - self.sigma[1]) + self.sigma[0]
+        sigma = torch.rand((1,)) * (self.sigma[1] - self.sigma[0]) + self.sigma[0]
         x[self.get_name(x)] = sigma
         self.nested_set(
             x,

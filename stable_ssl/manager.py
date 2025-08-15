@@ -393,14 +393,25 @@ class Manager(submitit.helpers.Checkpointable):
             logging.info(c)
         for c in self._trainer.early_stopping_callbacks:
             logging.info(c)
-
-        logging.info(f"📣📣📣 CALLING trainer.fit with {self.ckpt_path=} 📣📣📣")
+        if Path("requeue_checkpoint.ckpt").is_file():
+            if self.ckpt_path is not None:
+                logging.warning(
+                    "We are overring user given {self.ckpt_path}"
+                    " to `requeue_checkpoint.ckpt`"
+                )
+            ckpt_path = "requeue_checkpoint.ckpt"
+        else:
+            ckpt_path = self.ckpt_path
+        logging.info(f"📣📣📣 CALLING trainer.fit with {ckpt_path=} 📣📣📣")
         self._trainer.fit(
             self.instantiated_module,
             datamodule=self.instantiated_data,
-            ckpt_path=self.ckpt_path,
+            ckpt_path=ckpt_path,
         )
         self._dump_wandb_data()
+        if Path("requeue_checkpoint.ckpt").is_file():
+            logging.info("Cleaning up requeue checkpoint")
+            Path("requeue_checkpoint.ckpt").unlink()
 
     def validate(self):
         logging.info("📣📣📣 CALLING trainer.validate 📣📣📣")
@@ -466,7 +477,7 @@ class Manager(submitit.helpers.Checkpointable):
             return None
         return runs[-2]
 
-    def save_checkpoint(self, path=None):
+    def save_checkpoint(self, path: str = None, upload_wandb: bool = False):
         # TODO: figure out how to flush logging in subprocess
         print("Entering checkpoint method", flush=True)
         if path is None:
@@ -479,7 +490,8 @@ class Manager(submitit.helpers.Checkpointable):
             print(f"\t● saving checkpoint to user's path {path} ⏳", flush=True)
         self._trainer.save_checkpoint(str(path))
         print("\t● checkpoint saved ✅", flush=True)
-        self._upload_checkpoint_for_requeue(path)
+        if upload_wandb:
+            self._upload_checkpoint_for_requeue(path)
 
     @rank_zero_only
     def _upload_checkpoint_for_requeue(self, ckpt_path):
@@ -537,6 +549,8 @@ class Manager(submitit.helpers.Checkpointable):
         # child = self.__class__(
         #     self.trainer, self.module, self.data, self.seed, self.ckpt_path
         # )
+        print("Saving checkpoint to `requeue_checkpoint.ckpt`")
+        self.save_checkpoint("requeue_checkpoint.ckpt", upload_wandb=False)
         print("Requeing with: ", int, args, kwargs, flush=True)
         return submitit.helpers.DelayedSubmission(inst, *args, **kwargs)
 

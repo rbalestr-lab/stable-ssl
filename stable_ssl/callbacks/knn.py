@@ -108,6 +108,7 @@ class OnlineKNN(Callback):
 
     def setup(self, trainer: Trainer, pl_module: LightningModule, stage: str) -> None:
         """Find or create queue callbacks and setup metrics."""
+        logging.info(f"Setting up {self.state_key} callback!")
         if self._input_queue is None or self._target_queue is None:
             self._input_queue = find_or_create_queue_callback(
                 trainer,

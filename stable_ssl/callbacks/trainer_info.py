@@ -4,7 +4,7 @@ from lightning.pytorch import Callback
 from loguru import logger as logging
 from prettytable import PrettyTable
 from pytorch_lightning.utilities import rank_zero_only
-
+import os
 from ..data.module import DataModule
 
 
@@ -124,3 +124,39 @@ class TrainerInfo(Callback):
             return
         trainer.datamodule.set_pl_trainer(trainer)
         return super().setup(trainer, pl_module, stage)
+
+
+class SLURMInfo(Callback):
+    """Links the trainer to the DataModule for enhanced functionality.
+
+    This callback establishes a bidirectional connection between the trainer
+    and DataModule, enabling the DataModule to access trainer information
+    such as device placement, distributed training state, and other runtime
+    configurations.
+
+    This is particularly useful for DataModules that need to adapt their
+    behavior based on trainer configuration (e.g., device-aware data loading,
+    distributed sampling adjustments).
+
+    Note:
+        Only works with DataModule instances that have a set_pl_trainer method.
+        A warning is logged if using a custom DataModule without this method.
+    """
+
+    def setup(self, trainer, pl_module, stage):
+        logging.info("---- SLURM INFO ---- 🔧")
+        logging.info(f"Job ID: {self._get_env_var('SLURM_JOB_ID')}")
+        logging.info(f"Job Name: {self._get_env_var('SLURM_JOB_NAME')}")
+        logging.info(f"Nodes: {self._get_env_var('SLURM_JOB_NUM_NODES')}")
+        logging.info(f"Tasks: {self._get_env_var('SLURM_NTASKS')}")
+        logging.info(f"CPUs per node: {self._get_env_var('SLURM_CPUS_ON_NODE')}")
+        logging.info(f"CPUs per task: {self._get_env_var('SLURM_CPUS_PER_TASK')}")
+        logging.info(f"Memory per node: {self._get_env_var('SLURM_MEM_PER_NODE')}")
+        logging.info(f"Memory per CPU: {self._get_env_var('SLURM_MEM_PER_CPU')}")
+        logging.info(f"Time limit: {self._get_env_var('SLURM_JOB_TIME')}")
+        logging.info(f"Partition: {self._get_env_var('SLURM_JOB_PARTITION')}")
+        logging.info(f"Node List: {self._get_env_var('SLURM_JOB_NODELIST')}")
+        logging.info(f"Submit Directory: {self._get_env_var('SLURM_SUBMIT_DIR')}")
+
+    def _get_env_var(self, var, default="N/A"):
+        return os.environ.get(var, default)

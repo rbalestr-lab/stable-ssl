@@ -1,11 +1,11 @@
-"""SimCLR training on CIFAR10."""
+"""VICReg training on CIFAR-10."""
 
 import lightning as pl
 import torch
+import torch.nn as nn
 import torchmetrics
 import torchvision
 from lightning.pytorch.loggers import WandbLogger
-from torch import nn
 
 import stable_ssl as ssl
 from stable_ssl.data import transforms
@@ -15,11 +15,11 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 from utils import get_data_dir
 
-simclr_transform = transforms.MultiViewTransform(
+vicreg_transform = transforms.MultiViewTransform(
     [
         transforms.Compose(
             transforms.RGB(),
-            transforms.RandomResizedCrop((32, 32), scale=(0.2, 1.0)),
+            transforms.RandomResizedCrop((32, 32), scale=(0.08, 1.0)),
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.ColorJitter(
                 brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8
@@ -57,7 +57,7 @@ cifar_val = torchvision.datasets.CIFAR10(root=str(data_dir), train=False, downlo
 train_dataset = ssl.data.FromTorchDataset(
     cifar_train,
     names=["image", "label"],
-    transform=simclr_transform,
+    transform=vicreg_transform,
 )
 val_dataset = ssl.data.FromTorchDataset(
     cifar_val,
@@ -65,16 +65,17 @@ val_dataset = ssl.data.FromTorchDataset(
     transform=val_transform,
 )
 
+batch_size = 256
 train_dataloader = torch.utils.data.DataLoader(
     dataset=train_dataset,
     sampler=ssl.data.sampler.RepeatedRandomSampler(train_dataset, n_views=2),
-    batch_size=256,
+    batch_size=batch_size,
     num_workers=8,
     drop_last=True,
 )
 val_dataloader = torch.utils.data.DataLoader(
     dataset=val_dataset,
-    batch_size=256,
+    batch_size=batch_size,
     num_workers=10,
 )
 
@@ -87,7 +88,7 @@ def forward(self, batch, stage):
     if self.training:
         proj = self.projector(out["embedding"])
         views = ssl.data.fold_views(proj, batch["sample_idx"])
-        out["loss"] = self.simclr_loss(views[0], views[1])
+        out["loss"] = self.vicreg_loss(views[0], views[1])
     return out
 
 
@@ -104,14 +105,18 @@ projector = nn.Sequential(
     nn.Linear(2048, 2048),
     nn.BatchNorm1d(2048),
     nn.ReLU(inplace=True),
-    nn.Linear(2048, 256),
+    nn.Linear(2048, 2048),
 )
 
 module = ssl.Module(
     backbone=backbone,
     projector=projector,
     forward=forward,
-    simclr_loss=ssl.losses.NTXEntLoss(temperature=0.5),
+    vicreg_loss=ssl.losses.VICRegLoss(
+        sim_coeff=25.0,
+        std_coeff=25.0,
+        cov_coeff=1.0,
+    ),
     optim={
         "optimizer": {
             "type": "LARS",
@@ -149,7 +154,8 @@ knn_probe = ssl.callbacks.OnlineKNN(
 
 wandb_logger = WandbLogger(
     entity="stable-ssl",
-    project="cifar10-simclr",
+    project="cifar10-vicreg",
+    name="vicreg-resnet18",
     log_model=False,
 )
 
