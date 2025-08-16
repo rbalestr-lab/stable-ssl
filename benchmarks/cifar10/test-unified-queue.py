@@ -160,9 +160,9 @@ knn_probe_large = ssl.callbacks.OnlineKNN(
 # Add RankMe callback
 rankme_callback = ssl.callbacks.RankMe(
     name="rankme",
-    input="embedding",
+    target="embedding",
     queue_length=10000,  # Should share queue with knn_probe_medium
-    input_dim=512,
+    target_shape=512,
 )
 
 # Linear probe for comparison
