@@ -61,7 +61,7 @@ class OnlineQueue(Callback):
         self.gather_distributed = gather_distributed
         self._snapshot = None
 
-        logging.info(f"OnlineOrderedQueue initialized for key '{key}'")
+        logging.info(f"OnlineQueue initialized for key '{key}'")
         logging.info(f"\t- requested_length: {queue_length}")
         logging.info(f"\t- dim: {dim}")
         logging.info(f"\t- dtype: {dtype}")
@@ -216,7 +216,7 @@ class OnlineQueue(Callback):
         return self._snapshot
 
 
-def find_or_create_ordered_queue_callback(
+def find_or_create_queue_callback(
     trainer: Trainer,
     key: str,
     queue_length: int,
@@ -273,7 +273,7 @@ def find_or_create_ordered_queue_callback(
         if create_if_missing:
             # Create a new queue callback
             logging.info(
-                f"No ordered queue found for key '{key}', creating new OnlineOrderedQueue with "
+                f"No queue found for key '{key}', creating new OnlineQueue with "
                 f"length={queue_length}, dim={dim}, dtype={dtype}"
             )
             new_queue = OnlineQueue(
@@ -283,6 +283,16 @@ def find_or_create_ordered_queue_callback(
                 dtype=dtype,
                 gather_distributed=gather_distributed,
             )
+
+            # Initialize queue info immediately for the first queue
+            if key not in OnlineQueue._queue_info:
+                OnlineQueue._queue_info[key] = {
+                    "max_length": queue_length,
+                    "dim": dim,
+                    "dtype": dtype,
+                    "callbacks": [new_queue],
+                }
+
             # Add to trainer callbacks
             trainer.callbacks.append(new_queue)
             # Run setup if trainer is already set up
@@ -301,7 +311,7 @@ def find_or_create_ordered_queue_callback(
                 if isinstance(cb, OnlineQueue)
             ]
             raise ValueError(
-                f"No OnlineOrderedQueue found for key '{key}'. Available queues: {available}"
+                f"No OnlineQueue found for key '{key}'. Available queues: {available}"
             )
 
     # With unified management, we can have multiple callbacks for same key
@@ -328,6 +338,20 @@ def find_or_create_ordered_queue_callback(
             dtype=dtype or matching_queues[0].dtype,
             gather_distributed=gather_distributed,
         )
+
+        # Update the queue info immediately if needed
+        if key in OnlineQueue._queue_info:
+            old_max = OnlineQueue._queue_info[key]["max_length"]
+            if queue_length > old_max:
+                OnlineQueue._queue_info[key]["max_length"] = queue_length
+                logging.info(
+                    f"OnlineQueue: Updated max size for key '{key}' "
+                    f"from {old_max} to {queue_length}"
+                )
+            # Add the new callback to the list
+            if new_queue not in OnlineQueue._queue_info[key]["callbacks"]:
+                OnlineQueue._queue_info[key]["callbacks"].append(new_queue)
+
         trainer.callbacks.append(new_queue)
         if (
             hasattr(trainer, "lightning_module")

@@ -56,7 +56,6 @@ class TestUnifiedQueueManagement:
                 self._callbacks_modules = {}
 
         pl_module = MockModule()
-        trainer.lightning_module = pl_module
 
         # Create initial queue with size 100
         queue1 = find_or_create_queue_callback(
@@ -103,8 +102,6 @@ class TestUnifiedQueueManagement:
                 return tensor.unsqueeze(0)
 
         pl_module = MockModule()
-        trainer.lightning_module = pl_module
-        trainer.world_size = 1
 
         # Create callbacks with different sizes
         queue_small = find_or_create_queue_callback(
@@ -129,9 +126,13 @@ class TestUnifiedQueueManagement:
         test_data = torch.randn(300, 5)
         OnlineQueue._shared_queues["shared_features"].append(test_data)
 
-        # Trigger validation snapshots
-        queue_small.on_validation_epoch_start(trainer, pl_module)
-        queue_large.on_validation_epoch_start(trainer, pl_module)
+        # Trigger validation snapshots - pass trainer with world_size=1
+        class MockTrainer:
+            world_size = 1
+
+        mock_trainer = MockTrainer()
+        queue_small.on_validation_epoch_start(mock_trainer, pl_module)
+        queue_large.on_validation_epoch_start(mock_trainer, pl_module)
 
         # Small queue should get last 100 items
         assert queue_small._snapshot.shape[0] == 100
@@ -199,7 +200,6 @@ class TestUnifiedQueueManagement:
                 self._callbacks_modules = {}
 
         pl_module = MockModule()
-        trainer.lightning_module = pl_module
 
         queue = find_or_create_queue_callback(
             trainer=trainer,

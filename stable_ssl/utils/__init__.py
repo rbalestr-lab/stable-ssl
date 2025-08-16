@@ -38,7 +38,7 @@ from .inspection_utils import (
     dict_values,
     get_required_fn_parameters,
 )
-from .nn_modules import EMA, ImageToVideoEncoder, Normalize, UnsortedQueue
+from .nn_modules import EMA, ImageToVideoEncoder, Normalize, OrderedQueue, UnsortedQueue
 from .visualization import imshow_with_grid, visualize_images_graph
 
 __all__ = [
@@ -81,6 +81,7 @@ __all__ = [
     "ImageToVideoEncoder",
     "Normalize",
     "UnsortedQueue",
+    "OrderedQueue",
     "EMA",
     # visualization
     "imshow_with_grid",
