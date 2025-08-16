@@ -298,28 +298,35 @@ class TestImageToVideoEncoder:
 
     def test_video_encoding(self):
         """Test encoding video frames with an image encoder."""
-        # Create a simple encoder for testing
-        encoder = torch.nn.Linear(64, 32)
+        # Create a simple Conv2d encoder for testing
+        encoder = torch.nn.Sequential(
+            torch.nn.Conv2d(4, 8, kernel_size=3),
+            torch.nn.AdaptiveAvgPool2d(1),
+            torch.nn.Flatten(),
+        )
         video_encoder = ImageToVideoEncoder(encoder)
 
         # Create video tensor: (batch=2, time=3, channel=4, height=4, width=4)
         video = torch.randn(2, 3, 4, 4, 4)
-        # Flatten to (2, 3, 64) for the linear layer
-        video_flat = video.view(2, 3, -1)
 
         # Apply video encoder
-        features = video_encoder(video_flat.view(2, 3, 4, 4, 4))
+        features = video_encoder(video)
 
-        # Check output shape: (batch=2, time=3, features=32)
-        assert features.shape == (2, 3, 32)
+        # Check output shape: (batch=2, time=3, features=8)
+        assert features.shape == (2, 3, 8)
 
     def test_single_frame(self):
         """Test with single frame video."""
-        encoder = torch.nn.Linear(16, 8)
+        # Create a simple Conv2d encoder
+        encoder = torch.nn.Sequential(
+            torch.nn.Conv2d(3, 16, kernel_size=1),
+            torch.nn.AdaptiveAvgPool2d(1),
+            torch.nn.Flatten(),
+        )
         video_encoder = ImageToVideoEncoder(encoder)
 
-        # Single frame: (batch=4, time=1, features=16)
-        video = torch.randn(4, 1, 16).view(4, 1, 4, 2, 2)
+        # Single frame: (batch=4, time=1, channel=3, height=8, width=8)
+        video = torch.randn(4, 1, 3, 8, 8)
         features = video_encoder(video)
 
-        assert features.shape == (4, 1, 8)
+        assert features.shape == (4, 1, 16)
