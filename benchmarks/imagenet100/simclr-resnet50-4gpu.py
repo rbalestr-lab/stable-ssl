@@ -62,9 +62,9 @@ val_dataset = ssl.data.HFDataset(
     transform=val_transform,
 )
 
-batch_size = 1024  # per-GPU batch size (increased after removing KNN)
-world_size = 2  # number of GPUs
-total_batch_size = batch_size * world_size  # total batch size = 2048
+batch_size = 1024  # per-GPU batch size
+world_size = 4  # number of GPUs
+total_batch_size = batch_size * world_size  # total batch size = 4096
 train_dataloader = torch.utils.data.DataLoader(
     dataset=train_dataset,
     sampler=ssl.data.sampler.RepeatedRandomSampler(train_dataset, n_views=2),
@@ -149,7 +149,7 @@ linear_probe = ssl.callbacks.OnlineProbe(
 wandb_logger = WandbLogger(
     entity="stable-ssl",
     project="imagenet100-simclr",
-    name="simclr-resnet50-2gpu",
+    name="simclr-resnet50-4gpu",
     log_model=False,
 )
 
@@ -161,7 +161,7 @@ trainer = pl.Trainer(
     logger=wandb_logger,
     enable_checkpointing=False,
     strategy="ddp",
-    devices=2,
+    devices=4,
     accelerator="gpu",
 )
 
