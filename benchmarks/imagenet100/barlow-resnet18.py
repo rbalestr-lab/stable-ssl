@@ -17,24 +17,24 @@ barlow_transform = transforms.MultiViewTransform(
         transforms.Compose(
             transforms.RGB(),
             transforms.RandomResizedCrop((224, 224), scale=(0.08, 1.0)),
-            transforms.RandomHorizontalFlip(p=0.5),
             transforms.ColorJitter(
                 brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8
             ),
             transforms.RandomGrayscale(p=0.2),
-            transforms.GaussianBlur(kernel_size=23, sigma=(0.1, 2.0), p=1.0),
+            transforms.PILGaussianBlur(p=1.0),
+            transforms.RandomHorizontalFlip(p=0.5),
             transforms.ToImage(**ssl.data.static.ImageNet),
         ),
         transforms.Compose(
             transforms.RGB(),
             transforms.RandomResizedCrop((224, 224), scale=(0.08, 1.0)),
-            transforms.RandomHorizontalFlip(p=0.5),
             transforms.ColorJitter(
                 brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8
             ),
             transforms.RandomGrayscale(p=0.2),
-            transforms.GaussianBlur(kernel_size=23, sigma=(0.1, 2.0), p=0.1),
+            transforms.PILGaussianBlur(p=0.1),
             transforms.RandomSolarize(threshold=0.5, p=0.2),
+            transforms.RandomHorizontalFlip(p=0.5),
             transforms.ToImage(**ssl.data.static.ImageNet),
         ),
     ]
@@ -67,14 +67,14 @@ train_dataloader = torch.utils.data.DataLoader(
     dataset=train_dataset,
     sampler=ssl.data.sampler.RepeatedRandomSampler(train_dataset, n_views=2),
     batch_size=batch_size,
-    num_workers=8,
+    num_workers=4,
     drop_last=True,
     persistent_workers=True,
 )
 val_dataloader = torch.utils.data.DataLoader(
     dataset=val_dataset,
     batch_size=batch_size,
-    num_workers=8,
+    num_workers=4,
     persistent_workers=True,
 )
 
@@ -87,36 +87,39 @@ def forward(self, batch, stage):
     if self.training:
         proj = self.projector(out["embedding"])
         views = ssl.data.fold_views(proj, batch["sample_idx"])
-        out["loss"] = self.barlow_loss(views[0], views[1])
+        out["loss"] = 0.1 * self.barlow_loss(views[0], views[1])  # scale_loss: 0.1
     return out
 
 
 backbone = ssl.backbone.from_torchvision(
-    "resnet50",
+    "resnet18",
     low_resolution=False,
 )
 backbone.fc = torch.nn.Identity()
 
 projector = nn.Sequential(
-    nn.Linear(2048, 8192),
-    nn.BatchNorm1d(8192),
+    nn.Linear(512, 2048),
+    nn.BatchNorm1d(2048),
     nn.ReLU(inplace=True),
-    nn.Linear(8192, 8192),
-    nn.BatchNorm1d(8192),
+    nn.Linear(2048, 2048),
+    nn.BatchNorm1d(2048),
     nn.ReLU(inplace=True),
-    nn.Linear(8192, 8192),
+    nn.Linear(2048, 2048),
 )
 
 module = ssl.Module(
     backbone=backbone,
     projector=projector,
     forward=forward,
-    barlow_loss=ssl.losses.BarlowTwinsLoss(lambd=0.005),
+    barlow_loss=ssl.losses.BarlowTwinsLoss(lambd=0.005),  # scale_loss: 0.1
     optim={
         "optimizer": {
             "type": "LARS",
-            "lr": 0.2 * batch_size / 256,
-            "weight_decay": 1e-6,
+            "lr": 0.3 * batch_size / 256,
+            "weight_decay": 1e-4,
+            "clip_lr": True,
+            "eta": 0.02,
+            "exclude_bias_n_norm": True,
         },
         "scheduler": {
             "type": "LinearWarmupCosineAnnealing",
@@ -129,7 +132,7 @@ linear_probe = ssl.callbacks.OnlineProbe(
     name="linear_probe",
     input="embedding",
     target="label",
-    probe=torch.nn.Linear(2048, 100),
+    probe=torch.nn.Linear(512, 100),
     loss_fn=torch.nn.CrossEntropyLoss(),
     metrics={
         "top1": torchmetrics.classification.MulticlassAccuracy(100),
@@ -143,24 +146,27 @@ knn_probe = ssl.callbacks.OnlineKNN(
     target="label",
     queue_length=20000,
     metrics={"accuracy": torchmetrics.classification.MulticlassAccuracy(100)},
-    input_dim=2048,
+    input_dim=512,
     k=20,
 )
 
 wandb_logger = WandbLogger(
     entity="stable-ssl",
     project="imagenet100-barlow",
-    name="barlow-resnet50",
+    name="barlow-resnet18",
     log_model=False,
 )
 
 trainer = pl.Trainer(
-    max_epochs=200,
+    max_epochs=400,
     num_sanity_val_steps=0,
     callbacks=[knn_probe, linear_probe],
     precision="16-mixed",
     logger=wandb_logger,
-    enable_checkpointing=False,
+    enable_checkpointing=True,
+    devices=1,
+    accelerator="gpu",
+    sync_batchnorm=False,
 )
 
 manager = ssl.Manager(trainer=trainer, module=module, data=data)
