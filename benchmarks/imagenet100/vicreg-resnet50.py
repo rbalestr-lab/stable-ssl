@@ -17,24 +17,24 @@ vicreg_transform = transforms.MultiViewTransform(
         transforms.Compose(
             transforms.RGB(),
             transforms.RandomResizedCrop((224, 224), scale=(0.08, 1.0)),
-            transforms.RandomHorizontalFlip(p=0.5),
             transforms.ColorJitter(
                 brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8
             ),
             transforms.RandomGrayscale(p=0.2),
-            transforms.GaussianBlur(kernel_size=23, sigma=(0.1, 2.0), p=1.0),
+            transforms.PILGaussianBlur(p=1.0),
+            transforms.RandomHorizontalFlip(p=0.5),
             transforms.ToImage(**ssl.data.static.ImageNet),
         ),
         transforms.Compose(
             transforms.RGB(),
             transforms.RandomResizedCrop((224, 224), scale=(0.08, 1.0)),
-            transforms.RandomHorizontalFlip(p=0.5),
             transforms.ColorJitter(
                 brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8
             ),
             transforms.RandomGrayscale(p=0.2),
-            transforms.GaussianBlur(kernel_size=23, sigma=(0.1, 2.0), p=0.1),
+            transforms.PILGaussianBlur(p=0.1),
             transforms.RandomSolarize(threshold=0.5, p=0.2),
+            transforms.RandomHorizontalFlip(p=0.5),
             transforms.ToImage(**ssl.data.static.ImageNet),
         ),
     ]
@@ -92,19 +92,19 @@ def forward(self, batch, stage):
 
 
 backbone = ssl.backbone.from_torchvision(
-    "resnet50",
+    "resnet18",
     low_resolution=False,
 )
 backbone.fc = torch.nn.Identity()
 
 projector = nn.Sequential(
-    nn.Linear(2048, 8192),
-    nn.BatchNorm1d(8192),
+    nn.Linear(512, 2048),
+    nn.BatchNorm1d(2048),
     nn.ReLU(inplace=True),
-    nn.Linear(8192, 8192),
-    nn.BatchNorm1d(8192),
+    nn.Linear(2048, 2048),
+    nn.BatchNorm1d(2048),
     nn.ReLU(inplace=True),
-    nn.Linear(8192, 8192),
+    nn.Linear(2048, 2048),
 )
 
 module = ssl.Module(
@@ -114,13 +114,16 @@ module = ssl.Module(
     vicreg_loss=ssl.losses.VICRegLoss(
         sim_coeff=25.0,
         std_coeff=25.0,
-        cov_coeff=1.0,
+        cov_coeff=200.0,
     ),
     optim={
         "optimizer": {
             "type": "LARS",
-            "lr": 0.2 * batch_size / 256,
-            "weight_decay": 1e-6,
+            "lr": 0.3 * batch_size / 256,
+            "weight_decay": 1e-4,
+            "clip_lr": True,
+            "eta": 0.02,
+            "exclude_bias_n_norm": True,
         },
         "scheduler": {
             "type": "LinearWarmupCosineAnnealing",
@@ -133,7 +136,7 @@ linear_probe = ssl.callbacks.OnlineProbe(
     name="linear_probe",
     input="embedding",
     target="label",
-    probe=torch.nn.Linear(2048, 100),
+    probe=torch.nn.Linear(512, 100),
     loss_fn=torch.nn.CrossEntropyLoss(),
     metrics={
         "top1": torchmetrics.classification.MulticlassAccuracy(100),
@@ -147,14 +150,14 @@ knn_probe = ssl.callbacks.OnlineKNN(
     target="label",
     queue_length=20000,
     metrics={"accuracy": torchmetrics.classification.MulticlassAccuracy(100)},
-    input_dim=2048,
+    input_dim=512,
     k=20,
 )
 
 wandb_logger = WandbLogger(
     entity="stable-ssl",
     project="imagenet100-vicreg",
-    name="vicreg-resnet50",
+    name="vicreg-resnet18",
     log_model=False,
 )
 

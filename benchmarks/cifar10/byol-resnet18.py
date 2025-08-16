@@ -177,7 +177,7 @@ knn_probe = ssl.callbacks.OnlineKNN(
     queue_length=20000,
     metrics={"accuracy": torchmetrics.classification.MulticlassAccuracy(10)},
     input_dim=512,
-    k=20,
+    k=10,
 )
 
 wandb_logger = WandbLogger(
