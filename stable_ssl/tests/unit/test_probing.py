@@ -237,7 +237,5 @@ class TestProbingUnit:
         # Note: hasattr returns False for properties that raise AttributeError
         # So we check if it's a property on the class instead
         assert isinstance(getattr(type(probe), "probe_module", None), property)
-        with pytest.raises(
-            AttributeError, match="probe_module not accessible before setup"
-        ):
+        with pytest.raises(AttributeError, match="module not accessible before setup"):
             _ = probe.probe_module

@@ -4,17 +4,15 @@ from typing import Dict, Optional, Union
 import torch
 import torchmetrics
 from hydra.utils import instantiate
-from lightning.pytorch import Callback, LightningModule, Trainer
+from lightning.pytorch import LightningModule, Trainer
 from loguru import logger as logging
 
-from stable_ssl.optim.utils import create_optimizer, create_scheduler
 from stable_ssl.utils import get_data_from_batch_or_outputs
 
-from ..optim import LARS
-from .utils import EarlyStopping, format_metrics_as_dict
+from .utils import EarlyStopping, OptimizedCallback, format_metrics_as_dict
 
 
-class OnlineProbe(Callback):
+class OnlineProbe(OptimizedCallback):
     """Online probe for evaluating learned representations during self-supervised training.
 
     This callback implements the standard linear evaluation protocol by training a probe
@@ -81,27 +79,23 @@ class OnlineProbe(Callback):
         metrics: Optional[Union[dict, tuple, list, torchmetrics.Metric]] = None,
         early_stopping: Optional[EarlyStopping] = None,
     ) -> None:
-        super().__init__()
+        # Initialize base class
+        super().__init__(
+            name=name,
+            optimizer=optimizer,
+            scheduler=scheduler,
+            accumulate_grad_batches=accumulate_grad_batches,
+        )
 
-        self.name = name
         self.input = input
         self.target = target
         self.loss_fn = loss_fn
-        self.accumulate_grad_batches = accumulate_grad_batches
         self.early_stopping = early_stopping
 
         # Store probe configuration for later initialization
-        # The actual module will be stored in pl_module._callbacks_modules
         self._probe_config = probe
-        self._pl_module = None  # Will be set in setup()
-
-        # Store optimizer and scheduler configs
-        self._optimizer_config = optimizer
-        self._scheduler_config = scheduler
 
         # These will be initialized in setup
-        self.optimizer = None
-        self.scheduler = None
         self._train_metrics = None
         self._val_metrics = None
 
@@ -113,16 +107,8 @@ class OnlineProbe(Callback):
         logging.info(f"  - Target: {target}")
         logging.info(f"  - Accumulate grad batches: {accumulate_grad_batches}")
 
-    def setup(self, trainer: Trainer, pl_module: LightningModule, stage: str) -> None:
-        """Initialize optimizer, scheduler, and metrics."""
-        logging.info(f"Setting up {self.state_key} callback!")
-        if stage != "fit":
-            return
-
-        # Store reference to pl_module for accessing _callbacks_modules
-        self._pl_module = pl_module
-
-        # Initialize probe module if needed
+    def _initialize_module(self, pl_module: LightningModule) -> torch.nn.Module:
+        """Initialize the probe module from configuration."""
         if isinstance(self._probe_config, torch.nn.Module):
             probe_module = self._probe_config
         elif callable(self._probe_config):
@@ -130,121 +116,17 @@ class OnlineProbe(Callback):
         else:
             probe_module = instantiate(self._probe_config, _convert_="object")
 
-        # Move probe to correct device
-        probe_module = probe_module.to(pl_module.device)
+        return probe_module
 
-        # Store probe module in pl_module._callbacks_modules (single source of truth)
-        logging.info(f"{self.name}: Storing probe module in _callbacks_modules")
-        if not hasattr(pl_module, "_callbacks_modules"):
-            pl_module._callbacks_modules = {}
-        pl_module._callbacks_modules[self.name] = probe_module
+    def setup(self, trainer: Trainer, pl_module: LightningModule, stage: str) -> None:
+        """Initialize optimizer, scheduler, and metrics."""
+        # Call parent setup for module/optimizer/scheduler
+        super().setup(trainer, pl_module, stage)
 
-        # Initialize optimizer - inherit from main module if not specified
-        if self._optimizer_config is None:
-            # Try to inherit from main module's optimizer config
-            if hasattr(pl_module, "optim") and pl_module.optim:
-                # Extract optimizer config from main module
-                if isinstance(pl_module.optim, dict):
-                    # Check if it's a single optimizer config
-                    if "optimizer" in pl_module.optim:
-                        main_opt_config = pl_module.optim["optimizer"]
-                        logging.info(
-                            f"{self.name}: Inheriting optimizer config from main module"
-                        )
-                    else:
-                        # It's a multi-optimizer config, use the first one or a default
-                        first_opt_key = next(iter(pl_module.optim.keys()))
-                        main_opt_config = pl_module.optim[first_opt_key].get(
-                            "optimizer", "LARS"
-                        )
-                        logging.info(
-                            f"{self.name}: Inheriting optimizer config from '{first_opt_key}'"
-                        )
+        if stage != "fit":
+            return
 
-                    # Create optimizer with inherited config
-                    self.optimizer = create_optimizer(
-                        self.probe_module.parameters(), main_opt_config
-                    )
-                else:
-                    # Fallback to LARS
-                    logging.info(
-                        f"{self.name}: Main module optim format not recognized, using LARS"
-                    )
-                    self.optimizer = LARS(
-                        self.probe_module.parameters(),
-                        lr=0.1,
-                        clip_lr=True,
-                        eta=0.02,
-                        exclude_bias_n_norm=True,
-                        weight_decay=0,
-                    )
-            else:
-                # No main module config, use default LARS
-                logging.info(
-                    f"{self.name}: No main module optimizer config found, using default LARS"
-                )
-                self.optimizer = LARS(
-                    self.probe_module.parameters(),
-                    lr=0.1,
-                    clip_lr=True,
-                    eta=0.02,
-                    exclude_bias_n_norm=True,
-                    weight_decay=0,
-                )
-        else:
-            # Use explicitly provided optimizer config
-            self.optimizer = create_optimizer(
-                self.probe_module.parameters(), self._optimizer_config
-            )
-
-        # Initialize scheduler - inherit from main module if not specified
-        if self._scheduler_config is None:
-            # Try to inherit from main module's scheduler config
-            if hasattr(pl_module, "optim") and pl_module.optim:
-                if isinstance(pl_module.optim, dict):
-                    # Check if it's a single optimizer config
-                    if "scheduler" in pl_module.optim:
-                        main_sched_config = pl_module.optim.get(
-                            "scheduler", "CosineAnnealingLR"
-                        )
-                        logging.info(
-                            f"{self.name}: Inheriting scheduler config from main module"
-                        )
-                        self.scheduler = create_scheduler(
-                            self.optimizer, main_sched_config, module=pl_module
-                        )
-                    else:
-                        # It's a multi-optimizer config, use the first one
-                        first_opt_key = next(iter(pl_module.optim.keys()))
-                        main_sched_config = pl_module.optim[first_opt_key].get(
-                            "scheduler", "CosineAnnealingLR"
-                        )
-                        logging.info(
-                            f"{self.name}: Inheriting scheduler config from '{first_opt_key}'"
-                        )
-                        self.scheduler = create_scheduler(
-                            self.optimizer, main_sched_config, module=pl_module
-                        )
-                else:
-                    # Fallback to ConstantLR
-                    logging.info(f"{self.name}: Using default ConstantLR scheduler")
-                    self.scheduler = torch.optim.lr_scheduler.ConstantLR(
-                        self.optimizer, factor=1.0
-                    )
-            else:
-                # No main module config, use default
-                logging.info(
-                    f"{self.name}: No main module scheduler config found, using ConstantLR"
-                )
-                self.scheduler = torch.optim.lr_scheduler.ConstantLR(
-                    self.optimizer, factor=1.0
-                )
-        else:
-            # Use explicitly provided scheduler config
-            self.scheduler = create_scheduler(
-                self.optimizer, self._scheduler_config, module=pl_module
-            )
-
+        # Setup metrics
         logging.info(f"{self.name}: Setting up metrics")
         if not hasattr(pl_module, "_callbacks_metrics"):
             pl_module._callbacks_metrics = {}
@@ -254,8 +136,6 @@ class OnlineProbe(Callback):
 
         self._train_metrics = pl_module._callbacks_metrics[self.name]["_train"]
         self._val_metrics = pl_module._callbacks_metrics[self.name]["_val"]
-
-        logging.info(f"{self.name}: Setup complete")
 
     def on_train_batch_end(
         self,
@@ -276,16 +156,16 @@ class OnlineProbe(Callback):
         if x is None or y is None:
             return
 
-        self.probe_module.train()
+        self.module.train()
 
         with torch.enable_grad():
             x = x.detach()
 
-            probe_dtype = next(self.probe_module.parameters()).dtype
+            probe_dtype = next(self.module.parameters()).dtype
             if x.dtype != probe_dtype:
                 x = x.to(probe_dtype)
 
-            preds = self.probe_module(x)
+            preds = self.module(x)
 
             loss = self.loss_fn(preds, y)
 
@@ -306,12 +186,8 @@ class OnlineProbe(Callback):
 
         pl_module.log_dict(logs, on_step=True, on_epoch=True)
 
-        if (batch_idx + 1) % self.accumulate_grad_batches == 0:
-            self.optimizer.step()
-            self.optimizer.zero_grad(set_to_none=True)
-
-            if trainer.global_step % trainer.accumulate_grad_batches == 0:
-                self.scheduler.step()
+        # Optimizer step using parent class method
+        self.optimizer_step(batch_idx, trainer)
 
     def on_validation_batch_end(
         self,
@@ -335,17 +211,17 @@ class OnlineProbe(Callback):
             return
 
         # Ensure probe is in eval mode
-        self.probe_module.eval()
+        self.module.eval()
 
         # Forward pass without gradients
         with torch.no_grad():
             # Ensure input has same dtype as probe module
             # This handles mixed precision training where features might be float16
-            probe_dtype = next(self.probe_module.parameters()).dtype
+            probe_dtype = next(self.module.parameters()).dtype
             if x.dtype != probe_dtype:
                 x = x.to(probe_dtype)
 
-            preds = self.probe_module(x)
+            preds = self.module(x)
 
         # Store predictions in batch
         prediction_key = f"{self.name}_preds"
@@ -390,41 +266,5 @@ class OnlineProbe(Callback):
 
     @property
     def probe_module(self):
-        """Access probe module from pl_module._callbacks_modules.
-
-        This property is only accessible after setup() has been called.
-        The probe module is stored centrally in pl_module._callbacks_modules
-        to avoid duplication in checkpoints.
-        """
-        if self._pl_module is None:
-            raise AttributeError(
-                f"{self.name}: probe_module not accessible before setup(). "
-                "The probe module is initialized during the setup phase."
-            )
-        return self._pl_module._callbacks_modules[self.name]
-
-    @property
-    def state_key(self) -> str:
-        return f"OnlineProbe[name={self.name}]"
-
-    def state_dict(self) -> Dict:
-        """Save callback state - only optimizer and scheduler states.
-
-        The probe module itself is saved via pl_module._callbacks_modules,
-        so we don't duplicate it here.
-        """
-        return {
-            "optimizer": self.optimizer.state_dict() if self.optimizer else None,
-            "scheduler": self.scheduler.state_dict() if self.scheduler else None,
-        }
-
-    def load_state_dict(self, state_dict: Dict) -> None:
-        """Load callback state - only optimizer and scheduler states.
-
-        The probe module itself is loaded via pl_module._callbacks_modules,
-        so we don't handle it here.
-        """
-        if "optimizer" in state_dict and self.optimizer:
-            self.optimizer.load_state_dict(state_dict["optimizer"])
-        if "scheduler" in state_dict and self.scheduler:
-            self.scheduler.load_state_dict(state_dict["scheduler"])
+        """Alias for self.module for backward compatibility."""
+        return self.module
