@@ -1,6 +1,7 @@
 from .checkpoint_sklearn import SklearnCheckpoint, WandbCheckpoint
 from .image_retrieval import ImageRetrieval
 from .knn import OnlineKNN
+from .latent_viz import LatentViz
 from .lidar import LiDAR
 from .probe import OnlineProbe
 from .rankme import RankMe
@@ -14,6 +15,7 @@ __all__ = [
     SklearnCheckpoint,
     WandbCheckpoint,
     OnlineKNN,
+    LatentViz,
     TrainerInfo,
     SLURMInfo,
     LoggingCallback,
