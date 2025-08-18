@@ -69,17 +69,23 @@ def compute_pairwise_distances_chunked(
     Returns:
         Distance matrix of shape (n, m)
     """
-    n = x.shape[0]
     m = y.shape[0]
-    device = x.device
 
-    # Allocate output matrix
-    distances = torch.empty(n, m, device=device, dtype=x.dtype)
+    # If chunk_size is -1 or larger than m, process all at once
+    if chunk_size <= 0 or chunk_size >= m:
+        return compute_pairwise_distances(x, y, metric)
+
+    # Build distance matrix by concatenating chunks
+    chunks = []
 
     # Process y in chunks
     for i in range(0, m, chunk_size):
         end_idx = min(i + chunk_size, m)
         y_chunk = y[i:end_idx]
-        distances[:, i:end_idx] = compute_pairwise_distances(x, y_chunk, metric)
+        chunk_distances = compute_pairwise_distances(x, y_chunk, metric)
+        chunks.append(chunk_distances)
+
+    # Concatenate chunks along the second dimension
+    distances = torch.cat(chunks, dim=1)
 
     return distances
