@@ -1,5 +1,5 @@
 from functools import partial
-from typing import Any, Dict, Optional, Union
+from typing import Optional, Union
 
 import torch
 import torchmetrics
@@ -8,7 +8,6 @@ from loguru import logger as logging
 
 from stable_ssl.optim.utils import create_optimizer, create_scheduler
 from ..optim import LARS
-
 
 
 class OptimizedCallback(Callback):

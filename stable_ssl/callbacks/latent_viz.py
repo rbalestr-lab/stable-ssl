@@ -204,7 +204,7 @@ class LatentViz(OptimizedCallback):
                     f"(epoch {trainer.current_epoch + 1}/{self.warmup_epochs})"
                 )
             return
-        
+
         # Only update every N batches to reduce computational overhead
         if batch_idx % self.update_interval != 0:
             return
@@ -323,7 +323,7 @@ class LatentViz(OptimizedCallback):
                 f"(epoch {trainer.current_epoch + 1}/{self.warmup_epochs})"
             )
             return
-        
+
         # Plot visualization at intervals
         if trainer.current_epoch % self.plot_interval != 0:
             return
@@ -392,16 +392,22 @@ class LatentViz(OptimizedCallback):
                     columns = ["x", "y"]
 
                 table = wandb.Table(columns=columns, data=data.tolist())
-                
+
                 # Log table - will overwrite previous epoch's table
-                wandb.log({
-                    f"{self.name}/2d_latent_table": table,
-                    f"{self.name}/current_epoch": epoch
-                })
-                
-                logging.info(f"{self.name}: Logged latent table to experiment tracker at epoch {epoch}")
+                wandb.log(
+                    {
+                        f"{self.name}/2d_latent_table": table,
+                        f"{self.name}/current_epoch": epoch,
+                    }
+                )
+
+                logging.info(
+                    f"{self.name}: Logged latent table to experiment tracker at epoch {epoch}"
+                )
         except ImportError:
-            logging.debug(f"{self.name}: WandB not installed, skipping visualization logging")
+            logging.debug(
+                f"{self.name}: WandB not installed, skipping visualization logging"
+            )
         except Exception as e:
             logging.error(f"{self.name}: Failed to log visualization: {e}")
 
