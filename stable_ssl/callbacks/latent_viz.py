@@ -17,7 +17,7 @@ from torch import Tensor
 from stable_ssl.utils.distance_metrics import compute_pairwise_distances_chunked
 
 from .queue import find_or_create_queue_callback
-from .utils import OptimizedCallback, log_to_experiment
+from .utils import OptimizedCallback
 
 
 class LatentViz(OptimizedCallback):
@@ -51,6 +51,8 @@ class LatentViz(OptimizedCallback):
         scheduler: Learning rate scheduler configuration. If None, uses ConstantLR.
         accumulate_grad_batches: Number of batches to accumulate gradients.
         update_interval: Update projection network every N training batches (default: 10).
+        warmup_epochs: Number of epochs to wait before starting projection training (default: 0).
+            Allows main model to stabilize before learning 2D projections.
         distance_metric: Metric for computing distances in high-D space.
         plot_interval: Interval (in epochs) for plotting 2D visualization.
         save_dir: Optional directory to save plots. If None, saves to 'latent_viz_{name}'.
@@ -72,6 +74,7 @@ class LatentViz(OptimizedCallback):
         ] = None,
         accumulate_grad_batches: int = 1,
         update_interval: int = 10,
+        warmup_epochs: int = 0,
         distance_metric: Literal["euclidean", "cosine"] = "euclidean",
         plot_interval: int = 10,
         save_dir: Optional[str] = None,
@@ -91,6 +94,7 @@ class LatentViz(OptimizedCallback):
         self.k_neighbors = k_neighbors
         self.n_negatives = n_negatives
         self.update_interval = update_interval
+        self.warmup_epochs = warmup_epochs
         self.distance_metric = distance_metric
         self.plot_interval = plot_interval
         self.save_dir = save_dir
@@ -116,6 +120,7 @@ class LatentViz(OptimizedCallback):
         logging.info(f"  - K neighbors: {k_neighbors}")
         logging.info(f"  - Negative samples: {n_negatives}")
         logging.info(f"  - Update interval: {update_interval} batches")
+        logging.info(f"  - Warmup epochs: {warmup_epochs}")
         logging.info(f"  - Accumulate grad batches: {accumulate_grad_batches}")
 
     def _initialize_module(self, pl_module: LightningModule) -> torch.nn.Module:
@@ -191,6 +196,15 @@ class LatentViz(OptimizedCallback):
         batch_idx: int,
     ) -> None:
         """Perform projection network training step."""
+        # Skip training during warmup period
+        if trainer.current_epoch < self.warmup_epochs:
+            if batch_idx == 0:  # Log once per epoch
+                logging.info(
+                    f"{self.name}: Warmup period - skipping projection training "
+                    f"(epoch {trainer.current_epoch + 1}/{self.warmup_epochs})"
+                )
+            return
+        
         # Only update every N batches to reduce computational overhead
         if batch_idx % self.update_interval != 0:
             return
@@ -256,8 +270,7 @@ class LatentViz(OptimizedCallback):
         )
 
         k_actual = min(self.k_neighbors, n_samples - 1)  # Exclude self
-        # Add large value to diagonal to exclude self from neighbors
-        high_d_distances.fill_diagonal_(float("inf"))
+        high_d_distances.fill_diagonal_(float("inf"))  # Exclude self
         _, nn_indices = high_d_distances.topk(k=k_actual, dim=1, largest=False)
 
         # Compute 2D similarities (Q matrix) using Student-t kernel - chunked for memory efficiency
@@ -267,7 +280,7 @@ class LatentViz(OptimizedCallback):
         )
         q_matrix = 1.0 / (1.0 + z_distances_sq)
 
-        # Set diagonal to 0 (no self-similarity) - avoid in-place operation
+        # Set diagonal to 0 (no self-similarity)
         mask = torch.ones_like(q_matrix).detach()
         mask.fill_diagonal_(0)
         q_matrix = q_matrix * mask
@@ -303,6 +316,14 @@ class LatentViz(OptimizedCallback):
         self, trainer: Trainer, pl_module: LightningModule
     ) -> None:
         """Plot 2D visualization at specified intervals."""
+        # Skip visualization during warmup period
+        if trainer.current_epoch < self.warmup_epochs:
+            logging.info(
+                f"{self.name}: Warmup period - skipping visualization "
+                f"(epoch {trainer.current_epoch + 1}/{self.warmup_epochs})"
+            )
+            return
+        
         # Plot visualization at intervals
         if trainer.current_epoch % self.plot_interval != 0:
             return
@@ -338,11 +359,9 @@ class LatentViz(OptimizedCallback):
         """Save 2D embeddings to file and log to experiment tracker."""
         import os
 
-        # Convert to numpy
+        # Save coordinates to NPZ file
         z_2d_np = z_2d.cpu().numpy()
         labels_np = labels.cpu().numpy() if labels is not None else None
-
-        # Save coordinates to NPZ file
         if self.save_dir is not None:
             save_dir = self.save_dir
         else:
@@ -357,54 +376,34 @@ class LatentViz(OptimizedCallback):
 
         logging.info(f"{self.name}: Saved 2D coordinates to {save_path}")
 
-        # Log to experiment tracker if available (WandB, TensorBoard, etc.)
+        # Log to experiment tracker if available
         try:
-            # Check if WandB is available and being used
             from lightning.pytorch.loggers import WandbLogger
 
             if isinstance(trainer.logger, WandbLogger):
                 import wandb
 
-                # Create WandB-specific visualization
+                # Create WandB-specific table only (no direct scatter logging)
                 if labels_np is not None:
-                    # With labels - use numpy for efficient data preparation
                     data = np.column_stack([z_2d_np, labels_np.astype(int)])
-                    table = wandb.Table(columns=["x", "y", "class"], data=data.tolist())
-                    log_to_experiment(
-                        trainer,
-                        {
-                            f"{self.name}/2d_latent_space": wandb.plot.scatter(
-                                table,
-                                "x",
-                                "y",
-                                groupby="class",
-                                title=f"{self.name} - 2D Latent Space (Epoch {epoch})",
-                            ),
-                            f"{self.name}/epoch": epoch,
-                        },
-                    )
+                    columns = ["x", "y", "class"]
                 else:
-                    # Without labels - direct conversion
-                    table = wandb.Table(columns=["x", "y"], data=z_2d_np.tolist())
-                    log_to_experiment(
-                        trainer,
-                        {
-                            f"{self.name}/2d_latent_space": wandb.plot.scatter(
-                                table,
-                                "x",
-                                "y",
-                                title=f"{self.name} - 2D Latent Space (Epoch {epoch})",
-                            ),
-                            f"{self.name}/epoch": epoch,
-                        },
-                    )
+                    data = z_2d_np
+                    columns = ["x", "y"]
 
-                logging.info(f"{self.name}: Logged scatter plot to experiment tracker")
+                table = wandb.Table(columns=columns, data=data.tolist())
+                
+                # Log table - will overwrite previous epoch's table
+                wandb.log({
+                    f"{self.name}/2d_latent_table": table,
+                    f"{self.name}/current_epoch": epoch
+                })
+                
+                logging.info(f"{self.name}: Logged latent table to experiment tracker at epoch {epoch}")
         except ImportError:
-            # WandB not installed, skip
-            pass
+            logging.debug(f"{self.name}: WandB not installed, skipping visualization logging")
         except Exception as e:
-            logging.debug(f"{self.name}: Could not log visualization: {e}")
+            logging.error(f"{self.name}: Failed to log visualization: {e}")
 
     @property
     def projection_module(self):

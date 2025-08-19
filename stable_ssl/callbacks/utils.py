@@ -10,48 +10,6 @@ from stable_ssl.optim.utils import create_optimizer, create_scheduler
 from ..optim import LARS
 
 
-def log_to_experiment(trainer: Trainer, log_dict: Dict[str, Any]) -> None:
-    """Log arbitrary data to the experiment tracker (WandB, TensorBoard, etc.).
-
-    This utility allows callbacks to log complex objects (plots, tables, etc.)
-    to any logger type without needing to know the specifics or store trainer references.
-
-    Args:
-        trainer: The Lightning Trainer instance (passed directly, not stored).
-        log_dict: Dictionary of items to log. Values can be scalars, tensors, or
-                  logger-specific objects (e.g., wandb.Table, wandb.plot.scatter).
-
-    Example:
-        >>> # In a callback method
-        >>> log_to_experiment(
-        ...     trainer,
-        ...     {
-        ...         "my_callback/plot": wandb.plot.scatter(...),
-        ...         "my_callback/epoch": epoch,
-        ...     },
-        ... )
-    """
-    if trainer.logger is None:
-        return
-
-    try:
-        # Most loggers support experiment.log() for complex objects
-        if hasattr(trainer.logger, "experiment"):
-            experiment = trainer.logger.experiment
-            if hasattr(experiment, "log"):
-                experiment.log(log_dict)
-            else:
-                # Fallback to logger.log if experiment doesn't have log method
-                for key, value in log_dict.items():
-                    trainer.logger.log_metrics({key: value}, step=trainer.global_step)
-        else:
-            # Fallback for simple loggers
-            for key, value in log_dict.items():
-                if isinstance(value, (int, float, torch.Tensor)):
-                    trainer.logger.log_metrics({key: value}, step=trainer.global_step)
-    except Exception as e:
-        logging.debug(f"Failed to log to experiment tracker: {e}")
-
 
 class OptimizedCallback(Callback):
     """Base callback class with optimizer and scheduler management.
