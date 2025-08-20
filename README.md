@@ -10,9 +10,10 @@
 [![WandB](https://raw.githubusercontent.com/wandb/assets/main/wandb-github-badge-gradient.svg)](https://wandb.ai/site)
 
 
-`stable-ssl` is a comprehensive PyTorch Lightning-based framework designed for rapid experimentation across multiple machine learning paradigms: **supervised learning**, **semi-supervised learning**, **supervised contrastive learning**, **self-supervised learning (SSL)**, and **multimodal learning**.
+AI is moving beyond labels. Today's models learn through **self-supervision** and **multimodal alignment**, extracting knowledge from raw data to build general-purpose representations that work across tasks.
 
-What sets `stable-ssl` apart is our obsession for **visibility into model training**. Our rich callback ecosystem (`OnlineProbe`, `OnlineKNN`, `RankMe`, `LiDAR`, and more) provides real-time insights into representation quality, feature collapse, and training dynamics. The intuitive dictionary-based data flow lets you monitor any layer, modality, or metadata, making it trivial to track what matters in your experiments. Track everything, debug faster, iterate sooner.
+`stable-ssl` is a PyTorch Lightning framework built for this new paradigm. What sets us apart is **deep visibility into representation learning**. Our callback ecosystem (`OnlineProbe`, `OnlineKNN`, `RankMe`, `LiDAR`) provides real-time insights into representation quality, feature collapse, and training dynamics. The dictionary-based architecture lets you monitor any layer, modality, or metadata by name. Track everything, debug faster, iterate sooner.
+
 
 ## How?
 
