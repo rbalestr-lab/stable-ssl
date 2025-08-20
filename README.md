@@ -71,12 +71,20 @@ To reach flexibility, scalability and stability, we rely on battle-tested third 
     - All components are passed as kwargs to `ssl.Module`:
 
     ```python
+    # First define your model components
+    backbone = ssl.backbone.from_torchvision("resnet18")
+    projector = torch.nn.Linear(512, 128)
+
+    # Then create the module with all components
     module = ssl.Module(
         backbone=backbone,
         projector=projector,
-        forward=forward,
+        forward=forward,  # The forward function defined above
         simclr_loss=ssl.losses.NTXEntLoss(temperature=0.5),
-        optim={...}  # Optimizer configuration
+        optim={
+            "optimizer": {"type": "Adam", "lr": 0.001},
+            "scheduler": {"type": "CosineAnnealing"}
+        }
     )
     ```
 
