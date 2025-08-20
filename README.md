@@ -12,7 +12,7 @@
 
 AI is moving beyond labels. Today's models learn through **self-supervision** and **multimodal alignment**, extracting knowledge from raw data to build general-purpose representations that work across tasks.
 
-`stable-ssl` is a PyTorch Lightning framework built for this new paradigm. What sets us apart is **deep visibility into representation learning**. Our callback ecosystem (`OnlineProbe`, `OnlineKNN`, `RankMe`, `LiDAR`) provides real-time insights into representation quality, feature collapse, and training dynamics. The dictionary-based architecture lets you monitor any layer, modality, or metadata by name. Track everything, debug faster, iterate sooner.
+`stable-ssl` is a PyTorch Lightning framework built for this new paradigm. What sets us apart is **real-time visibility into representation quality**. Our callback ecosystem (`OnlineProbe`, `OnlineKNN`, `RankMe`, `LiDAR` and many more) provides insights into feature collapse, training dynamics, and downstream performance. Data flows as dictionaries through model components, metrics, and callbacks, making any intermediate value accessible. Track everything, debug faster, iterate sooner.
 
 
 ## How?
