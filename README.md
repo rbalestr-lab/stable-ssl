@@ -9,24 +9,24 @@
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![WandB](https://raw.githubusercontent.com/wandb/assets/main/wandb-github-badge-gradient.svg)](https://wandb.ai/site)
 
-## Doing One Thing, But Doing It Right... Ours is Self Supervised Learning
 
-Self Supervised Learning (SSL) is the last frontier of AI. But quick experimentation is not possible today as no library offers stable and modular key-in-hand solutions. Existing libraries are either static (lightly-ai, solo-learn) or not concerned with SSL--justifying our existence. *Our goal is to provide a flexible, full-fledge, optimized framework to conduct rapid SSL research and scale as needed.*
+AI is moving beyond labels. Today's models learn through **self-supervision** and **multimodal alignment**, extracting knowledge from raw data to build general-purpose representations that work across tasks. These foundation models are then deployed at scale, often after finetuning, to solve tasks in zero or few shot.
+
+`stable-ssl` is a PyTorch framework built on top of Lightning for this new paradigm. What sets us apart is **real-time visibility into training quality** through extensive logging and monitoring. Our callback ecosystem (`OnlineProbe`, `OnlineKNN`, `RankMe`, `LiDAR` and many more) provides insights into feature collapse, training dynamics, and downstream performance. Data flow as dictionaries through model components, metrics, and callbacks, making any intermediate value accessible and debuggable. With `stable-ssl`: track everything, debug faster, iterate sooner.
+
 
 ## How?
 
-To reach flexibility, scalability and stability, we rely on battle-tested third party libraries: `PyTorch`, `Lightning`, `HuggingFace`, `TorchMetrics` amongst a few others. Those dependencies allow us to focus on one thing: assembling everything into a powerful SSL research framework. ``stable-ssl`` adopts a flexible and modular design for seamless integration of components from external libraries, including architectures, loss functions, evaluation metrics, and augmentations.
-
-## Log log log, monitor monitor monitor!
-
-The key to SSL research is to log and monitor everything. This is what we bring to a new level with `stable-ssl` by providing extremely rich logging and numerous callbacks that can be added and combined in any way you like within your trainer such as `stable_ssl.callbacks.OnlineProbe`, `stable_ssl.callbacks.OnlineKNN`, `stable_ssl.callbacks.RankMe`, `stable_ssl.callbacks.LiDAR`, `stable_ssl.callbacks.OnlineWriter`, and so on.
+To reach flexibility, scalability and stability, we rely on battle-tested third party libraries: `PyTorch`, `Lightning`, `HuggingFace`, `TorchMetrics` amongst a few others. Those dependencies allow us to focus on assembling everything into a powerful ML framework. ``stable-ssl`` adopts a flexible and modular design for seamless integration of components from external libraries, including architectures, loss functions, evaluation metrics, and augmentations.
 
 ## Core Structure
 
-`stable-ssl` only requires you to get familiar with 3 components:
+`stable-ssl` simplifies complex ML workflows into 4 intuitive components:
 
-1. **data**: the dataset should be a huggingface dataset e.g.
-    ```
+1. **data**: Your dataset must follow a dictionary-structured format where each sample is a dictionary with named fields (e.g., `{"image": ..., "label": ...}`). This ensures consistent behavior across all components. You have multiple options for creating datasets:
+
+    - **HuggingFace datasets** (if available on the Hub):
+    ```python
     import stable_ssl as ssl
     train_dataset = ssl.data.HFDataset(
         path="frgfm/imagenette",
@@ -35,126 +35,68 @@ The key to SSL research is to log and monitor everything. This is what we bring 
         transform=train_transform,
     )
     ```
-    if it already exists on the Hub, otherwise you can wrap your own dataset into a HF dataset. **Why?** Imposing that format ensures consistent behavior (each sample is a dictionary) and leverage powerful utilities from the `datasets` package. Once datasets (train et al.) are created, they can be used as-is with `torch.utils.data.DataLoader`. However we recommend putting them into our `DataModule` e.g.
-    ```
-    datamodule = ssl.data.DataModule(train=train_dataset, val=val_dataset, ...)
-    ```
-    to ensure precise logging and easy debugging.
-2. **module, models, forward**: the overall orchestration leverages `ssl.Module` which inherits from `lightning.LightningModule`. We provide all the basic required utilities (optimizer/scheduler creation etc). So the only required implementation for the user is the `forward` method, for example a supervised learning run would define
-    ```
-    def forward(self, batch, stage):
-        batch["embedding"] = self.backbone(batch["image"])["logits"]
-        if self.training:
-            preds = self.classifier(batch["embedding"])
-            batch["loss"] = torch.nn.functional.cross_entropy(preds, batch["label"])
-        return batch
-    ```
-    the `forward` method takes in a dictionary (`batch` from the data loader) and should return a dictionary. If any module has to be trained, then a `loss` key must be present. Further customization can be done (see the `examples`) ensuring that any desired behavior can be achieved. The `self` is a LightningModule with any attribute passed during module creation:
-    ```
-    config = AutoConfig.from_pretrained("microsoft/resnet-18")
-    backbone = ViT(512)
-    projector = torch.nn.Linear(512, 128)
-    module = ssl.Module(
-        backbone=backbone,
-        projector=projector,
-        forward=forward,
-        simclr_loss=ssl.losses.NTXEntLoss(temperature=0.1),
-    )
-    ```
-    any `kwarg` passed to `stable_ssl.Module` is automatically set, the only reserved `kwarg` is `forward`
-3. **trainer**: the final step is to describe how training will happen! This is done with the `lightning.Trainer` module, for example
-    ```
-    trainer = pl.Trainer(
-            max_epochs=10,
-            num_sanity_val_steps=1,
-            callbacks=[linear_probe, knn_probe, rankme],
-            precision="16-mixed",
-            logger=False,
-            enable_checkpointing=False,
-        )
-    manager = ssl.Manager(trainer=trainer, module=module, data=data)
-    manager()
-    ```
-    once this is specified, simply pipe everything into our manager class that will connect everything and launch fitting! This extra wrapper is needed to produce as precise logging as possible.
 
-<details>
-  <summary>Minimal Example : SimCLR INET10</summary>
-    ```
-    import stable_ssl as ssl
-    import torch
-    from transformers import AutoModelForImageClassification, AutoConfig
-    import lightning as pl
-    from stable_ssl.data import transforms
-    import torchmetrics
-
-    # without transform
-    mean = [0.485, 0.456, 0.406]
-    std = [0.229, 0.224, 0.225]
-    train_transform = transforms.Compose(
-        transforms.RGB(),
-        transforms.RandomResizedCrop((224, 224)),
-        transforms.RandomHorizontalFlip(p=0.5),
-        transforms.ColorJitter(
-            brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8
-        ),
-        transforms.RandomGrayscale(p=0.2),
-        transforms.GaussianBlur(kernel_size=(5, 5), p=1.0),
-        transforms.ToImage(mean=mean, std=std),
-    )
-    train_dataset = ssl.data.HFDataset(
-        path="frgfm/imagenette",
-        name="160px",
-        split="train",
+    - **From PyTorch datasets**:
+    ```python
+    train_dataset = ssl.data.FromTorchDataset(
+        torchvision_dataset,
+        names=["image", "label"],  # Map tuple outputs to dictionary keys
         transform=train_transform,
     )
-    train = torch.utils.data.DataLoader(
-        dataset=train_dataset,
-        sampler=ssl.data.sampler.RepeatedRandomSampler(train_dataset, n_views=2),
-        batch_size=64,
-        num_workers=20,
-        drop_last=True,
-    )
-    val_transform = transforms.Compose(
-        transforms.RGB(),
-        transforms.Resize((256, 256)),
-        transforms.CenterCrop((224, 224)),
-        transforms.ToImage(mean=mean, std=std),
-    )
-    val = torch.utils.data.DataLoader(
-        dataset=ssl.data.HFDataset(
-            path="frgfm/imagenette",
-            name="160px",
-            split="validation",
-            transform=val_transform,
-        ),
-        batch_size=128,
-        num_workers=10,
-    )
-    data = ssl.data.DataModule(train=train, val=val)
+    ```
 
+    - **Custom datasets**: Any dataset that returns dictionaries
+
+    Once created, wrap your dataloaders in our `DataModule` for precise logging:
+    ```python
+    datamodule = ssl.data.DataModule(train=train_dataloader, val=val_dataloader)
+    ```
+2. **module**: The key differentiator from PyTorch Lightning - **you only define the `forward` function**, not `training_step`! This unique approach unifies loss computation and monitoring in one place:
+
+    ```python
     def forward(self, batch, stage):
-        batch["embedding"] = self.backbone(batch["image"])["logits"]
+        out = {}
+        out["embedding"] = self.backbone(batch["image"])
         if self.training:
-            proj = self.projector(batch["embedding"])
+            # Define your loss directly in forward
+            proj = self.projector(out["embedding"])
             views = ssl.data.fold_views(proj, batch["sample_idx"])
-            batch["loss"] = self.simclr_loss(views[0], views[1])
-        return batch
+            out["loss"] = self.simclr_loss(views[0], views[1])
+        return out
+    ```
 
-    config = AutoConfig.from_pretrained("microsoft/resnet-18")
-    backbone = AutoModelForImageClassification.from_config(config)
+    **Key points:**
+    - The `forward` method defines both the loss and any quantities to monitor
+    - No need to override `training_step`, `validation_step`, etc.
+    - Return a dictionary with a `"loss"` key for training
+    - All components are passed as kwargs to `ssl.Module`:
+
+    ```python
+    # First define your model components
+    backbone = ssl.backbone.from_torchvision("resnet18")
     projector = torch.nn.Linear(512, 128)
-    backbone.classifier[1] = torch.nn.Identity()
+
+    # Then create the module with all components
     module = ssl.Module(
         backbone=backbone,
         projector=projector,
-        forward=forward,
-        simclr_loss=ssl.losses.NTXEntLoss(temperature=0.1),
+        forward=forward,  # The forward function defined above
+        simclr_loss=ssl.losses.NTXEntLoss(temperature=0.5),
+        optim={
+            "optimizer": {"type": "Adam", "lr": 0.001},
+            "scheduler": {"type": "CosineAnnealing"}
+        }
     )
+    ```
+
+3. **callbacks**: Monitor and evaluate your models in real-time during training. Callbacks are the secret sauce of `stable-ssl`, providing rich insights without interrupting your training flow:
+
+    ```python
+    # Monitor SSL representations with a linear probe
     linear_probe = ssl.callbacks.OnlineProbe(
-        "linear_probe",
-        module,
-        "embedding",
-        "label",
+        name="linear_probe",
+        input="embedding",  # Which output from forward to monitor
+        target="label",      # Ground truth from batch
         probe=torch.nn.Linear(512, 10),
         loss_fn=torch.nn.CrossEntropyLoss(),
         metrics={
@@ -162,28 +104,194 @@ The key to SSL research is to log and monitor everything. This is what we bring 
             "top5": torchmetrics.classification.MulticlassAccuracy(10, top_k=5),
         },
     )
+
+    # Track representation quality with KNN evaluation
     knn_probe = ssl.callbacks.OnlineKNN(
-        module,
-        "knn_probe",
-        "embedding",
-        "label",
-        20000,
-        metrics=torchmetrics.classification.MulticlassAccuracy(10),
+        name="knn_probe",
+        input="embedding",
+        target="label",
+        queue_length=20000,
         k=10,
-        features_dim=512,
     )
 
+    # Other powerful callbacks:
+    # - RankMe: Monitor feature collapse
+    # - LiDAR: Track representation diversity
+    # - OnlineWriter: Save embeddings during training
+    ```
+
+    **Why callbacks matter:**
+    - **Real-time feedback**: Know if your SSL method is learning useful representations.
+    - **Debugging made easy**: Catch issues like representation collapse early.
+    - **Research insights**: Track multiple metrics simultaneously for deeper understanding.
+
+4. **trainer**: Orchestrate everything together with PyTorch Lightning's `Trainer`:
+    ```
     trainer = pl.Trainer(
-        max_epochs=6,
-        num_sanity_val_steps=1,
-        callbacks=[linear_probe, knn_probe],
-        precision="16-mixed",
-        logger=False,
-        enable_checkpointing=False,
-    )
+            max_epochs=10,
+            num_sanity_val_steps=1,
+            callbacks=[linear_probe, knn_probe, rankme],  # Your monitoring callbacks
+            precision="16-mixed",
+            logger=False,
+            enable_checkpointing=False,
+        )
     manager = ssl.Manager(trainer=trainer, module=module, data=data)
     manager()
     ```
+    Once configured, the `Manager` connects all components and handles the training loop with precise logging and monitoring.
+
+## Complete Example
+
+<details>
+<summary>SimCLR on CIFAR-10</summary>
+
+This example demonstrates the key features of `stable-ssl`: dictionary-structured data, unified forward function, and rich monitoring through callbacks.
+
+```python
+import lightning as pl
+import torch
+import torchmetrics
+import torchvision
+from torch import nn
+from lightning.pytorch.loggers import WandbLogger
+
+import stable_ssl as ssl
+from stable_ssl.data import transforms
+
+# Define augmentations for SimCLR (creates 2 views of each image)
+simclr_transform = transforms.MultiViewTransform(
+    [
+        transforms.Compose(
+            transforms.RGB(),
+            transforms.RandomResizedCrop((32, 32), scale=(0.2, 1.0)),
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8),
+            transforms.RandomGrayscale(p=0.2),
+            transforms.ToImage(**ssl.data.static.CIFAR10),
+        ),
+        # Second view with slightly different augmentations
+        transforms.Compose(
+            transforms.RGB(),
+            transforms.RandomResizedCrop((32, 32), scale=(0.08, 1.0)),
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8),
+            transforms.RandomGrayscale(p=0.2),
+            transforms.RandomSolarize(threshold=0.5, p=0.2),
+            transforms.ToImage(**ssl.data.static.CIFAR10),
+        ),
+    ]
+)
+
+# Load CIFAR-10 and wrap in dictionary format
+cifar_train = torchvision.datasets.CIFAR10(root="./data", train=True, download=True)
+cifar_val = torchvision.datasets.CIFAR10(root="./data", train=False, download=True)
+
+train_dataset = ssl.data.FromTorchDataset(
+    cifar_train,
+    names=["image", "label"],  # Convert tuple to dictionary
+    transform=simclr_transform,
+)
+
+val_dataset = ssl.data.FromTorchDataset(
+    cifar_val,
+    names=["image", "label"],
+    transform=transforms.Compose(
+        transforms.RGB(),
+        transforms.Resize((32, 32)),
+        transforms.ToImage(**ssl.data.static.CIFAR10),
+    ),
+)
+
+# Create dataloaders with view sampling for contrastive learning
+train_dataloader = torch.utils.data.DataLoader(
+    dataset=train_dataset,
+    sampler=ssl.data.sampler.RepeatedRandomSampler(train_dataset, n_views=2),
+    batch_size=256,
+    num_workers=8,
+    drop_last=True,
+)
+
+val_dataloader = torch.utils.data.DataLoader(
+    dataset=val_dataset,
+    batch_size=256,
+    num_workers=10,
+)
+
+data = ssl.data.DataModule(train=train_dataloader, val=val_dataloader)
+
+# Define the forward function (replaces training_step in PyTorch Lightning)
+def forward(self, batch, stage):
+    out = {}
+    out["embedding"] = self.backbone(batch["image"])
+    if self.training:
+        # Project embeddings and compute contrastive loss
+        proj = self.projector(out["embedding"])
+        views = ssl.data.fold_views(proj, batch["sample_idx"])
+        out["loss"] = self.simclr_loss(views[0], views[1])
+    return out
+
+# Build model components
+backbone = ssl.backbone.from_torchvision("resnet18", low_resolution=True)
+backbone.fc = torch.nn.Identity()  # Remove classification head
+
+projector = nn.Sequential(
+    nn.Linear(512, 2048),
+    nn.BatchNorm1d(2048),
+    nn.ReLU(inplace=True),
+    nn.Linear(2048, 2048),
+    nn.BatchNorm1d(2048),
+    nn.ReLU(inplace=True),
+    nn.Linear(2048, 256),
+)
+
+# Create the module with all components
+module = ssl.Module(
+    backbone=backbone,
+    projector=projector,
+    forward=forward,
+    simclr_loss=ssl.losses.NTXEntLoss(temperature=0.5),
+    optim={
+        "optimizer": {"type": "LARS", "lr": 5, "weight_decay": 1e-6},
+        "scheduler": {"type": "LinearWarmupCosineAnnealing"},
+        "interval": "epoch",
+    },
+)
+
+# Add callbacks for monitoring performance during training
+linear_probe = ssl.callbacks.OnlineProbe(
+    name="linear_probe",
+    input="embedding",
+    target="label",
+    probe=torch.nn.Linear(512, 10),
+    loss_fn=torch.nn.CrossEntropyLoss(),
+    metrics={
+        "top1": torchmetrics.classification.MulticlassAccuracy(10),
+        "top5": torchmetrics.classification.MulticlassAccuracy(10, top_k=5),
+    },
+)
+
+knn_probe = ssl.callbacks.OnlineKNN(
+    name="knn_probe",
+    input="embedding",
+    target="label",
+    queue_length=20000,
+    metrics={"accuracy": torchmetrics.classification.MulticlassAccuracy(10)},
+    input_dim=512,
+    k=10,
+)
+
+# Configure training
+trainer = pl.Trainer(
+    max_epochs=1000,
+    callbacks=[knn_probe, linear_probe],  # Monitor SSL quality in real-time
+    precision="16-mixed",
+    logger=WandbLogger(project="cifar10-simclr"),
+)
+
+# Launch training
+manager = ssl.Manager(trainer=trainer, module=module, data=data)
+manager()
+```
 </details>
 
 
@@ -311,4 +419,8 @@ The library is not yet available on PyPI. You can install it from the source cod
 
 ## Contributors
 
-`stable-ssl` was started by `Randall Balestriero` circa 2020 for internal research projects. After numerous refactorings and simplifications, it became practical for external use circa 2024 at which point `Hugues Van Assel` and `Lucas Maes` joined as core contributors.
+Core contributors (in order of joining the project):
+- [Randall Balestriero](https://github.com/RandallBalestriero)
+- [Hugues Van Assel](https://github.com/huguesva)
+- [Sami Bou Ghanem](https://github.com/sami-bg)
+- [Lucas Maes](https://github.com/lucas-maes)
