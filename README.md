@@ -131,7 +131,10 @@ To reach flexibility, scalability and stability, we rely on battle-tested third 
     ```
     Once configured, the `Manager` connects all components and handles the training loop with precise logging and monitoring.
 
-## Complete Example: SimCLR on CIFAR-10
+## Complete Example
+
+<details>
+<summary>SimCLR on CIFAR-10</summary>
 
 This example demonstrates the key features of `stable-ssl`: dictionary-structured data, unified forward function, and rich monitoring through callbacks.
 
@@ -280,6 +283,7 @@ trainer = pl.Trainer(
 manager = ssl.Manager(trainer=trainer, module=module, data=data)
 manager()
 ```
+</details>
 
 
 ## Installation
