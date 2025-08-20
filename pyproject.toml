@@ -12,26 +12,33 @@ authors = [
 license = {text = "MIT"}
 readme = {file = "README.md", content-type = "text/markdown"}
 dependencies = [
-    "numpy",
     "torch",
     "torchvision",
-    "tqdm",
-    "omegaconf",
-    "wandb",
     "hydra-core",
+    "lightning",
     "hydra-submitit-launcher",
-    "pandas",
-    "tabulate",
-    "jsonlines",
-    "torchmetrics",
-    "scipy",
+    "submitit",
+    "wandb",
     "datasets",
+    "loguru",
+    "scikit-learn>=1.7.0",
+    "prettytable",
+    "timm",
+    "transformers",
+    "tabulate",
+    "matplotlib",
+    "requests-cache[all]",
+    "richuru",
+    "minari[hdf5]>=0.5.3",
 ]
 
 dynamic = ["version"]
 
-[project.entry-points."console_scripts"]
-stable-ssl = "stable_ssl.cli:entry"
+# [project.entry-points."console_scripts"]
+# stable-ssl = "stable_ssl.cli:entry"
+
+[project.entry-points."lightning.pytorch.callbacks_factory"]
+stablessl_callbacks = "stable_ssl.callbacks.factories:default"
 
 [tool.setuptools]
 packages = ["stable_ssl"]
@@ -43,7 +50,6 @@ version = {attr = "stable_ssl.__about__.__version__"}
 dev = [
     "pytest",
     "coverage",
-    "numpydoc",
     "pytest-cov",
     "codecov",
     "pre-commit",
@@ -56,8 +62,17 @@ doc = [
     "sphinx-book-theme",
     "sphinxcontrib-bibtex",
     "matplotlib",
-    "numpydoc",
     "memory_profiler",
     "myst-parser",
-    "myst-parser",
 ]
+
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "D"]
+ignore = ["D100", "D102", "D103", "D104", "D105", "D107"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+docstring-code-format = true

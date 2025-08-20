@@ -18,12 +18,10 @@
     :maxdepth: 1
     :caption: API
 
-    api/base
-    api/config
+    api/backbone
     api/data
     api/losses
-    api/modules
+    api/manager
+    api/module
     api/monitors
-    api/optimizers
-    api/schedulers
-    api/trainers
+    api/optim
