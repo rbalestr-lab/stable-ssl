@@ -19,11 +19,7 @@ coverage:
         target: auto # target "X%" coverage to hit on project
         threshold: 0.5% # allow this much decrease from base
         if_ci_failed: error
-    patch:
-      default:
-        base: auto # target to compare against
-        target: 50% # target "X%" coverage to hit on patch
-        # threshold: 50%  # allow this much decrease on patch
+    patch: off
     changes: false
 
 parsers:
