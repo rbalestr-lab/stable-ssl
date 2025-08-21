@@ -9,14 +9,14 @@ trainer:
   # ===== Module Parameters =====
   module:
     backbone:
-      _target_: stable_ssl.modules.TeacherStudentModule
+      _target_: stable_ssl.backbone.utils.TeacherStudentWrapper
       student:
         _target_: stable_ssl.modules.load_backbone
         name: resnet50
         low_resolution: False
         num_classes: null
     projector:
-      _target_: stable_ssl.modules.TeacherStudentModule
+      _target_: stable_ssl.backbone.utils.TeacherStudentWrapper
       student:
         _target_: stable_ssl.modules.MLP
         sizes: [2048, 2048, 2048]

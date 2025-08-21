@@ -403,6 +403,16 @@ class Manager(submitit.helpers.Checkpointable):
         else:
             ckpt_path = self.ckpt_path
         logging.info(f"📣📣📣 CALLING trainer.fit with {ckpt_path=} 📣📣📣")
+        # Enable passing in gradient_clip_* to pl.Trainer while using 
+        # manual optimization of ssl.Module by re-assigning it here.
+        # https://github.com/rbalestr-lab/stable-ssl/issues/246
+        if hasattr(self.trainer, "gradient_clip_val"):
+            self.module.gradient_clip_val = self.trainer.gradient_clip_val
+            self.trainer.gradient_clip_val = None
+        if hasattr(self.trainer, "gradient_clip_algorithm"):
+            self.module.gradient_clip_algorithm = self.trainer.gradient_clip_algorithm
+            self.trainer.gradient_clip_algorithm = None
+            
         self._trainer.fit(
             self.instantiated_module,
             datamodule=self.instantiated_data,

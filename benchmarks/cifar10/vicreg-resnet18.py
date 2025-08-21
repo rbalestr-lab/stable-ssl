@@ -153,10 +153,11 @@ knn_probe = ssl.callbacks.OnlineKNN(
 )
 
 wandb_logger = WandbLogger(
-    entity="stable-ssl",
-    project="cifar10-vicreg",
-    name="vicreg-resnet18",
-    log_model=False,
+    project="ijepa-cifar10",
+    entity="samibg",  # Your W&B entity
+    name="vicreg-cifar10-run",
+    log_model=False,  # Set to True if you want to save model artifacts
+    offline=False,  # Ensure offline mode
 )
 
 trainer = pl.Trainer(
@@ -165,6 +166,7 @@ trainer = pl.Trainer(
     callbacks=[knn_probe, linear_probe],
     precision="16-mixed",
     logger=wandb_logger,
+    devices=1,
     enable_checkpointing=False,
 )
 

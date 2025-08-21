@@ -116,6 +116,9 @@ class Module(pl.LightningModule):
         self._optimizer_index_by_name = None
         self._optimizer_frequencies = None
 
+    def on_fit_start(self):
+        super().on_fit_start()
+
     def forward(self, *args, **kwargs):
         raise NotImplementedError("The forward() method must be implemented.")
 
@@ -206,8 +209,8 @@ class Module(pl.LightningModule):
                 # Clip gradients for this optimizer then step
                 self.clip_gradients(
                     opt,
-                    gradient_clip_val=self.trainer.gradient_clip_val,
-                    gradient_clip_algorithm=self.trainer.gradient_clip_algorithm,
+                    gradient_clip_val=self.gradient_clip_val,
+                    gradient_clip_algorithm=self.gradient_clip_algorithm,
                 )
                 opt.step()
                 opt.zero_grad(set_to_none=True)
