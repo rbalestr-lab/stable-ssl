@@ -11,7 +11,7 @@ import torch
 from lightning.pytorch import Callback, LightningModule, Trainer
 from loguru import logger as logging
 
-from stable_ssl.utils import OrderedQueue, get_data_from_batch_or_outputs
+from ..utils import OrderedQueue, get_data_from_batch_or_outputs
 
 
 class OnlineQueue(Callback):

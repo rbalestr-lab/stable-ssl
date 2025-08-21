@@ -113,11 +113,6 @@ To reach flexibility, scalability and stability, we rely on battle-tested third 
         queue_length=20000,
         k=10,
     )
-
-    # Other powerful callbacks:
-    # - RankMe: Monitor feature collapse
-    # - LiDAR: Track representation diversity
-    # - OnlineWriter: Save embeddings during training
     ```
 
     Callbacks are powered by an intelligent queue management system that automatically shares memory between callbacks monitoring the same data, optimizing memory usage and eliminating redundant computations.

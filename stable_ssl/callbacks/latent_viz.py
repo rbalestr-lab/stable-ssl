@@ -14,7 +14,7 @@ from lightning.pytorch import LightningModule, Trainer
 from loguru import logger as logging
 from torch import Tensor
 
-from stable_ssl.utils.distance_metrics import compute_pairwise_distances_chunked
+from ..utils.distance_metrics import compute_pairwise_distances_chunked
 
 from .queue import find_or_create_queue_callback
 from .utils import OptimizedCallback

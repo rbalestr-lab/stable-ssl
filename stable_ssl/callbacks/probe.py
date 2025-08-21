@@ -7,7 +7,7 @@ from hydra.utils import instantiate
 from lightning.pytorch import LightningModule, Trainer
 from loguru import logger as logging
 
-from stable_ssl.utils import get_data_from_batch_or_outputs
+from ..utils import get_data_from_batch_or_outputs
 
 from .utils import EarlyStopping, OptimizedCallback, format_metrics_as_dict
 

@@ -6,7 +6,7 @@ import torchmetrics
 from lightning.pytorch import Callback, LightningModule, Trainer
 from loguru import logger as logging
 
-from stable_ssl.optim.utils import create_optimizer, create_scheduler
+from ..optim.utils import create_optimizer, create_scheduler
 from ..optim import LARS
 
 

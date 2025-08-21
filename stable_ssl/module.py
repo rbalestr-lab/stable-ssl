@@ -8,7 +8,7 @@ import torchmetrics
 from loguru import logger as logging
 from tabulate import tabulate
 
-from stable_ssl.optim.utils import create_optimizer, create_scheduler
+from .optim.utils import create_optimizer, create_scheduler
 
 
 class Module(pl.LightningModule):

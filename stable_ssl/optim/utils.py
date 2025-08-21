@@ -7,8 +7,8 @@ from typing import Any, Union
 import torch
 from hydra.utils import instantiate
 
-import stable_ssl.optim as ssl_optim
-import stable_ssl.optim.lr_scheduler as ssl_lr
+from .. import optim as ssl_optim
+from ..optim import lr_scheduler as ssl_lr
 
 
 def create_optimizer(
