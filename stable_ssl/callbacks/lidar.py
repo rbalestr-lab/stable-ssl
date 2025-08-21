@@ -19,11 +19,22 @@ class LiDAR(Callback):
 
     LiDAR measures the effective rank of learned representations using Linear Discriminant
     Analysis (LDA). It computes the exponential of the entropy of the eigenvalue distribution
-    from the LDA transformation, providing a metric between 1 and the feature dimension that
-    indicates how many dimensions are effectively being used.
+    from the LDA transformation, providing a metric between 1 and min(d, n_classes - 1) where
+    d is the feature dimension, indicating how many dimensions are effectively being used.
 
     This implementation is based on Thilak et al. "LiDAR: Sensing Linear Probing Performance
     in Joint Embedding SSL Architectures" (arXiv:2312.04000).
+
+    IMPORTANT: Surrogate Class Formation Requirement
+    -------------------------------------------------
+    The LiDAR paper requires that each "surrogate class" consists of q augmented views
+    of the same clean sample. The current implementation chunks the queue sequentially
+    into groups of size samples_per_class. For faithful reproduction of the paper:
+
+    - Ensure the upstream queue pushes q contiguous augmentations of each clean sample
+    - OR implement ID-based grouping to ensure each group contains views of the same sample
+
+    Without proper grouping, the metric may not accurately reflect the paper's methodology.
 
     The metric helps detect:
     - Dimensional collapse in self-supervised learning
@@ -71,6 +82,15 @@ class LiDAR(Callback):
         self.epsilon = epsilon
 
         self._target_queue = None
+
+        # Validate queue length adequacy
+        min_required_samples = n_classes * samples_per_class
+        if queue_length < min_required_samples:
+            logging.warning(
+                f"{name}: Queue length ({queue_length}) is less than required "
+                f"samples ({min_required_samples} = {n_classes} classes × {samples_per_class} samples/class). "
+                f"LiDAR computation may use fewer classes than specified."
+            )
 
         logging.info(f"Initialized LiDAR callback: {name}")
         logging.info(f"  - Target: {target}")
@@ -160,6 +180,9 @@ class LiDAR(Callback):
             return None
 
         # Reshape embeddings to (n_classes, samples_per_class, feature_dim)
+        # WARNING: This assumes the queue contains contiguous groups of augmentations
+        # from the same clean sample. If the queue mixes samples randomly, the
+        # surrogate classes won't match the paper's methodology.
         # Take only the samples we need
         n_used = actual_n_classes * self.samples_per_class
         embeddings = embeddings[:n_used].view(
@@ -182,11 +205,11 @@ class LiDAR(Callback):
 
             centered_samples_flat = centered_samples.reshape(-1, d)
 
-            # Sw = sum((x_ij - mu_i) @ (x_ij - mu_i)^T) / (n_total * (samples_per_class - 1))
-            # This is the standard LDA within-class covariance normalization
-            n_total = actual_n_classes * self.samples_per_class
+            # Sw = sum((x_ij - mu_i) @ (x_ij - mu_i)^T) / (n_classes * (samples_per_class - 1))
+            # This is the unbiased estimate of class-averaged within-class covariance
+            # as described in the LiDAR paper (arXiv:2312.04000)
             Sw = (centered_samples_flat.T @ centered_samples_flat) / (
-                n_total * (self.samples_per_class - 1)
+                actual_n_classes * (self.samples_per_class - 1)
             )
 
             # Add regularization to within-class covariance
@@ -211,14 +234,14 @@ class LiDAR(Callback):
             eigvals_lidar = torch.clamp(eigvals_lidar, min=0.0)
 
             # Normalize eigenvalues to get probability distribution
-            eigvals_sum = eigvals_lidar.sum()
+            # Following the paper: p_i = (lambda_i + epsilon) / sum_j(lambda_j + epsilon)
+            eigvals_with_eps = eigvals_lidar + self.epsilon
+            eigvals_sum = eigvals_with_eps.sum()
             if eigvals_sum <= 0:
                 logging.warning(f"{self.name}: All eigenvalues are zero or negative")
                 return 1.0  # Return minimum rank
 
-            p = (eigvals_lidar / eigvals_sum) + self.epsilon
-
-            p = p / p.sum()
+            p = eigvals_with_eps / eigvals_sum
 
             # Compute entropy and LiDAR metric
             entropy = -(p * torch.log(p)).sum()
