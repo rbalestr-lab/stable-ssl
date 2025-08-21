@@ -184,8 +184,16 @@ class Module(pl.LightningModule):
 
         # Gradient accumulation factor
         # Check for transferred parameter first (from Lightning patch), then original
-        accum = max(int(getattr(self.trainer, "accumulate_grad_batches_", 
-                                getattr(self.trainer, "accumulate_grad_batches", 1))), 1)
+        accum = max(
+            int(
+                getattr(
+                    self.trainer,
+                    "accumulate_grad_batches_",
+                    getattr(self.trainer, "accumulate_grad_batches", 1),
+                )
+            ),
+            1,
+        )
         scale = 1.0 / float(accum)
 
         # Compute gradients once for the joint loss
@@ -207,11 +215,15 @@ class Module(pl.LightningModule):
 
                 # Clip gradients for this optimizer then step
                 # Check for transferred parameters first (from Lightning patch), then original
-                clip_val = getattr(self.trainer, "gradient_clip_val_", 
-                                  self.trainer.gradient_clip_val)
-                clip_algo = getattr(self.trainer, "gradient_clip_algorithm_",
-                                   self.trainer.gradient_clip_algorithm)
-                
+                clip_val = getattr(
+                    self.trainer, "gradient_clip_val_", self.trainer.gradient_clip_val
+                )
+                clip_algo = getattr(
+                    self.trainer,
+                    "gradient_clip_algorithm_",
+                    self.trainer.gradient_clip_algorithm,
+                )
+
                 if clip_val is not None and clip_val > 0:
                     self.clip_gradients(
                         opt,

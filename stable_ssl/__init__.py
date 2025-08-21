@@ -13,6 +13,7 @@ from .__about__ import (
     __url__,
     __version__,
 )
+from .utils.lightning_patch import apply_manual_optimization_patch
 from .backbone.utils import TeacherStudentWrapper
 from .callbacks import (
     EarlyStopping,
@@ -127,6 +128,4 @@ except ModuleNotFoundError:
     pass
 
 # Apply Lightning patch for manual optimization parameter support
-from .utils.lightning_patch import apply_manual_optimization_patch
-
 apply_manual_optimization_patch()
