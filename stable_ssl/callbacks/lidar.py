@@ -1,112 +1,221 @@
-import types
-from typing import Iterable
+"""LiDAR (Linear Discriminant Analysis Rank) callback for monitoring representation quality.
+
+Based on:
+    Thilak et al. "LiDAR: Sensing Linear Probing Performance in Joint Embedding SSL Architectures"
+    arXiv:2312.04000 (2023)
+"""
+
+from typing import Iterable, Optional, Union
 
 import torch
-import torch.distributed as dist
+from lightning.pytorch import Callback, LightningModule, Trainer
 from loguru import logger as logging
-from torch.distributed import broadcast, reduce
 
-from .queue import OnlineQueue
-
-
-def wrap_validation_step(fn, target, input, name):
-    def ffn(self, batch, batch_idx, fn=fn, target=target, input=input, name=name):
-        raise NotImplementedError
-        batch = fn(batch, batch_idx)
-        if batch_idx > 0:
-            return batch
-        embeddings = getattr(self, f"_cached_{name}_X")
-        if self.trainer.global_rank == 0:
-            class_means = embeddings.mean(dim=1)
-            grand_mean_local = class_means.mean(dim=0)
-
-            d = embeddings.shape[-1]
-            device = embeddings.device
-            local_n = class_means.shape[0]
-            q = embeddings.shape[1]
-            n_total = local_n * q
-
-            local_Sb = torch.zeros(d, d, device=device)
-            local_Sw = torch.zeros(d, d, device=device)
-
-            for i in range(local_n):
-                diff_b = (class_means[i] - grand_mean_local).unsqueeze(1)
-                local_Sb += diff_b @ diff_b.T
-                for j in range(q):
-                    diff_w = (embeddings[i, j] - class_means[i]).unsqueeze(1)
-                    local_Sw += diff_w @ diff_w.T
-            S_b = reduce(local_Sb, rank=0, op=dist.ReduceOp.SUM) / (n_total - 1)
-            S_w = reduce(local_Sw, rank=0, op=dist.ReduceOp.SUM) / (n_total * (q - 1))
-            S_w += self.delta * torch.eye(d, device=device)
-
-            eigvals_w, eigvecs_w = torch.linalg.eigh(S_w)
-            eigvals_w = torch.clamp(eigvals_w, min=self.epsilon)
-
-            invsqrt_w = (
-                eigvecs_w * (1.0 / torch.sqrt(eigvals_w))
-            ) @ eigvecs_w.transpose(-1, -2)
-            Sigma_lidar = invsqrt_w @ S_b @ invsqrt_w
-
-            lam, _ = torch.linalg.eigh(Sigma_lidar)
-            lam = torch.clamp(lam, min=0.0)
-
-            lam_sum = lam.sum() + self.epsilon
-            p = lam / lam_sum
-
-            p_log_p = p * torch.log(p + self.epsilon)
-
-            lidar = float(torch.exp(-p_log_p.sum()))
-            return broadcast(torch.tensor([lidar], device=device), src_rank=0).item()
-
-        return batch
-
-    return ffn
+from .queue import find_or_create_queue_callback
 
 
-class LiDAR(OnlineQueue):
-    """LiDAR (Linear Discriminant Analysis Rank) monitor for detecting dimensional collapse.
-
+class LiDAR(Callback):
+    """LiDAR (Linear Discriminant Analysis Rank) monitor using queue discovery.
+    
     LiDAR measures the effective rank of learned representations using Linear Discriminant
     Analysis (LDA). It computes the exponential of the entropy of the eigenvalue distribution
     from the LDA transformation, providing a metric between 1 and the feature dimension that
     indicates how many dimensions are effectively being used.
-
-    This implementation is based on Thilak et al. "The Pitfalls of Next-Token Prediction"
-    (arXiv:2403.06963).
-
+    
+    This implementation is based on Thilak et al. "LiDAR: Sensing Linear Probing Performance 
+    in Joint Embedding SSL Architectures" (arXiv:2312.04000).
+    
     The metric helps detect:
     - Dimensional collapse in self-supervised learning
     - Loss of representational capacity
     - Over-regularization effects
-
+    
     Args:
-        pl_module: The Lightning module to attach the callback to
         name: Unique identifier for this callback instance
         target: Key in batch dict containing the feature embeddings to monitor
         queue_length: Size of the circular buffer for caching embeddings
         target_shape: Shape of the target embeddings (e.g., 768 for 768-dim features)
-
-    Note:
-        This callback extends OnlineQueue to maintain a buffer of embeddings and
-        computes LiDAR only on the first validation batch to avoid redundant computation.
+        n_classes: Number of surrogate classes (clean samples) for LDA computation
+        samples_per_class: Number of augmented samples per class
+        delta: Regularization constant added to within-class covariance (default: 1e-4)
+        epsilon: Small constant for numerical stability (default: 1e-8)
     """
-
+    
     def __init__(
         self,
-        pl_module,
         name: str,
         target: str,
         queue_length: int,
-        target_shape: Iterable[int],
+        target_shape: Union[int, Iterable[int]],
+        n_classes: int = 100,
+        samples_per_class: int = 10,
+        delta: float = 1e-4,
+        epsilon: float = 1e-8,
     ) -> None:
-        super().__init__(
-            pl_module,
-            name=name,
-            to_save=[target],
-            queue_length=queue_length,
-            shapes=[target_shape],
-            dtypes=[torch.float],
-        )
-        logging.info("\t- wrapping the `validation_step`")
-        fn = wrap_validation_step(pl_module.validation_step, target, input, name)
-        pl_module.validation_step = types.MethodType(fn, pl_module)
+        super().__init__()
+        
+        # Convert target_shape to int if needed
+        if isinstance(target_shape, (list, tuple)):
+            if len(target_shape) == 1:
+                target_shape = target_shape[0]
+            else:
+                target_shape = int(torch.prod(torch.tensor(target_shape)))
+        
+        self.name = name
+        self.target = target
+        self.queue_length = queue_length
+        self.target_shape = target_shape
+        self.n_classes = n_classes
+        self.samples_per_class = samples_per_class
+        self.delta = delta
+        self.epsilon = epsilon
+        
+        self._target_queue = None
+        
+        logging.info(f"Initialized LiDAR callback: {name}")
+        logging.info(f"  - Target: {target}")
+        logging.info(f"  - Queue length: {queue_length}")
+        logging.info(f"  - Feature dimension: {target_shape}")
+        logging.info(f"  - N classes: {n_classes}, Samples per class: {samples_per_class}")
+    
+    @property
+    def state_key(self) -> str:
+        """Unique identifier for this callback's state during checkpointing."""
+        return f"LiDAR[name={self.name}]"
+    
+    def setup(self, trainer: Trainer, pl_module: LightningModule, stage: str) -> None:
+        """Find or create the queue callback for target features."""
+        if self._target_queue is None:
+            self._target_queue = find_or_create_queue_callback(
+                trainer,
+                self.target,
+                self.queue_length,
+                self.target_shape,
+                torch.float32,
+                gather_distributed=True,
+                create_if_missing=True,
+            )
+            logging.info(f"{self.name}: Using queue for target '{self.target}'")
+    
+    def on_validation_batch_end(
+        self,
+        trainer: Trainer,
+        pl_module: LightningModule,
+        outputs: dict,
+        batch: dict,
+        batch_idx: int,
+        dataloader_idx: int = 0,
+    ) -> None:
+        """Compute LiDAR metric on the first validation batch only."""
+        if batch_idx > 0:
+            return
+        
+        logging.info(f"{self.name}: Computing LiDAR on first validation batch")
+        
+        embeddings = self._target_queue.data
+        
+        if embeddings is None:
+            logging.warning(f"{self.name}: Queue data not available")
+            return
+        
+        if embeddings.numel() == 0:
+            logging.warning(f"{self.name}: Queue data is empty")
+            return
+        
+        # The queue already handles gathering across GPUs if gather_distributed=True
+        # So embeddings here already contains data from all GPUs
+        lidar_value = self._compute_lidar(embeddings)
+        
+        if lidar_value is not None:
+            pl_module.log(
+                self.name, 
+                lidar_value, 
+                rank_zero_only=True,  # Only log from rank 0 to avoid duplicates
+                sync_dist=False  # No need to sync since we compute same value on all ranks
+            )
+            if trainer.global_rank == 0:
+                logging.info(f"{self.name}: LiDAR = {lidar_value:.4f}")
+    
+    def _compute_lidar(self, embeddings: torch.Tensor) -> Optional[float]:
+        """Compute the LiDAR metric from embeddings.
+        
+        Args:
+            embeddings: Tensor of shape (n_samples, feature_dim)
+        
+        Returns:
+            LiDAR value or None if computation fails
+        """
+        n_samples, d = embeddings.shape
+        
+        # Determine how many classes we can form
+        actual_n_classes = min(self.n_classes, n_samples // self.samples_per_class)
+        
+        if actual_n_classes < 2:
+            logging.warning(
+                f"{self.name}: Not enough samples for LiDAR computation. "
+                f"Need at least {2 * self.samples_per_class} samples, got {n_samples}"
+            )
+            return None
+        
+        # Reshape embeddings to (n_classes, samples_per_class, feature_dim)
+        # Take only the samples we need
+        n_used = actual_n_classes * self.samples_per_class
+        embeddings = embeddings[:n_used].view(actual_n_classes, self.samples_per_class, d)
+        
+        with torch.no_grad():
+            class_means = embeddings.mean(dim=1)  # (n_classes, d)
+            grand_mean = class_means.mean(dim=0)  # (d,)
+            
+            device = embeddings.device
+            
+            # Sb = sum((mu_i - mu) @ (mu_i - mu)^T) / (n_classes - 1)
+            centered_means = class_means - grand_mean.unsqueeze(0)
+            Sb = (centered_means.T @ centered_means) / (actual_n_classes - 1)
+            
+            # First center all samples by their class means
+            class_means_expanded = class_means.unsqueeze(1).expand_as(embeddings)
+            centered_samples = embeddings - class_means_expanded
+            
+            centered_samples_flat = centered_samples.reshape(-1, d)
+            
+            # Sw = sum((x_ij - mu_i) @ (x_ij - mu_i)^T) / (n_total * (samples_per_class - 1))
+            # This is the standard LDA within-class covariance normalization
+            n_total = actual_n_classes * self.samples_per_class
+            Sw = (centered_samples_flat.T @ centered_samples_flat) / (n_total * (self.samples_per_class - 1))
+            
+            # Add regularization to within-class covariance
+            Sw = Sw + self.delta * torch.eye(d, device=device)
+            
+            # Compute Sw^(-1/2) using eigendecomposition
+            eigvals_w, eigvecs_w = torch.linalg.eigh(Sw)
+            eigvals_w = torch.clamp(eigvals_w, min=self.epsilon)
+            
+            # Sw^(-1/2) = V * D^(-1/2) * V^T
+            sqrt_inv_eigvals = 1.0 / torch.sqrt(eigvals_w)
+            Sw_invsqrt = (eigvecs_w * sqrt_inv_eigvals.unsqueeze(0)) @ eigvecs_w.T
+            
+            # Compute LiDAR matrix: Σ_lidar = Sw^(-1/2) * Sb * Sw^(-1/2)
+            Sigma_lidar = Sw_invsqrt @ Sb @ Sw_invsqrt
+            
+            # Handle numerical errors by ensuring symmetry
+            Sigma_lidar = 0.5 * (Sigma_lidar + Sigma_lidar.T)
+            
+            # Compute eigenvalues of LiDAR matrix
+            eigvals_lidar = torch.linalg.eigvalsh(Sigma_lidar)
+            eigvals_lidar = torch.clamp(eigvals_lidar, min=0.0)
+            
+            # Normalize eigenvalues to get probability distribution
+            eigvals_sum = eigvals_lidar.sum()
+            if eigvals_sum <= 0:
+                logging.warning(f"{self.name}: All eigenvalues are zero or negative")
+                return 1.0  # Return minimum rank
+            
+            p = (eigvals_lidar / eigvals_sum) + self.epsilon
+            
+            p = p / p.sum()
+            
+            # Compute entropy and LiDAR metric
+            entropy = -(p * torch.log(p)).sum()
+            lidar = torch.exp(entropy).item()
+            
+            return lidar
