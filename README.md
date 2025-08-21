@@ -12,7 +12,7 @@
 
 AI is moving beyond labels. Today's models learn through **self-supervision** and **multimodal alignment**, extracting knowledge from raw data to build general-purpose representations that work across tasks. These foundation models are then deployed at scale, often after finetuning, to solve tasks in zero or few shot.
 
-`stable-ssl` is a PyTorch framework built on top of Lightning for this new paradigm. What sets us apart is **real-time visibility into training quality** through extensive logging and monitoring. Our callback ecosystem (`OnlineProbe`, `OnlineKNN`, `RankMe`, `LiDAR` and many more) provides insights into feature collapse, training dynamics, and downstream performance. Data flow as dictionaries through model components, metrics, and callbacks, making any intermediate value accessible and debuggable. With `stable-ssl`: track everything, debug faster, iterate sooner.
+`stable-ssl` is a PyTorch framework built on top of Lightning for this new paradigm. What sets us apart is **real-time visibility into training quality** through extensive logging and monitoring. Our callback ecosystem (`OnlineProbe`, `OnlineKNN`, `RankMe`, and many more) provides insights into feature collapse, training dynamics, and downstream performance. Data flow as dictionaries through model components, metrics, and callbacks, making any intermediate value accessible and debuggable. With `stable-ssl`: track everything, debug faster, iterate sooner.
 
 
 ## How?
@@ -89,7 +89,7 @@ To reach flexibility, scalability and stability, we rely on battle-tested third 
     )
     ```
 
-3. **callbacks**: Monitor and evaluate your models in real-time during training. Callbacks are the secret sauce of `stable-ssl`, providing rich insights without interrupting your training flow:
+3. **callbacks**: Monitor and evaluate your models in real-time during training. Callbacks are key ingredients of `stable-ssl`, providing rich insights without interrupting your training flow:
 
     ```python
     # Monitor SSL representations with a linear probe
@@ -119,6 +119,8 @@ To reach flexibility, scalability and stability, we rely on battle-tested third 
     # - LiDAR: Track representation diversity
     # - OnlineWriter: Save embeddings during training
     ```
+
+    Callbacks are powered by an intelligent queue management system that automatically shares memory between callbacks monitoring the same data, optimizing memory usage and eliminating redundant computations.
 
     **Why callbacks matter:**
     - **Real-time feedback**: Know if your SSL method is learning useful representations.
