@@ -125,3 +125,8 @@ try:
     datasets.logging.set_verbosity_info()
 except ModuleNotFoundError:
     pass
+
+# Apply Lightning patch for manual optimization parameter support
+from .utils.lightning_patch import apply_manual_optimization_patch
+
+apply_manual_optimization_patch()
