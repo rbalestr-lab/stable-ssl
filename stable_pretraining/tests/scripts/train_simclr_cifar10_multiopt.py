@@ -15,7 +15,7 @@ from lightning.pytorch.loggers import CSVLogger
 
 import stable_pretraining as ssl
 from stable_pretraining.data import transforms
-from stable_pretraining.data.utils import Dataset
+from stable_pretraining.data.datasets import Dataset
 
 # without transform
 mean = [0.485, 0.456, 0.406]

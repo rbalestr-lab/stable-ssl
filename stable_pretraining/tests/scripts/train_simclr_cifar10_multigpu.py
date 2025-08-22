@@ -14,7 +14,7 @@ from transformers import AutoConfig, AutoModelForImageClassification
 
 import stable_pretraining as ssl
 from stable_pretraining.data import transforms
-from stable_pretraining.data.utils import Dataset
+from stable_pretraining.data.datasets import Dataset
 
 mean = [0.485, 0.456, 0.406]
 std = [0.229, 0.224, 0.225]

@@ -523,10 +523,6 @@ def set_seed(seeds):
 @contextmanager
 def random_seed(seed):
     seeds = [getstate(), np.random.get_state(), torch.get_rng_state()]
-    # for now we don't use that functionality since it creates issues
-    # with DataLoader and multiple processes...
-    # RuntimeError: Cannot re-initialize CUDA in forked subprocess.
-    # To use CUDA with multiprocessing, you must use the 'spawn' start method
     if False:  # torch.cuda.is_available():
         seeds.append(torch.cuda.get_rng_state_all())
     new_seeds = [int(seed)] * len(seeds)
@@ -550,110 +546,6 @@ class ControlledTransform(Transform):
         with random_seed(x["idx"] + self.seed_offset):
             x = self._transform(x)
         return x
-
-
-# class Normalize(Transform):
-#     """Normalize a tensor image or video with mean and standard deviation.
-
-#     This transform does not support PIL Image.
-#     Given mean: ``(mean[1],...,mean[n])`` and std: ``(std[1],..,std[n])`` for ``n``
-#     channels, this transform will normalize each channel of the input
-#     ``torch.*Tensor`` i.e.,
-#     ``output[channel] = (input[channel] - mean[channel]) / std[channel]``
-
-#     .. note::
-#         This transform acts out of place, i.e., it does not mutate the input tensor.
-
-#     Args:
-#         mean (sequence): Sequence of means for each channel.
-#         std (sequence): Sequence of standard deviations for each channel.
-#         inplace(bool,optional): Bool to make this operation in-place.
-
-#     """
-
-#     def __init__(
-#         self, mean: Sequence[float], std: Sequence[float], inplace: bool = False
-#     ):
-#         super().__init__()
-#         self.mean = list(mean)
-#         self.std = list(std)
-#         self.inplace = inplace
-
-#     def _transform(self, inp: Any, params: Dict[str, Any]) -> Any:
-#         out = self._call_kernel(
-#             F.normalize,
-#             inp,
-#             mean=self.mean,
-#             std=self.std,
-#             inplace=self.inplace,
-#         )
-#         return out, None
-
-
-# CIFAR_TRAIN = v2.Compose(
-#     [
-#         v2.RandomCrop(32, padding=4, fill=128),
-#         v2.RandomHorizontalFlip(),
-#         v2.ToImage(),
-#         v2.ToDtype(torch.float32, scale=True),
-#         v2.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-#     ]
-# )
-
-# CIFAR_TEST = v2.Compose(
-#     [
-#         v2.ToImage(),
-#         v2.ToDtype(torch.float32, scale=True),
-#         v2.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-#     ]
-# )
-
-# INET_TRAIN = v2.Compose(
-#     [
-#         v2.RGB(),
-#         v2.RandomResizedCrop(size=(224, 224), antialias=True, scale=(0.2, 0.99)),
-#         v2.RandomApply(
-#             [v2.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1)],
-#             p=0.8,
-#         ),
-#         v2.RandomGrayscale(p=0.2),
-#         v2.RandomHorizontalFlip(p=0.5),
-#         v2.ToImage(),
-#         v2.ToDtype(torch.float32, scale=True),
-#         v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-#     ]
-# )
-
-# INET_TEST = v2.Compose(
-#     [
-#         v2.RGB(),
-#         v2.Resize(size=(256, 256), antialias=True),
-#         v2.CenterCrop(size=(224, 224)),
-#         v2.ToImage(),
-#         v2.ToDtype(torch.float32, scale=True),
-#         v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-#     ]
-# )
-
-
-# class GaussianDiffusion(Transform):
-#     def __init__(self, variance_preserving=True):
-#         super().__init__()
-#         self.variance_preserving = variance_preserving
-
-#         betas = torch.linspace(0.0001, 0.04, 100)
-#         self.alphas = torch.cumprod(1 - betas, 0)
-
-#     def __call__(self, sample):
-#         alpha = self.alphas[torch.randint(low=0, high=len(self.alphas), size=(1,))]
-#         if self.variance_preserving:
-#             sample["image"] = sample["image"].mul_(torch.sqrt(alpha))
-#         else:
-#             alpha = alpha * 80
-#         eps = torch.randn_like(sample["image"]).mul((1 - alpha).sqrt())
-#         sample["weighted_clean_image"] = sample["image"].clone()
-#         sample["image"] = sample["image"].add_(eps)
-#         return sample
 
 
 class Conditional(Transform):

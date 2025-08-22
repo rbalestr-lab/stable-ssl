@@ -6,13 +6,6 @@ import torch
 import torch.distributed as dist
 
 
-def _check_integer(v, name):
-    if not isinstance(v, int) or isinstance(v, bool) or v <= 0:
-        raise ValueError(
-            f"{name} should be a positive integer value, but got {name}={v}"
-        )
-
-
 class RepeatedRandomSampler(torch.utils.data.DistributedSampler):
     r"""Samples elements randomly. If without replacement, then sample from a shuffled dataset.
 
@@ -70,10 +63,6 @@ class RepeatedRandomSampler(torch.utils.data.DistributedSampler):
     def __len__(self):
         return self.num_samples * self.n_views
 
-    # @property
-    # def num_samples(self) -> int:
-    #     return (len(self.data_source) * self.n_views) // self.num_replicas
-
     def __iter__(self) -> Iterator[int]:
         n = self._data_source_len
         g = torch.Generator()
@@ -97,45 +86,6 @@ class RepeatedRandomSampler(torch.utils.data.DistributedSampler):
                 self.rank * self.num_samples : (self.rank + 1) * self.num_samples
             ]
             yield from rank_slice.repeat_interleave(self.n_views).tolist()
-
-
-# class RepeatedSampler(torch.utils.data.BatchSampler):
-#     def __init__(
-#         self,
-#         num_samples_or_dataset: Union[torch.utils.data.Dataset, HFDataset, int],
-#         batch_size: Optional[int] = 1,
-#         n_views: Optional[int] = 1,
-#         shuffle: bool = True,
-#         replacement: bool = False,
-#         sampler=None,
-#         drop_last: bool = False,
-#     ) -> None:
-#         # if hasattr(num_samples_or_dataset, "__len__"):
-#         #     num_samples_or_dataset = len(num_samples_or_dataset)
-#         if sampler is None and shuffle:
-#             sampler = torch.utils.data.RandomSampler(
-#                 num_samples_or_dataset, replacement=replacement
-#             )
-#         elif sampler is None and not shuffle:
-#             sampler = torch.utils.data.SequentialSampler(num_samples_or_dataset)
-#         super().__init__(sampler=sampler, batch_size=batch_size, drop_last=drop_last)
-#         _check_integer(n_views, "n_views")
-#         self.batch_size = batch_size
-#         self.n_views = n_views
-
-#     def __iter__(self) -> Iterator[List[int]]:
-#         # Create multiple references to the same iterator
-#         sampler_iter = iter(self.sampler)
-#         args = [sampler_iter] * (self.batch_size // self.n_views)
-#         for batch_droplast in zip(*args):
-#             indices = [*batch_droplast]
-#             yield [int(i) for i in np.repeat(indices, self.n_views)]
-
-#     def __len__(self) -> int:
-#         # Can only be called if self.sampler has __len__ implemented
-#         # We cannot enforce this condition, so we turn off typechecking for the
-#         # implementation below.
-#         return len(self.sampler) // (self.batch_size // self.n_views)
 
 
 class SupervisedBatchSampler(torch.utils.data.Sampler[List[int]]):

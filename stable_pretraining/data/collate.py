@@ -38,8 +38,6 @@ class Collator:
         return batch
 
     def __call__(self, samples):
-        # samples = torch.utils.data.default_collate(samples)
-        # contract the views if there are any
         single_view = torch.is_tensor(samples[0]["image"])
         if single_view:
             samples = torch.utils.data.default_collate(samples)

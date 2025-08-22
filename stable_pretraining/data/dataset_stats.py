@@ -1,3 +1,9 @@
+"""Dataset statistics for normalization.
+
+This module contains pre-computed mean and standard deviation values for various
+common datasets, used for data normalization during preprocessing.
+"""
+
 CIFAR10 = dict(mean=[0.4914, 0.4822, 0.4465], std=[0.2470, 0.2435, 0.2616])
 CIFAR100 = dict(mean=[0.5071, 0.4867, 0.4408], std=[0.2675, 0.2565, 0.2761])
 ImageNet = dict(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
