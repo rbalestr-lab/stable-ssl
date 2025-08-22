@@ -1,8 +1,8 @@
-stable_ssl.losses
+stable_pretraining.losses
 =================
 
-.. module:: stable_ssl.losses
-.. currentmodule:: stable_ssl.losses
+.. module:: stable_pretraining.losses
+.. currentmodule:: stable_pretraining.losses
 
 .. autosummary::
    :toctree: gen_modules/

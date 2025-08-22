@@ -1,7 +1,7 @@
-stable_ssl.module
+stable_pretraining.module
 ==================
-.. module:: stable_ssl.module
-.. currentmodule:: stable_ssl.module
+.. module:: stable_pretraining.module
+.. currentmodule:: stable_pretraining.module
 
 The module provides the main PyTorch Lightning module class for self-supervised learning. This is the core component that handles all training orchestration - you only need to implement the **forward** method!
 

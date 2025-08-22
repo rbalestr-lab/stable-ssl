@@ -1,7 +1,7 @@
-stable_ssl.data
+stable_pretraining.data
 =================
-.. module:: stable_ssl.data
-.. currentmodule:: stable_ssl.data
+.. module:: stable_pretraining.data
+.. currentmodule:: stable_pretraining.data
 
 The data module provides comprehensive tools for dataset handling, transforms, sampling, and data loading in self-supervised learning contexts.
 

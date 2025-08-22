@@ -1,7 +1,7 @@
-stable_ssl.manager
+stable_pretraining.manager
 ==================
-.. module:: stable_ssl.manager
-.. currentmodule:: stable_ssl.manager
+.. module:: stable_pretraining.manager
+.. currentmodule:: stable_pretraining.manager
 
 The manager module provides the main training orchestration class for self-supervised learning experiments.
 

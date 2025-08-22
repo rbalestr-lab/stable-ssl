@@ -1,7 +1,7 @@
-stable_ssl.optim
+stable_pretraining.optim
 ================
-.. module:: stable_ssl.optim
-.. currentmodule:: stable_ssl.optim
+.. module:: stable_pretraining.optim
+.. currentmodule:: stable_pretraining.optim
 
 The optim module provides custom optimizers and learning rate schedulers for self-supervised learning.
 

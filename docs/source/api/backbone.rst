@@ -1,7 +1,7 @@
-stable_ssl.backbone
+stable_pretraining.backbone
 ==================
-.. module:: stable_ssl.backbone
-.. currentmodule:: stable_ssl.backbone
+.. module:: stable_pretraining.backbone
+.. currentmodule:: stable_pretraining.backbone
 
 The backbone module provides neural network architectures and utilities for self-supervised learning.
 

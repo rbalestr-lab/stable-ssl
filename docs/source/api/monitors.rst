@@ -1,7 +1,7 @@
-stable_ssl.callbacks
+stable_pretraining.callbacks
 ====================
-.. module:: stable_ssl.callbacks
-.. currentmodule:: stable_ssl.callbacks
+.. module:: stable_pretraining.callbacks
+.. currentmodule:: stable_pretraining.callbacks
 
 The callbacks module provides various monitoring and evaluation tools for self-supervised learning training.
 

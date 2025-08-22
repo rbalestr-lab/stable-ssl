@@ -12,7 +12,7 @@
 .. include:: ../../README.md
     :parser: myst_parser.sphinx_
 
-.. currentmodule:: stable_ssl
+.. currentmodule:: stable_pretraining
 
 .. toctree::
     :maxdepth: 1
