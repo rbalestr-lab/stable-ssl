@@ -1,4 +1,4 @@
-"""This script demonstrates how to retrieve data from wandb using the stable-SSL library and create plots from it.
+"""This script demonstrates how to retrieve data from wandb using the stable_pretraining library and create plots from it.
 
 To use, you should set the entity variable to your WandB entity and the project variable to the specific project within
 your WandB entity that you want to access runs from.
@@ -8,14 +8,14 @@ your WandB entity that you want to access runs from.
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-import stable_ssl as ssl
+import stable_pretraining as spt
 
 entity = "[YOUR ENTITY HERE]"
 project = "[YOUR PROJECT HERE]"
 
 
 # want to retrieve finished runs from wandb
-configs, dfs = ssl.reader.wandb_project(
+configs, dfs = spt.reader.wandb_project(
     entity=entity, project=project, filters={"state": "finished"}
 )
 
@@ -70,7 +70,7 @@ for run_id, df in tqdm(dfs.items(), desc="Processing runs", unit="run"):
             and using_list is None
         ):
             # Extract balanced accuracy from the run
-            new_df, config = ssl.reader.wandb(entity, project, run_id)
+            new_df, config = spt.reader.wandb(entity, project, run_id)
             # drop the ones that are NAN
             balanced_acc = new_df["eval/NonSpurious_balanced_accuracy"].dropna()
 

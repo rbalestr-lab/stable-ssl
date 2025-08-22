@@ -1,10 +1,10 @@
-"""This script demonstrates how to retrieve data from wandb using the stable-SSL library."""
+"""This script demonstrates how to retrieve data from wandb using the stable_pretraining library."""
 
-import stable_ssl as ssl
+import stable_pretraining as spt
 
-config, df = ssl.utils.reader.wandb_run(
+config, df = spt.utils.reader.wandb_run(
     "excap", "single_dataset_sequential", "p67ng6bq"
 )
 print(df)
-configs, dfs = ssl.utils.reader.wandb_project("excap", "single_dataset_sequential")
+configs, dfs = spt.utils.reader.wandb_project("excap", "single_dataset_sequential")
 print(dfs)

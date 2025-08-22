@@ -1,28 +1,28 @@
-# Stable-SSL Benchmarks
+# Stable-Pretraining Benchmarks
 
 This directory contains benchmark scripts for various self-supervised learning methods.
 
 ## Data Storage Configuration
 
-By default, datasets are stored in `~/.cache/stable-ssl/data/`. This location can be customized in two ways:
+By default, datasets are stored in `~/.cache/stable-pretraining/data/`. This location can be customized in two ways:
 
 ### Option 1: Environment Variable (Recommended)
 
-Set the `STABLE_SSL_DATA_DIR` environment variable to specify a custom data directory:
+Set the `STABLE_PRETRAINING_DATA_DIR` environment variable to specify a custom data directory:
 
 ```bash
 # Set for current session
-export STABLE_SSL_DATA_DIR=/path/to/your/data
+export STABLE_PRETRAINING_DATA_DIR=/path/to/your/data
 
 # Or set permanently in your shell configuration (~/.bashrc, ~/.zshrc, etc.)
-echo 'export STABLE_SSL_DATA_DIR=/path/to/your/data' >> ~/.bashrc
+echo 'export STABLE_PRETRAINING_DATA_DIR=/path/to/your/data' >> ~/.bashrc
 ```
 
 ### Option 2: Default Location
 
 If no environment variable is set, data will be stored in:
-- `~/.cache/stable-ssl/data/` (Linux/Mac)
-- `C:\Users\<username>\.cache\stable-ssl\data\` (Windows)
+- `~/.cache/stable-pretraining/data/` (Linux/Mac)
+- `C:\Users\<username>\.cache\stable-pretraining\data\` (Windows)
 
 Each dataset will be stored in its own subdirectory (e.g., `cifar10/`, `imagenet/`, etc.).
 

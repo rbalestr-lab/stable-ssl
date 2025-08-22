@@ -1,9 +1,9 @@
-# stable-ssl
+# stable-pretraining
 
-[![Documentation](https://img.shields.io/badge/Documentation-blue.svg)](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/)
-[![Benchmarks](https://img.shields.io/badge/Benchmarks-blue.svg)](https://github.com/rbalestr-lab/stable-ssl/tree/main/benchmarks)
-[![Test Status](https://github.com/rbalestr-lab/stable-ssl/actions/workflows/testing.yml/badge.svg)](https://github.com/rbalestr-lab/stable-ssl/actions/workflows/testing.yml)
-[![CircleCI](https://dl.circleci.com/status-badge/img/gh/rbalestr-lab/stable-ssl/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/rbalestr-lab/stable-ssl/tree/main)
+[![Documentation](https://img.shields.io/badge/Documentation-blue.svg)](https://rbalestr-lab.github.io/stable-pretraining.github.io/dev/)
+[![Benchmarks](https://img.shields.io/badge/Benchmarks-blue.svg)](https://github.com/rbalestr-lab/stable-pretraining/tree/main/benchmarks)
+[![Test Status](https://github.com/rbalestr-lab/stable-pretraining/actions/workflows/testing.yml/badge.svg)](https://github.com/rbalestr-lab/stable-pretraining/actions/workflows/testing.yml)
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/rbalestr-lab/stable-pretraining/tree/main.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/rbalestr-lab/stable-pretraining/tree/main)
 [![PyTorch](https://img.shields.io/badge/PyTorch-ee4c2c?logo=pytorch&logoColor=white)](https://pytorch.org/get-started/locally/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -12,23 +12,23 @@
 
 AI is moving beyond labels. Today's models learn through **self-supervision** and **multimodal alignment**, extracting knowledge from raw data to build general-purpose representations that work across tasks. These foundation models are then deployed at scale, often after finetuning, to solve tasks in zero or few shot.
 
-`stable-ssl` is a PyTorch framework built on top of Lightning for this new paradigm. What sets us apart is **real-time visibility into training quality** through extensive logging and monitoring. Our callback ecosystem (`OnlineProbe`, `OnlineKNN`, `RankMe`, and many more) provides insights into feature collapse, training dynamics, and downstream performance. Data flow as dictionaries through model components, metrics, and callbacks, making any intermediate value accessible and debuggable. With `stable-ssl`: track everything, debug faster, iterate sooner.
+`stable-pretraining` is a PyTorch framework built on top of Lightning for this new paradigm. What sets us apart is **real-time visibility into training quality** through extensive logging and monitoring. Our callback ecosystem (`OnlineProbe`, `OnlineKNN`, `RankMe`, and many more) provides insights into feature collapse, training dynamics, and downstream performance. Data flow as dictionaries through model components, metrics, and callbacks, making any intermediate value accessible and debuggable. With `stable-pretraining`: track everything, debug faster, iterate sooner.
 
 
 ## How?
 
-To reach flexibility, scalability and stability, we rely on battle-tested third party libraries: `PyTorch`, `Lightning`, `HuggingFace`, `TorchMetrics` amongst a few others. Those dependencies allow us to focus on assembling everything into a powerful ML framework. ``stable-ssl`` adopts a flexible and modular design for seamless integration of components from external libraries, including architectures, loss functions, evaluation metrics, and augmentations.
+To reach flexibility, scalability and stability, we rely on battle-tested third party libraries: `PyTorch`, `Lightning`, `HuggingFace`, `TorchMetrics` amongst a few others. Those dependencies allow us to focus on assembling everything into a powerful ML framework. ``stable-pretraining`` adopts a flexible and modular design for seamless integration of components from external libraries, including architectures, loss functions, evaluation metrics, and augmentations.
 
 ## Core Structure
 
-`stable-ssl` simplifies complex ML workflows into 4 intuitive components:
+`stable-pretraining` simplifies complex ML workflows into 4 intuitive components:
 
 1. **data**: Your dataset must follow a dictionary-structured format where each sample is a dictionary with named fields (e.g., `{"image": ..., "label": ...}`). This ensures consistent behavior across all components. You have multiple options for creating datasets:
 
     - **HuggingFace datasets** (if available on the Hub):
     ```python
-    import stable_ssl as ssl
-    train_dataset = ssl.data.HFDataset(
+    import stable_pretraining as spt
+    train_dataset = spt.data.HFDataset(
         path="frgfm/imagenette",
         name="160px",
         split="train",
@@ -38,7 +38,7 @@ To reach flexibility, scalability and stability, we rely on battle-tested third 
 
     - **From PyTorch datasets**:
     ```python
-    train_dataset = ssl.data.FromTorchDataset(
+    train_dataset = spt.data.FromTorchDataset(
         torchvision_dataset,
         names=["image", "label"],  # Map tuple outputs to dictionary keys
         transform=train_transform,
@@ -49,7 +49,7 @@ To reach flexibility, scalability and stability, we rely on battle-tested third 
 
     Once created, wrap your dataloaders in our `DataModule` for precise logging:
     ```python
-    datamodule = ssl.data.DataModule(train=train_dataloader, val=val_dataloader)
+    datamodule = spt.data.DataModule(train=train_dataloader, val=val_dataloader)
     ```
 2. **module**: The key differentiator from PyTorch Lightning - **you only define the `forward` function**, not `training_step`! This unique approach unifies loss computation and monitoring in one place:
 
@@ -60,7 +60,7 @@ To reach flexibility, scalability and stability, we rely on battle-tested third 
         if self.training:
             # Define your loss directly in forward
             proj = self.projector(out["embedding"])
-            views = ssl.data.fold_views(proj, batch["sample_idx"])
+            views = spt.data.fold_views(proj, batch["sample_idx"])
             out["loss"] = self.simclr_loss(views[0], views[1])
         return out
     ```
@@ -69,19 +69,19 @@ To reach flexibility, scalability and stability, we rely on battle-tested third 
     - The `forward` method defines both the loss and any quantities to monitor
     - No need to override `training_step`, `validation_step`, etc.
     - Return a dictionary with a `"loss"` key for training
-    - All components are passed as kwargs to `ssl.Module`:
+    - All components are passed as kwargs to `spt.Module`:
 
     ```python
     # First define your model components
-    backbone = ssl.backbone.from_torchvision("resnet18")
+    backbone = spt.backbone.from_torchvision("resnet18")
     projector = torch.nn.Linear(512, 128)
 
     # Then create the module with all components
-    module = ssl.Module(
+    module = spt.Module(
         backbone=backbone,
         projector=projector,
         forward=forward,  # The forward function defined above
-        simclr_loss=ssl.losses.NTXEntLoss(temperature=0.5),
+        simclr_loss=spt.losses.NTXEntLoss(temperature=0.5),
         optim={
             "optimizer": {"type": "Adam", "lr": 0.001},
             "scheduler": {"type": "CosineAnnealing"}
@@ -89,11 +89,11 @@ To reach flexibility, scalability and stability, we rely on battle-tested third 
     )
     ```
 
-3. **callbacks**: Monitor and evaluate your models in real-time during training. Callbacks are key ingredients of `stable-ssl`, providing rich insights without interrupting your training flow:
+3. **callbacks**: Monitor and evaluate your models in real-time during training. Callbacks are key ingredients of `stable-pretraining`, providing rich insights without interrupting your training flow:
 
     ```python
     # Monitor SSL representations with a linear probe
-    linear_probe = ssl.callbacks.OnlineProbe(
+    linear_probe = spt.callbacks.OnlineProbe(
         name="linear_probe",
         input="embedding",  # Which output from forward to monitor
         target="label",      # Ground truth from batch
@@ -106,7 +106,7 @@ To reach flexibility, scalability and stability, we rely on battle-tested third 
     )
 
     # Track representation quality with KNN evaluation
-    knn_probe = ssl.callbacks.OnlineKNN(
+    knn_probe = spt.callbacks.OnlineKNN(
         name="knn_probe",
         input="embedding",
         target="label",
@@ -132,7 +132,7 @@ To reach flexibility, scalability and stability, we rely on battle-tested third 
             logger=False,
             enable_checkpointing=False,
         )
-    manager = ssl.Manager(trainer=trainer, module=module, data=data)
+    manager = spt.Manager(trainer=trainer, module=module, data=data)
     manager()
     ```
     Once configured, the `Manager` connects all components and handles the training loop with precise logging and monitoring.
@@ -142,7 +142,7 @@ To reach flexibility, scalability and stability, we rely on battle-tested third 
 <details>
 <summary>SimCLR on CIFAR-10</summary>
 
-This example demonstrates the key features of `stable-ssl`: dictionary-structured data, unified forward function, and rich monitoring through callbacks.
+This example demonstrates the key features of `stable-pretraining`: dictionary-structured data, unified forward function, and rich monitoring through callbacks.
 
 ```python
 import lightning as pl
@@ -152,8 +152,8 @@ import torchvision
 from torch import nn
 from lightning.pytorch.loggers import WandbLogger
 
-import stable_ssl as ssl
-from stable_ssl.data import transforms
+import stable_pretraining as spt
+from stable_pretraining.data import transforms
 
 # Define augmentations for SimCLR (creates 2 views of each image)
 simclr_transform = transforms.MultiViewTransform(
@@ -164,7 +164,7 @@ simclr_transform = transforms.MultiViewTransform(
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8),
             transforms.RandomGrayscale(p=0.2),
-            transforms.ToImage(**ssl.data.static.CIFAR10),
+            transforms.ToImage(**spt.data.static.CIFAR10),
         ),
         # Second view with slightly different augmentations
         transforms.Compose(
@@ -174,7 +174,7 @@ simclr_transform = transforms.MultiViewTransform(
             transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1, p=0.8),
             transforms.RandomGrayscale(p=0.2),
             transforms.RandomSolarize(threshold=0.5, p=0.2),
-            transforms.ToImage(**ssl.data.static.CIFAR10),
+            transforms.ToImage(**spt.data.static.CIFAR10),
         ),
     ]
 )
@@ -183,26 +183,26 @@ simclr_transform = transforms.MultiViewTransform(
 cifar_train = torchvision.datasets.CIFAR10(root="./data", train=True, download=True)
 cifar_val = torchvision.datasets.CIFAR10(root="./data", train=False, download=True)
 
-train_dataset = ssl.data.FromTorchDataset(
+train_dataset = spt.data.FromTorchDataset(
     cifar_train,
     names=["image", "label"],  # Convert tuple to dictionary
     transform=simclr_transform,
 )
 
-val_dataset = ssl.data.FromTorchDataset(
+val_dataset = spt.data.FromTorchDataset(
     cifar_val,
     names=["image", "label"],
     transform=transforms.Compose(
         transforms.RGB(),
         transforms.Resize((32, 32)),
-        transforms.ToImage(**ssl.data.static.CIFAR10),
+        transforms.ToImage(**spt.data.static.CIFAR10),
     ),
 )
 
 # Create dataloaders with view sampling for contrastive learning
 train_dataloader = torch.utils.data.DataLoader(
     dataset=train_dataset,
-    sampler=ssl.data.sampler.RepeatedRandomSampler(train_dataset, n_views=2),
+    sampler=spt.data.sampler.RepeatedRandomSampler(train_dataset, n_views=2),
     batch_size=256,
     num_workers=8,
     drop_last=True,
@@ -214,7 +214,7 @@ val_dataloader = torch.utils.data.DataLoader(
     num_workers=10,
 )
 
-data = ssl.data.DataModule(train=train_dataloader, val=val_dataloader)
+data = spt.data.DataModule(train=train_dataloader, val=val_dataloader)
 
 # Define the forward function (replaces training_step in PyTorch Lightning)
 def forward(self, batch, stage):
@@ -223,12 +223,12 @@ def forward(self, batch, stage):
     if self.training:
         # Project embeddings and compute contrastive loss
         proj = self.projector(out["embedding"])
-        views = ssl.data.fold_views(proj, batch["sample_idx"])
+        views = spt.data.fold_views(proj, batch["sample_idx"])
         out["loss"] = self.simclr_loss(views[0], views[1])
     return out
 
 # Build model components
-backbone = ssl.backbone.from_torchvision("resnet18", low_resolution=True)
+backbone = spt.backbone.from_torchvision("resnet18", low_resolution=True)
 backbone.fc = torch.nn.Identity()  # Remove classification head
 
 projector = nn.Sequential(
@@ -242,11 +242,11 @@ projector = nn.Sequential(
 )
 
 # Create the module with all components
-module = ssl.Module(
+module = spt.Module(
     backbone=backbone,
     projector=projector,
     forward=forward,
-    simclr_loss=ssl.losses.NTXEntLoss(temperature=0.5),
+    simclr_loss=spt.losses.NTXEntLoss(temperature=0.5),
     optim={
         "optimizer": {"type": "LARS", "lr": 5, "weight_decay": 1e-6},
         "scheduler": {"type": "LinearWarmupCosineAnnealing"},
@@ -255,7 +255,7 @@ module = ssl.Module(
 )
 
 # Add callbacks for monitoring performance during training
-linear_probe = ssl.callbacks.OnlineProbe(
+linear_probe = spt.callbacks.OnlineProbe(
     name="linear_probe",
     input="embedding",
     target="label",
@@ -267,7 +267,7 @@ linear_probe = ssl.callbacks.OnlineProbe(
     },
 )
 
-knn_probe = ssl.callbacks.OnlineKNN(
+knn_probe = spt.callbacks.OnlineKNN(
     name="knn_probe",
     input="embedding",
     target="label",
@@ -286,7 +286,7 @@ trainer = pl.Trainer(
 )
 
 # Launch training
-manager = ssl.Manager(trainer=trainer, module=module, data=data)
+manager = spt.Manager(trainer=trainer, module=module, data=data)
 manager()
 ```
 </details>
@@ -410,9 +410,9 @@ The library is not yet available on PyPI. You can install it from the source cod
 
 ## Ways You Can Contribute:
 
-- If you'd like to contribute new features, bug fixes, or improvements to the documentation, please refer to our [contributing guide](https://rbalestr-lab.github.io/stable-ssl.github.io/dev/contributing.html) for detailed instructions on how to get started.
+- If you'd like to contribute new features, bug fixes, or improvements to the documentation, please refer to our [contributing guide](https://rbalestr-lab.github.io/stable-pretraining.github.io/dev/contributing.html) for detailed instructions on how to get started.
 
-- You can also contribute by adding new methods, datasets, or configurations that improve the current performance of a method in the [benchmark section](https://github.com/rbalestr-lab/stable-ssl/tree/main/benchmarks).
+- You can also contribute by adding new methods, datasets, or configurations that improve the current performance of a method in the [benchmark section](https://github.com/rbalestr-lab/stable-pretraining/tree/main/benchmarks).
 
 ## Contributors
 

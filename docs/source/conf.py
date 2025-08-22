@@ -20,13 +20,13 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath("../stable_ssl"))
+sys.path.insert(0, os.path.abspath("../stable_pretraining"))
 
-from stable_ssl.__about__ import __version__  # Import the version from __about__.py
+from stable_pretraining.__about__ import __version__  # Import the version from __about__.py
 
-project = "stable-SSL"
-copyright = "2024, stable-SSL team"
-author = "stable-SSL team"
+project = "stable-pretraining"
+copyright = "2024, stable-pretraining team"
+author = "stable-pretraining team"
 
 # The full version, including alpha/beta/rc tags
 release = __version__  # Set release to the version from __about__.py
@@ -72,7 +72,7 @@ sphinx_gallery_conf = {
     "backreferences_dir": "gen_modules/backreferences",
     # Modules for which function/class level galleries are created. In
     # this case sphinx_gallery and numpy in a tuple of strings.
-    "doc_module": ("stable_ssl",),
+    "doc_module": ("stable_pretraining",),
     # objects to exclude from implicit backreferences. The default option
     # is an empty set, i.e. exclude nothing.
     "exclude_implicit_doc": {},

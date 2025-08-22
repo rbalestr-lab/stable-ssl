@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-import stable_ssl as ssl
+import stable_pretraining as spt
 
 
 def parse_rules(v):
@@ -27,7 +27,7 @@ if __name__ == "__main__":
     parser.add_argument("--metric", type=str, required=True)
     args = parser.parse_args()
 
-    configs, values = ssl.reader.jsonl_project(args.path)
+    configs, values = spt.reader.jsonl_project(args.path)
     if args.hparams is None:
         args.hparams = []
         for name, series in configs.items():

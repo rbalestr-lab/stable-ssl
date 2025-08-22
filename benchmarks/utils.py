@@ -8,8 +8,8 @@ def get_data_dir(dataset_name: str = None) -> Path:
     """Get the data directory for storing datasets.
 
     The directory is determined in the following order:
-    1. Environment variable STABLE_SSL_DATA_DIR if set
-    2. Default to ~/.cache/stable-ssl/data
+    1. Environment variable STABLE_PRETRAINING_DATA_DIR if set
+    2. Default to ~/.cache/stable-pretraining/data
 
     Args:
         dataset_name: Optional name of the dataset to create a subdirectory
@@ -25,14 +25,14 @@ def get_data_dir(dataset_name: str = None) -> Path:
         >>> cifar10_dir = get_data_dir("cifar10")
 
         >>> # Set custom directory via environment variable
-        >>> # export STABLE_SSL_DATA_DIR=/path/to/my/data
+        >>> # export STABLE_PRETRAINING_DATA_DIR=/path/to/my/data
     """
     # Check for environment variable
-    if "STABLE_SSL_DATA_DIR" in os.environ:
-        base_dir = Path(os.environ["STABLE_SSL_DATA_DIR"])
+    if "STABLE_PRETRAINING_DATA_DIR" in os.environ:
+        base_dir = Path(os.environ["STABLE_PRETRAINING_DATA_DIR"])
     else:
         # Use default location in user's cache directory
-        base_dir = Path.home() / ".cache" / "stable-ssl" / "data"
+        base_dir = Path.home() / ".cache" / "stable-pretraining" / "data"
 
     # Create base directory if it doesn't exist
     base_dir.mkdir(parents=True, exist_ok=True)

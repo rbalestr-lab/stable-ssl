@@ -8,8 +8,8 @@ import torchvision
 from omegaconf import DictConfig
 from torchvision import transforms
 
-import stable_ssl as ssl
-from stable_ssl.supervised import Supervised
+import stable_pretraining as spt
+from stable_pretraining.supervised import Supervised
 
 
 class MyCustomSupervised(Supervised):
@@ -27,7 +27,7 @@ class MyCustomSupervised(Supervised):
         )
         distribution = np.exp(np.linspace(0, self.config.distribution, 10))
         distribution /= np.sum(distribution)
-        trainset = ssl.base.resample_classes(trainset, distribution)
+        trainset = spt.base.resample_classes(trainset, distribution)
         trainloader = torch.utils.data.DataLoader(
             trainset,
             batch_size=self.config.optim.batch_size,
@@ -53,7 +53,7 @@ class MyCustomSupervised(Supervised):
         return testloader
 
     def initialize_modules(self):
-        self.model = ssl.utils.nn.resnet9()
+        self.model = spt.utils.nn.resnet9()
 
     def forward(self, x):
         return self.model(x)
@@ -75,7 +75,7 @@ class MyCustomSupervised(Supervised):
 
 @hydra.main(version_base=None)
 def main(cfg: DictConfig):
-    args = ssl.get_args(cfg)
+    args = spt.get_args(cfg)
 
     print("--- Arguments ---")
     print(args)
@@ -96,7 +96,7 @@ def visualization():
 
     cmap = colormaps.get_cmap("cool")
 
-    configs, values = ssl.reader.jsonl_project("experiment_llm")
+    configs, values = spt.reader.jsonl_project("experiment_llm")
     distris = {j: i for i, j in enumerate(np.unique(configs["distribution"]))}
     print(distris)
     fig, axs = plt.subplots(1, 1, sharey="all", sharex="all", figsize=(10, 7))

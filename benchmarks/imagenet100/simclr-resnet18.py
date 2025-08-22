@@ -4,8 +4,8 @@ import torchmetrics
 from lightning.pytorch.loggers import WandbLogger
 from torch import nn
 
-import stable_ssl as ssl
-from stable_ssl.data import transforms
+import stable_pretraining as spt
+from stable_pretraining.data import transforms
 import sys
 from pathlib import Path
 
@@ -23,7 +23,7 @@ simclr_transform = transforms.MultiViewTransform(
             transforms.RandomGrayscale(p=0.2),
             transforms.PILGaussianBlur(p=1.0),
             transforms.RandomHorizontalFlip(p=0.5),
-            transforms.ToImage(**ssl.data.static.ImageNet),
+            transforms.ToImage(**spt.data.static.ImageNet),
         ),
         transforms.Compose(
             transforms.RGB(),
@@ -35,7 +35,7 @@ simclr_transform = transforms.MultiViewTransform(
             transforms.PILGaussianBlur(p=0.1),
             transforms.RandomSolarize(threshold=0.5, p=0.2),
             transforms.RandomHorizontalFlip(p=0.5),
-            transforms.ToImage(**ssl.data.static.ImageNet),
+            transforms.ToImage(**spt.data.static.ImageNet),
         ),
     ]
 )
@@ -44,18 +44,18 @@ val_transform = transforms.Compose(
     transforms.RGB(),
     transforms.Resize((256, 256)),
     transforms.CenterCrop((224, 224)),
-    transforms.ToImage(**ssl.data.static.ImageNet),
+    transforms.ToImage(**spt.data.static.ImageNet),
 )
 
 data_dir = get_data_dir("imagenet100")
 
-train_dataset = ssl.data.HFDataset(
+train_dataset = spt.data.HFDataset(
     "clane9/imagenet-100",
     split="train",
     cache_dir=str(data_dir),
     transform=simclr_transform,
 )
-val_dataset = ssl.data.HFDataset(
+val_dataset = spt.data.HFDataset(
     "clane9/imagenet-100",
     split="validation",
     cache_dir=str(data_dir),
@@ -67,7 +67,7 @@ world_size = 1
 total_batch_size = batch_size * world_size
 train_dataloader = torch.utils.data.DataLoader(
     dataset=train_dataset,
-    sampler=ssl.data.sampler.RepeatedRandomSampler(train_dataset, n_views=2),
+    sampler=spt.data.sampler.RepeatedRandomSampler(train_dataset, n_views=2),
     batch_size=batch_size,
     num_workers=4,
     drop_last=True,
@@ -80,7 +80,7 @@ val_dataloader = torch.utils.data.DataLoader(
     persistent_workers=True,
 )
 
-data = ssl.data.DataModule(train=train_dataloader, val=val_dataloader)
+data = spt.data.DataModule(train=train_dataloader, val=val_dataloader)
 
 
 def forward(self, batch, stage):
@@ -88,12 +88,12 @@ def forward(self, batch, stage):
     out["embedding"] = self.backbone(batch["image"])
     if self.training:
         proj = self.projector(out["embedding"])
-        views = ssl.data.fold_views(proj, batch["sample_idx"])
+        views = spt.data.fold_views(proj, batch["sample_idx"])
         out["loss"] = self.simclr_loss(views[0], views[1])
     return out
 
 
-backbone = ssl.backbone.from_torchvision(
+backbone = spt.backbone.from_torchvision(
     "resnet18",
     low_resolution=False,
 )
@@ -105,11 +105,11 @@ projector = nn.Sequential(
     nn.Linear(4096, 512),
 )
 
-module = ssl.Module(
+module = spt.Module(
     backbone=backbone,
     projector=projector,
     forward=forward,
-    simclr_loss=ssl.losses.NTXEntLoss(temperature=0.2),
+    simclr_loss=spt.losses.NTXEntLoss(temperature=0.2),
     optim={
         "optimizer": {
             "type": "LARS",
@@ -126,7 +126,7 @@ module = ssl.Module(
     },
 )
 
-linear_probe = ssl.callbacks.OnlineProbe(
+linear_probe = spt.callbacks.OnlineProbe(
     name="linear_probe",
     input="embedding",
     target="label",
@@ -138,7 +138,7 @@ linear_probe = ssl.callbacks.OnlineProbe(
     },
 )
 
-knn_probe = ssl.callbacks.OnlineKNN(
+knn_probe = spt.callbacks.OnlineKNN(
     name="knn_probe",
     input="embedding",
     target="label",
@@ -167,5 +167,5 @@ trainer = pl.Trainer(
     sync_batchnorm=False,
 )
 
-manager = ssl.Manager(trainer=trainer, module=module, data=data)
+manager = spt.Manager(trainer=trainer, module=module, data=data)
 manager()

@@ -1,7 +1,7 @@
 # Testing Guide
 
 ## Overview
-Tests in stable-ssl are categorized to separate fast unit tests from slow integration tests. This enables efficient CI/CD while maintaining comprehensive test coverage.
+Tests in stable-pretraining are categorized to separate fast unit tests from slow integration tests. This enables efficient CI/CD while maintaining comprehensive test coverage.
 
 ## Test Categories
 
@@ -30,7 +30,7 @@ python -m pytest -m "not slow"
 ## Test Organization
 
 ```
-stable_ssl/tests/
+stable_pretraining/tests/
 ├── conftest.py              # Pytest configuration
 ├── utils.py                 # Test utilities and mocks
 ├── test_*_unit.py          # Unit tests
@@ -42,14 +42,14 @@ stable_ssl/tests/
 
 ### Use Test Utilities
 ```python
-from stable_ssl.tests.utils import MockImageDataset, create_mock_dataloader
+from stable_pretraining.tests.utils import MockImageDataset, create_mock_dataloader
 
 @pytest.mark.unit
 def test_loss_computation():
     # Test just the loss computation
     z1 = torch.randn(8, 128)
     z2 = torch.randn(8, 128)
-    loss_fn = ossl.losses.NTXEntLoss(temperature=0.1)
+    loss_fn = spt.losses.NTXEntLoss(temperature=0.1)
     loss = loss_fn(z1, z2)
     assert loss.item() >= 0
 ```
@@ -68,7 +68,7 @@ def test_loss_computation():
 ```python
 def test_simclr():
     # Downloads ImageNette, requires GPU, full training
-    train_dataset = ossl.data.HFDataset(
+    train_dataset = spt.data.HFDataset(
         path="frgfm/imagenette",
         name="160px",
         split="train",
@@ -83,7 +83,7 @@ def test_simclr():
 def test_simclr_loss():
     z1 = torch.randn(8, 128)
     z2 = torch.randn(8, 128)
-    loss_fn = ossl.losses.NTXEntLoss(temperature=0.1)
+    loss_fn = spt.losses.NTXEntLoss(temperature=0.1)
     loss = loss_fn(z1, z2)
     assert loss.item() >= 0
 
@@ -99,5 +99,5 @@ def test_simclr_training():
 GitHub Actions runs only unit tests:
 ```yaml
 - name: Run Unit Tests
-  run: python -m pytest stable_ssl/ -m unit --verbose --cov=stable_ssl --cov-report term
+  run: python -m pytest stable_pretraining/ -m unit --verbose --cov=stable_pretraining --cov-report term
 ```

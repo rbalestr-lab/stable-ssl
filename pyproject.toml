@@ -3,12 +3,9 @@ requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "stable-ssl"
-description = "Self-Supervised Learning Library"
-authors = [
-    {name = "Randall Balestriero", email = "randallbalestriero@gmail.com"},
-    {name = "Hugues Van Assel", email = "vanasselhugues@gmail.com"},
-]
+name = "stable-pretraining"
+description = "Stable Pretraining Library for Self-Supervised Learning"
+authors = []
 license = {text = "MIT"}
 readme = {file = "README.md", content-type = "text/markdown"}
 dependencies = [
@@ -35,16 +32,16 @@ dependencies = [
 dynamic = ["version"]
 
 # [project.entry-points."console_scripts"]
-# stable-ssl = "stable_ssl.cli:entry"
+# stable-pretraining = "stable_pretraining.cli:entry"
 
 [project.entry-points."lightning.pytorch.callbacks_factory"]
-stablessl_callbacks = "stable_ssl.callbacks.factories:default"
+stablepretraining_callbacks = "stable_pretraining.callbacks.factories:default"
 
 [tool.setuptools]
-packages = ["stable_ssl"]
+packages = ["stable_pretraining"]
 
 [tool.setuptools.dynamic]
-version = {attr = "stable_ssl.__about__.__version__"}
+version = {attr = "stable_pretraining.__about__.__version__"}
 
 [project.optional-dependencies]
 dev = [

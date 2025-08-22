@@ -17,11 +17,11 @@ defaults:
 
 trainer:
   # ===== Base Trainer =====
-  _target_: stable_ssl.trainers.JointEmbeddingTrainer
+  _target_: stable_pretraining.trainers.JointEmbeddingTrainer
 
   # ===== loss Parameters =====
   loss:
-    _target_: stable_ssl.losses.NTXEntLoss
+    _target_: stable_pretraining.losses.NTXEntLoss
     temperature: 0.5
 
   # ===== Data Parameters =====
@@ -40,7 +40,7 @@ trainer:
         train: True
         download: True
         transform:
-          _target_: stable_ssl.data.MultiViewSampler
+          _target_: stable_pretraining.data.MultiViewSampler
           transforms:
             - _target_: torchvision.transforms.v2.Compose
               transforms:
@@ -61,14 +61,14 @@ trainer:
                         saturation: 0.8,
                         hue: 0.2,
                       }
-                - _target_: stable_ssl.data.augmentations.GaussianBlur
+                - _target_: stable_pretraining.data.augmentations.GaussianBlur
                   sigma:
                     - 0.1
                     - 2.0
                 - _target_: torchvision.transforms.v2.ToImage
                 - _target_: torchvision.transforms.v2.ToDtype
                   dtype:
-                    _target_: stable_ssl.utils.str_to_dtype
+                    _target_: stable_pretraining.utils.str_to_dtype
                     _args_: [float32]
                   scale: True
             - ${trainer.data.train.dataset.transform.transforms.0}
@@ -86,19 +86,19 @@ trainer:
             - _target_: torchvision.transforms.v2.ToImage
             - _target_: torchvision.transforms.v2.ToDtype
               dtype:
-                _target_: stable_ssl.utils.str_to_dtype
+                _target_: stable_pretraining.utils.str_to_dtype
                 _args_: [float32]
               scale: True
 
   # ===== Module Parameters =====
   module:
     backbone:
-      _target_: stable_ssl.modules.load_backbone
+      _target_: stable_pretraining.modules.load_backbone
       name: resnet50
       low_resolution: True
       num_classes: null
     projector:
-      _target_: stable_ssl.modules.MLP
+      _target_: stable_pretraining.modules.MLP
       sizes: [2048, 2048, 128]
     projector_classifier:
       _target_: torch.nn.Linear
@@ -113,12 +113,12 @@ trainer:
   optim:
     epochs: 1000
     optimizer:
-      _target_: stable_ssl.optimizers.LARS
+      _target_: stable_pretraining.optimizers.LARS
       _partial_: True
       lr: 5
       weight_decay: 1e-6
     scheduler:
-      _target_: stable_ssl.schedulers.LinearWarmupCosineAnnealing
+      _target_: stable_pretraining.schedulers.LinearWarmupCosineAnnealing
       _partial_: True
       total_steps: ${eval:'${trainer.optim.epochs} * ${trainer.data._num_samples} // ${trainer.data.train.batch_size}'}
 
@@ -147,5 +147,5 @@ trainer:
     monitor:
       train:
         lidar:
-          _target_: stable_ssl.monitors.LiDAR
+          _target_: stable_pretraining.monitors.LiDAR
           n: 128

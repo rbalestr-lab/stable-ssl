@@ -24,7 +24,7 @@ jobs:
             echo ${CI_PULL_REQUEST//*pull\//} | tee merge.txt
             if [[ $(cat merge.txt) != "" ]]; then
               echo "Merging $(cat merge.txt)";
-              git remote add upstream https://github.com/rbalestr-lab/stable-ssl;
+              git remote add upstream https://github.com/rbalestr-lab/stable-pretraining;
               git pull --ff-only upstream "refs/pull/$(cat merge.txt)/merge";
               git fetch upstream main;
             fi
@@ -58,7 +58,7 @@ jobs:
           name: Check installation
           command: |
             which python
-            python -c "import stable_ssl"
+            python -c "import stable_pretraining"
             which sphinx-build
 
       - run:
@@ -90,17 +90,17 @@ jobs:
             mkdir -p ~/.ssh
             echo -e "Host *\nStrictHostKeyChecking no" > ~/.ssh/config
             chmod og= ~/.ssh/config
-            if [ ! -d ~/stable-ssl.github.io ]; then
-              git clone git@github.com:/rbalestr-lab/stable-ssl.github.io ~/stable-ssl.github.io --depth=1
+            if [ ! -d ~/stable-pretraining.github.io ]; then
+              git clone git@github.com:/rbalestr-lab/stable-pretraining.github.io ~/stable-pretraining.github.io --depth=1
             fi
       - run:
           name: Deploy docs
           command: |
             set -e;
             if [ "${CIRCLE_BRANCH}" == "main" ]; then
-              git config --global user.email "circle@stable-ssl.github.io";
+              git config --global user.email "circle@stable-pretraining.github.io";
               git config --global user.name "Circle CI";
-              cd ~/stable-ssl.github.io;
+              cd ~/stable-pretraining.github.io;
               git checkout main
               git remote -v
               git fetch origin
@@ -131,16 +131,16 @@ jobs:
             mkdir -p ~/.ssh
             echo -e "Host *\nStrictHostKeyChecking no" > ~/.ssh/config
             chmod og= ~/.ssh/config
-            if [ ! -d ~/stable-ssl.github.io ]; then
-              git clone git@github.com:/rbalestr-lab/stable-ssl.github.io ~/stable-ssl.github.io --depth=1
+            if [ ! -d ~/stable-pretraining.github.io ]; then
+              git clone git@github.com:/rbalestr-lab/stable-pretraining.github.io ~/stable-pretraining.github.io --depth=1
             fi
       - run:
           name: Deploy docs
           command: |
             set -e;
-            git config --global user.email "circle@stable-ssl.github.io";
+            git config --global user.email "circle@stable-pretraining.github.io";
             git config --global user.name "Circle CI";
-            cd ~/stable-ssl.github.io;
+            cd ~/stable-pretraining.github.io;
             git checkout main
             git remote -v
             git fetch origin
