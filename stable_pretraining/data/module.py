@@ -10,7 +10,7 @@ from omegaconf import DictConfig, OmegaConf
 from torch.utils.data import DataLoader, Dataset
 
 from .sampler import RepeatedRandomSampler
-from .utils import HFDataset
+from .datasets import HFDataset
 
 
 class DictFormat(Dataset):

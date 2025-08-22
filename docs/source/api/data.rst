@@ -14,30 +14,37 @@ Core Components
 
    DataModule
    Collator
+   Dataset
 
-Samplers
----------
+Real Data Wrappers
+------------------
 
 .. autosummary::
    :toctree: gen_modules/
    :template: myclass_template.rst
 
-   RepeatedRandomSampler
-   SupervisedBatchSampler
-   RandomBatchSampler
+   FromTorchDataset
+   HFDataset
+   Subset
 
-Dataset Classes
----------------
+Synthetic Data Generators
+-------------------------
 
 .. autosummary::
    :toctree: gen_modules/
    :template: myclass_template.rst
 
    GMM
-   Subset
-   FromTorchDataset
    MinariStepsDataset
-   HFDataset
+   MinariEpisodeDataset
+
+.. autosummary::
+   :toctree: gen_modules/
+   :template: myfunc_template.rst
+
+   swiss_roll
+   generate_perlin_noise_2d
+   perlin_noise_3d
 
 Noise Models
 ------------
@@ -49,6 +56,17 @@ Noise Models
    Categorical
    ExponentialMixtureNoiseModel
    ExponentialNormalNoiseModel
+
+Samplers
+---------
+
+.. autosummary::
+   :toctree: gen_modules/
+   :template: myclass_template.rst
+
+   RepeatedRandomSampler
+   SupervisedBatchSampler
+   RandomBatchSampler
 
 Utility Functions
 ----------------
@@ -67,6 +85,7 @@ Modules
 
 .. autosummary::
    :toctree: gen_modules/
-   :template: myclass_template.rst
 
    transforms
+   dataset_stats
+   synthetic_data

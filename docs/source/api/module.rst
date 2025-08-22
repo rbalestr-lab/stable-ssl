@@ -17,7 +17,7 @@ Core Module
 User Implementation
 ------------------
 
-The key insight of `stable-ssl` is **simplicity**: you only need to implement the `forward` method. Everything else (optimizers, schedulers, training loops, logging) is handled automatically.
+The key insight of `stable-pretraining` is **simplicity**: you only need to implement the `forward` method. Everything else (optimizers, schedulers, training loops, logging) is handled automatically.
 
 **Required Implementation:**
 
@@ -30,7 +30,7 @@ The key insight of `stable-ssl` is **simplicity**: you only need to implement th
         if self.training:
             # Training-specific logic
             proj = self.projector(batch["embedding"])
-            views = ssl.data.fold_views(proj, batch["sample_idx"])
+            views = spt.data.fold_views(proj, batch["sample_idx"])
             batch["loss"] = self.simclr_loss(views[0], views[1])
 
         return batch
@@ -39,11 +39,11 @@ The key insight of `stable-ssl` is **simplicity**: you only need to implement th
 
 .. code-block:: python
 
-    module = ssl.Module(
+    module = spt.Module(
         backbone=backbone,           # Your model components
         projector=projector,         # Any kwargs become self.attributes
         forward=forward,            # Your forward function
-        simclr_loss=ssl.losses.NTXEntLoss(temperature=0.1),
+        simclr_loss=spt.losses.NTXEntLoss(temperature=0.1),
     )
 
 **What's Handled Automatically:**
@@ -52,7 +52,7 @@ The key insight of `stable-ssl` is **simplicity**: you only need to implement th
 - ✅ **Training Loop**: Automatic gradient accumulation, clipping, and stepping
 - ✅ **Stage Management**: Training/validation/test/predict stages
 - ✅ **Metrics**: Automatic metric logging and computation
-- ✅ **Callbacks**: Integration with all stable-ssl callbacks
+- ✅ **Callbacks**: Integration with all stable-pretraining callbacks
 - ✅ **Logging**: Rich logging and monitoring
 
 **Key Features:**
