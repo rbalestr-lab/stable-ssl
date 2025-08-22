@@ -84,9 +84,24 @@ def recursive_instantiate(
                     isinstance(cfg[key], (dict, omegaconf.DictConfig))
                     and "_target_" in cfg[key]
                 ):
-                    instantiated[key] = hydra.utils.instantiate(
-                        cfg[key], _recursive_=True
-                    )
+                    # Special handling for Module to resolve forward function
+                    if key == "module" and "forward" in cfg[key]:
+                        module_cfg = dict(cfg[key])
+                        # Import the forward function if it's a string reference
+                        if isinstance(module_cfg["forward"], str):
+                            parts = module_cfg["forward"].rsplit(".", 1)
+                            if len(parts) == 2:
+                                import importlib
+
+                                module = importlib.import_module(parts[0])
+                                module_cfg["forward"] = getattr(module, parts[1])
+                        instantiated[key] = hydra.utils.instantiate(
+                            module_cfg, _recursive_=True
+                        )
+                    else:
+                        instantiated[key] = hydra.utils.instantiate(
+                            cfg[key], _recursive_=True
+                        )
                 else:
                     instantiated[key] = cfg[key]
             except Exception as e:

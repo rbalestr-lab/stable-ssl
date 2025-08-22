@@ -1,12 +1,12 @@
-# Complete SimCLR training configuration for CIFAR-10
+# Complete SimCLR training configuration for CIFAR-10 (Fixed version)
 # This example shows how to configure all components via Hydra
 #
 # Usage:
-#   python -m stable_pretraining.train --config-path ../examples --config-name simclr_cifar10_config
+#   python -m stable_pretraining.train --config-path ../examples --config-name simclr_cifar10_fixed
 #
 # With overrides:
-#   python -m stable_pretraining.train --config-path ../examples --config-name simclr_cifar10_config \
-#       module.optimizer.lr=0.01 \
+#   python -m stable_pretraining.train --config-path ../examples --config-name simclr_cifar10_fixed \
+#       module.optim.optimizer.lr=0.01 \
 #       trainer.max_epochs=200
 
 # Random seed for reproducibility
@@ -57,18 +57,6 @@ trainer:
           _target_: torchmetrics.classification.MulticlassAccuracy
           num_classes: 10
 
-    # LiDAR callback for monitoring representation quality
-    - _target_: stable_pretraining.callbacks.LiDAR
-      name: lidar
-      input: embedding
-      n: 128
-
-    # RankMe callback for measuring feature diversity
-    - _target_: stable_pretraining.callbacks.RankMe
-      name: rankme
-      input: embedding
-      epsilon: 0.01
-
   # Logger configuration (optional - can use WandB, TensorBoard, etc.)
   logger:
     _target_: lightning.pytorch.loggers.WandbLogger
@@ -81,14 +69,13 @@ trainer:
 module:
   _target_: stable_pretraining.Module
 
-  # Forward function for the training loop
-  forward:
-    _target_: stable_pretraining.forward_functions.simclr_forward
+  # Forward function - specified as module.function string
+  forward: stable_pretraining.forward_functions.simclr_forward
 
   # Backbone network
   backbone:
     _target_: stable_pretraining.backbone.from_torchvision
-    name: resnet18
+    model_name: resnet18
     low_resolution: true
 
   # Projection head for SSL
@@ -142,7 +129,7 @@ data:
     sampler:
       _target_: stable_pretraining.data.sampler.RepeatedRandomSampler
       n_views: 2
-      dataset:  # This will be filled by the dataset below
+      dataset:
         _target_: stable_pretraining.data.FromTorchDataset
         names: ["image", "label"]
         dataset:
@@ -153,9 +140,9 @@ data:
         transform:
           _target_: stable_pretraining.data.transforms.MultiViewTransform
           transforms:
-            # First augmentation view
+            # First augmentation view - using _args_ for Compose
             - _target_: stable_pretraining.data.transforms.Compose
-              transforms:
+              _args_:
                 - _target_: stable_pretraining.data.transforms.RGB
                 - _target_: stable_pretraining.data.transforms.RandomResizedCrop
                   size: [32, 32]
@@ -173,9 +160,9 @@ data:
                 - _target_: stable_pretraining.data.transforms.ToImage
                   mean: [0.485, 0.456, 0.406]
                   std: [0.229, 0.224, 0.225]
-            # Second augmentation view (slightly different)
+            # Second augmentation view (slightly different) - using _args_ for Compose
             - _target_: stable_pretraining.data.transforms.Compose
-              transforms:
+              _args_:
                 - _target_: stable_pretraining.data.transforms.RGB
                 - _target_: stable_pretraining.data.transforms.RandomResizedCrop
                   size: [32, 32]
@@ -196,7 +183,7 @@ data:
                 - _target_: stable_pretraining.data.transforms.ToImage
                   mean: [0.485, 0.456, 0.406]
                   std: [0.229, 0.224, 0.225]
-    dataset:  # Reference to the dataset defined above
+    dataset:
       _target_: stable_pretraining.data.FromTorchDataset
       names: ["image", "label"]
       dataset:
@@ -221,7 +208,7 @@ data:
         download: true
       transform:
         _target_: stable_pretraining.data.transforms.Compose
-        transforms:
+        _args_:
           - _target_: stable_pretraining.data.transforms.RGB
           - _target_: stable_pretraining.data.transforms.Resize
             size: [32, 32]
