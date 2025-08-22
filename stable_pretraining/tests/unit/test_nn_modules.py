@@ -1,4 +1,4 @@
-"""Unit tests for neural network modules in stable_ssl.utils.nn_modules."""
+"""Unit tests for neural network modules in stable_pretraining.utils.nn_modules."""
 
 import pytest
 import torch

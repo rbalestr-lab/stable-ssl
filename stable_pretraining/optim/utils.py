@@ -23,7 +23,7 @@ def create_optimizer(
     Args:
         params: Parameters to optimize (e.g., model.parameters())
         optimizer_config: Can be:
-            - str: optimizer name from torch.optim or stable_ssl.optim (e.g., "AdamW", "LARS")
+            - str: optimizer name from torch.optim or stable_pretraining.optim (e.g., "AdamW", "LARS")
             - dict: {"type": "AdamW", "lr": 1e-3, ...}
             - partial: pre-configured optimizer factory
             - class: optimizer class (e.g., torch.optim.AdamW)
@@ -82,7 +82,7 @@ def create_optimizer(
             raise ValueError(
                 f"Optimizer '{opt_type}' not found. Available in torch.optim: "
                 + ", ".join(torch_opts)
-                + ". Available in stable_ssl.optim: "
+                + ". Available in stable_pretraining.optim: "
                 + ", ".join(ssl_opts)
             )
     else:
@@ -144,5 +144,5 @@ def create_scheduler(
     if hasattr(scheduler_config, "_target_"):
         return instantiate(scheduler_config, optimizer=optimizer, _convert_="object")
 
-    # Delegate to central factory in stable_ssl.optim.lr_scheduler
+    # Delegate to central factory in stable_pretraining.optim.lr_scheduler
     return ssl_lr.create_scheduler(optimizer, scheduler_config, module=module)

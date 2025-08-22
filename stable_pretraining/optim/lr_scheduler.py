@@ -91,7 +91,7 @@ def _resolve_scheduler_callable(name_or_class):
         return globals()[name_or_class]
 
     raise ValueError(
-        f"Scheduler '{name_or_class}' not found in torch.optim.lr_scheduler or stable_ssl.optim.lr_scheduler."
+        f"Scheduler '{name_or_class}' not found in torch.optim.lr_scheduler or stable_pretraining.optim.lr_scheduler."
     )
 
 

@@ -33,7 +33,7 @@ class TeacherStudentWrapper(nn.Module):
     """Backbone wrapper that implements teacher-student distillation via EMA.
 
     This is a wrapper for backbones that creates a teacher model as an exponential moving average (EMA) of the student model.
-    It should be passed as the backbone to stable_ssl.Module and accessed via
+    It should be passed as the backbone to stable_pretraining.Module and accessed via
     forward_student() and forward_teacher() methods in your custom forward function.
 
     The teacher model is updated by taking a running average of the student's

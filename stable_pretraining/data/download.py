@@ -30,13 +30,13 @@ def bulk_download(
     urls: Iterable[str],
     dest_folder: Union[str, Path],
     backend: str = "filesystem",
-    cache_dir: str = "~/.stable_ssl/",
+    cache_dir: str = "~/.stable_pretraining/",
 ):
     """Download multiple files concurrently.
 
     Example:
-        import stable_ssl
-        stable_ssl.data.bulk_download([
+        import stable_pretraining
+        stable_pretraining.data.bulk_download([
             "https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz",
             "https://www.cs.toronto.edu/~kriz/cifar-100-python.tar.gz",
         ], "todelete")
@@ -45,7 +45,7 @@ def bulk_download(
         urls (Iterable[str]): List of URLs to download
         dest_folder (Union[str, Path]): Destination folder for downloads
         backend (str, optional): Storage backend type. Defaults to "filesystem".
-        cache_dir (str, optional): Cache directory path. Defaults to "~/.stable_ssl/".
+        cache_dir (str, optional): Cache directory path. Defaults to "~/.stable_pretraining/".
     """
     num_workers = len(urls)
     filenames = [os.path.basename(urlparse(url).path) for url in urls]
@@ -98,7 +98,7 @@ def download(
     url,
     dest_folder,
     backend="filesystem",
-    cache_dir="~/.stable_ssl/",
+    cache_dir="~/.stable_pretraining/",
     progress_bar=True,
     _progress_dict=None,
     _task_id=None,

@@ -124,7 +124,7 @@ class LoggerConfig:
         wandb (bool or dict or None, optional): Configuration for Weights & Biases logging.
             If `True`, it will be converted to an empty dictionary and default keys will be
             filled in if `rank == 0`. Default is None.
-            See :mod:`stable_ssl.config.WandbConfig`
+            See :mod:`stable_pretraining.config.WandbConfig`
             for the full list of parameters and their defaults.
     """
 
