@@ -14,7 +14,7 @@ class TestDatasetUnit:
 
     def test_hf_dataset_initialization(self):
         """Test HFDataset can be initialized with proper parameters."""
-        with patch("stable_ssl.data.HFDataset") as mock_dataset:
+        with patch("stable_pretraining.data.HFDataset") as mock_dataset:
             # Test basic initialization
             mock_dataset("ylecun/mnist", split="train")
             mock_dataset.assert_called_once_with("ylecun/mnist", split="train")
@@ -47,7 +47,7 @@ class TestDatasetUnit:
         train_config = OmegaConf.create(
             {
                 "dataset": {
-                    "_target_": "stable_ssl.data.HFDataset",
+                    "_target_": "stable_pretraining.data.HFDataset",
                     "path": "ylecun/mnist",
                     "split": "train",
                 },
@@ -59,11 +59,11 @@ class TestDatasetUnit:
         test_config = OmegaConf.create(
             {
                 "dataset": {
-                    "_target_": "stable_ssl.data.HFDataset",
+                    "_target_": "stable_pretraining.data.HFDataset",
                     "path": "ylecun/mnist",
                     "split": "test",
                     "transform": {
-                        "_target_": "stable_ssl.data.transforms.ToImage",
+                        "_target_": "stable_pretraining.data.transforms.ToImage",
                     },
                 },
                 "batch_size": 20,
@@ -71,7 +71,7 @@ class TestDatasetUnit:
         )
 
         # Verify configuration structure
-        assert train_config.dataset._target_ == "stable_ssl.data.HFDataset"
+        assert train_config.dataset._target_ == "stable_pretraining.data.HFDataset"
         assert train_config.dataset.path == "ylecun/mnist"
         assert train_config.batch_size == 20
         assert train_config.drop_last is True
@@ -82,7 +82,7 @@ class TestDatasetUnit:
 
     def test_datamodule_methods(self):
         """Test DataModule method calls without actual data loading."""
-        with patch("stable_ssl.data.DataModule") as mock_datamodule_class:
+        with patch("stable_pretraining.data.DataModule") as mock_datamodule_class:
             mock_datamodule = mock_datamodule_class.return_value
 
             # Mock the dataset attributes
@@ -176,7 +176,7 @@ class TestDatasetUnit:
         assert renamed_data["label"] == 1
 
     def test_repeated_sampler_replicas(self):
-        import stable_ssl as ssl
+        import stable_pretraining as ssl
 
         results = {}
         num_replicas = 2

@@ -14,7 +14,7 @@ class TestProbingUnit:
 
     def test_online_probe_initialization(self):
         """Test OnlineProbe callback initialization."""
-        with patch("stable_ssl.callbacks.OnlineProbe") as mock_probe:
+        with patch("stable_pretraining.callbacks.OnlineProbe") as mock_probe:
             mock_linear = Mock(spec=nn.Linear)
             mock_loss_fn = Mock(spec=nn.CrossEntropyLoss)
             mock_metrics = Mock(spec=torchmetrics.classification.MulticlassAccuracy)
@@ -39,7 +39,7 @@ class TestProbingUnit:
 
     def test_online_knn_initialization(self):
         """Test OnlineKNN callback initialization."""
-        with patch("stable_ssl.callbacks.OnlineKNN") as mock_knn:
+        with patch("stable_pretraining.callbacks.OnlineKNN") as mock_knn:
             mock_metrics = Mock(spec=torchmetrics.classification.MulticlassAccuracy)
 
             mock_knn(
@@ -112,7 +112,7 @@ class TestProbingUnit:
 
     def test_eval_only_wrapper(self):
         """Test EvalOnly wrapper for backbone."""
-        with patch("stable_ssl.backbone.EvalOnly") as mock_eval_only:
+        with patch("stable_pretraining.backbone.EvalOnly") as mock_eval_only:
             mock_backbone = Mock()
 
             eval_backbone = mock_eval_only(mock_backbone)
@@ -122,7 +122,7 @@ class TestProbingUnit:
 
     def test_transform_composition(self):
         """Test transform composition for train and validation."""
-        with patch("stable_ssl.data.transforms") as mock_transforms:
+        with patch("stable_pretraining.data.transforms") as mock_transforms:
             mean = [0.485, 0.456, 0.406]
             std = [0.229, 0.224, 0.225]
 
@@ -201,7 +201,7 @@ class TestProbingUnit:
 
     def test_module_without_optimizer(self):
         """Test module creation without optimizer for frozen backbone."""
-        with patch("stable_ssl.Module") as mock_module:
+        with patch("stable_pretraining.Module") as mock_module:
             mock_backbone = Mock()
             mock_forward = Mock()
 
@@ -213,7 +213,7 @@ class TestProbingUnit:
 
     def test_online_probe_lifecycle_methods(self):
         """Test OnlineProbe callback lifecycle methods."""
-        from stable_ssl.callbacks import OnlineProbe
+        from stable_pretraining.callbacks import OnlineProbe
 
         # Create probe with mock components
         probe = OnlineProbe(

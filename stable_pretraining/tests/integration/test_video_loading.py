@@ -4,7 +4,7 @@ import pytest
 import torch
 import torchvision
 
-import stable_ssl
+import stable_pretraining
 
 
 @pytest.mark.integration
@@ -14,11 +14,11 @@ class TestVideoLoadingIntegration:
     @pytest.mark.download
     def test_clip_extract(self):
         """Test video clip extraction with temporal sampling."""
-        dataset = stable_ssl.data.HFDataset(
+        dataset = stable_pretraining.data.HFDataset(
             path="shivalikasingh/video-demo",
             split="train",
             trust_remote_code=True,
-            transform=stable_ssl.data.transforms.RandomContiguousTemporalSampler(
+            transform=stable_pretraining.data.transforms.RandomContiguousTemporalSampler(
                 source="video", target="frames", num_frames=10
             ),
         )
@@ -40,15 +40,15 @@ class TestVideoLoadingIntegration:
     def test_clip_dataset_with_dataloader(self):
         """Test video dataset with DataLoader and transformations."""
         # Create dataset with video transforms
-        dataset = stable_ssl.data.HFDataset(
+        dataset = stable_pretraining.data.HFDataset(
             path="shivalikasingh/video-demo",
             split="train",
             trust_remote_code=True,
-            transform=stable_ssl.data.transforms.Compose(
-                stable_ssl.data.transforms.RandomContiguousTemporalSampler(
+            transform=stable_pretraining.data.transforms.Compose(
+                stable_pretraining.data.transforms.RandomContiguousTemporalSampler(
                     source="video", target="video", num_frames=10
                 ),
-                stable_ssl.data.transforms.Resize(
+                stable_pretraining.data.transforms.Resize(
                     (128, 128), source="video", target="video"
                 ),
             ),
@@ -72,18 +72,18 @@ class TestVideoLoadingIntegration:
     def test_embedding_from_video_frames(self):
         """Test feature extraction from video frames using image encoder."""
         # Create dataset with full video preprocessing
-        dataset = stable_ssl.data.HFDataset(
+        dataset = stable_pretraining.data.HFDataset(
             path="shivalikasingh/video-demo",
             split="train",
             trust_remote_code=True,
-            transform=stable_ssl.data.transforms.Compose(
-                stable_ssl.data.transforms.RandomContiguousTemporalSampler(
+            transform=stable_pretraining.data.transforms.Compose(
+                stable_pretraining.data.transforms.RandomContiguousTemporalSampler(
                     source="video", target="video", num_frames=10
                 ),
-                stable_ssl.data.transforms.Resize(
+                stable_pretraining.data.transforms.Resize(
                     (128, 128), source="video", target="video"
                 ),
-                stable_ssl.data.transforms.ToImage(
+                stable_pretraining.data.transforms.ToImage(
                     scale=False,
                     mean=[0, 0, 0],
                     std=[255, 255, 255],
@@ -98,7 +98,7 @@ class TestVideoLoadingIntegration:
         loader = torch.utils.data.DataLoader(dataset, batch_size=4, shuffle=True)
 
         # Create video encoder with ResNet18
-        embedding = stable_ssl.utils.ImageToVideoEncoder(torchvision.models.resnet18())
+        embedding = stable_pretraining.utils.ImageToVideoEncoder(torchvision.models.resnet18())
 
         # Test feature extraction
         for data in loader:
@@ -110,14 +110,14 @@ class TestVideoLoadingIntegration:
     def test_video_transform_pipeline(self):
         """Test complete video transform pipeline."""
         # Define transform pipeline
-        transform = stable_ssl.data.transforms.Compose(
-            stable_ssl.data.transforms.RandomContiguousTemporalSampler(
+        transform = stable_pretraining.data.transforms.Compose(
+            stable_pretraining.data.transforms.RandomContiguousTemporalSampler(
                 source="video", target="video", num_frames=16
             ),
-            stable_ssl.data.transforms.Resize(
+            stable_pretraining.data.transforms.Resize(
                 (224, 224), source="video", target="video"
             ),
-            stable_ssl.data.transforms.ToImage(
+            stable_pretraining.data.transforms.ToImage(
                 mean=[0.485, 0.456, 0.406],
                 std=[0.229, 0.224, 0.225],
                 source="video",
@@ -126,7 +126,7 @@ class TestVideoLoadingIntegration:
         )
 
         # Create dataset
-        dataset = stable_ssl.data.HFDataset(
+        dataset = stable_pretraining.data.HFDataset(
             path="shivalikasingh/video-demo",
             split="train",
             trust_remote_code=True,
@@ -145,11 +145,11 @@ class TestVideoLoadingIntegration:
 
         for num_frames in num_frames_list:
             # Create dataset with different frame counts
-            dataset = stable_ssl.data.HFDataset(
+            dataset = stable_pretraining.data.HFDataset(
                 path="shivalikasingh/video-demo",
                 split="train[:1]",  # Use only first video
                 trust_remote_code=True,
-                transform=stable_ssl.data.transforms.RandomContiguousTemporalSampler(
+                transform=stable_pretraining.data.transforms.RandomContiguousTemporalSampler(
                     source="video", target="frames", num_frames=num_frames
                 ),
             )
@@ -176,7 +176,7 @@ class TestVideoLoadingIntegration:
         )  # [batch, frames, channels, height, width]
 
         for backbone in backbones:
-            encoder = stable_ssl.utils.ImageToVideoEncoder(backbone)
+            encoder = stable_pretraining.utils.ImageToVideoEncoder(backbone)
 
             # Extract features
             with torch.no_grad():
@@ -189,11 +189,11 @@ class TestVideoLoadingIntegration:
 
     def test_video_data_types(self):
         """Test video data type handling."""
-        dataset = stable_ssl.data.HFDataset(
+        dataset = stable_pretraining.data.HFDataset(
             path="shivalikasingh/video-demo",
             split="train[:1]",
             trust_remote_code=True,
-            transform=stable_ssl.data.transforms.RandomContiguousTemporalSampler(
+            transform=stable_pretraining.data.transforms.RandomContiguousTemporalSampler(
                 source="video", target="frames", num_frames=10
             ),
         )
@@ -210,15 +210,15 @@ class TestVideoLoadingIntegration:
         import time
 
         # Create dataset
-        dataset = stable_ssl.data.HFDataset(
+        dataset = stable_pretraining.data.HFDataset(
             path="shivalikasingh/video-demo",
             split="train",
             trust_remote_code=True,
-            transform=stable_ssl.data.transforms.Compose(
-                stable_ssl.data.transforms.RandomContiguousTemporalSampler(
+            transform=stable_pretraining.data.transforms.Compose(
+                stable_pretraining.data.transforms.RandomContiguousTemporalSampler(
                     source="video", target="video", num_frames=8
                 ),
-                stable_ssl.data.transforms.Resize(
+                stable_pretraining.data.transforms.Resize(
                     (112, 112), source="video", target="video"
                 ),
             ),

@@ -4,7 +4,7 @@ import pytest
 import torch
 from lightning.pytorch import Trainer
 
-from stable_ssl.callbacks.queue import OnlineQueue, find_or_create_queue_callback
+from stable_pretraining.callbacks.queue import OnlineQueue, find_or_create_queue_callback
 
 
 @pytest.mark.unit

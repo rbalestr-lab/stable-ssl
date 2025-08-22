@@ -6,8 +6,8 @@ import torch
 import torchmetrics
 from transformers import AutoConfig, AutoModelForImageClassification
 
-import stable_ssl as ossl
-from stable_ssl.data import transforms
+import stable_pretraining as spt
+from stable_pretraining.data import transforms
 
 
 @pytest.mark.integration
@@ -36,7 +36,7 @@ class TestSupervisedIntegration:
         )
 
         # Create train dataset
-        train_dataset = ossl.data.HFDataset(
+        train_dataset = spt.data.HFDataset(
             path="frgfm/imagenette",
             name="160px",
             split="train",
@@ -56,7 +56,7 @@ class TestSupervisedIntegration:
         )
 
         val = torch.utils.data.DataLoader(
-            dataset=ossl.data.HFDataset(
+            dataset=spt.data.HFDataset(
                 path="frgfm/imagenette",
                 name="160px",
                 split="validation",
@@ -66,7 +66,7 @@ class TestSupervisedIntegration:
             num_workers=10,
         )
 
-        data = ossl.data.DataModule(train=train, val=val)
+        data = spt.data.DataModule(train=train, val=val)
 
         # Define supervised forward function
         def forward(self, batch, stage):
@@ -83,10 +83,10 @@ class TestSupervisedIntegration:
         classifier = torch.nn.Linear(512, 10)
 
         # Create module
-        module = ossl.Module(backbone=backbone, classifier=classifier, forward=forward)
+        module = spt.Module(backbone=backbone, classifier=classifier, forward=forward)
 
         # Create callbacks
-        linear_probe = ossl.callbacks.OnlineProbe(
+        linear_probe = spt.callbacks.OnlineProbe(
             "linear_probe",
             module,
             "embedding",
@@ -99,7 +99,7 @@ class TestSupervisedIntegration:
             },
         )
 
-        knn_probe = ossl.callbacks.OnlineKNN(
+        knn_probe = spt.callbacks.OnlineKNN(
             module,
             "knn_probe",
             "embedding",
@@ -110,7 +110,7 @@ class TestSupervisedIntegration:
             features_dim=512,
         )
 
-        rankme = ossl.callbacks.RankMe(
+        rankme = spt.callbacks.RankMe(
             module, "rankme", "embedding", 20000, target_shape=512
         )
 
@@ -125,7 +125,7 @@ class TestSupervisedIntegration:
         )
 
         # Run training
-        manager = ossl.Manager(trainer=trainer, module=module, data=data)
+        manager = spt.Manager(trainer=trainer, module=module, data=data)
         manager()
 
     @pytest.mark.gpu
@@ -203,7 +203,7 @@ class TestSupervisedIntegration:
         )
 
         # Load dataset
-        dataset = ossl.data.HFDataset(
+        dataset = spt.data.HFDataset(
             path="frgfm/imagenette",
             name="160px",
             split="train[:100]",  # Small subset
@@ -290,7 +290,7 @@ class TestSupervisedIntegration:
                 batch["loss"] = torch.nn.functional.cross_entropy(preds, batch["label"])
             return batch
 
-        module = ossl.Module(backbone=backbone, classifier=classifier, forward=forward)
+        module = spt.Module(backbone=backbone, classifier=classifier, forward=forward)
         module.train()
 
         # Create dummy batch

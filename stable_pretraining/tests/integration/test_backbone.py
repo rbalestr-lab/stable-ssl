@@ -20,7 +20,7 @@ def test_torchvision_embedding_dim(name):
     """Test setting embedding dimension on torchvision models."""
     import torchvision
 
-    import stable_ssl as ossl
+    import stable_pretraining as spt
 
     if "vit" in name:
         shape = (10, 3, 224, 224)
@@ -28,7 +28,7 @@ def test_torchvision_embedding_dim(name):
         shape = (10, 3, 512, 512)
 
     module = torchvision.models.__dict__[name]()
-    ossl.backbone.set_embedding_dim(
+    spt.backbone.set_embedding_dim(
         module,
         dim=20,
         expected_input_shape=shape,
@@ -49,11 +49,11 @@ def test_hf_embedding_dim(name, method, shape):
     """Test setting embedding dimension on HuggingFace models."""
     import torch
 
-    import stable_ssl as ossl
+    import stable_pretraining as spt
 
     module = method.from_pretrained(name)
 
-    module = ossl.backbone.set_embedding_dim(
+    module = spt.backbone.set_embedding_dim(
         module,
         dim=20,
         expected_input_shape=(10, 3, shape, shape),

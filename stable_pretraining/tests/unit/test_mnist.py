@@ -16,14 +16,14 @@ class TestMNISTUnit:
         # Create configuration
         data_config = OmegaConf.create(
             {
-                "_target_": "stable_ssl.data.DataModule",
+                "_target_": "stable_pretraining.data.DataModule",
                 "train": {
                     "dataset": {
-                        "_target_": "stable_ssl.data.HFDataset",
+                        "_target_": "stable_pretraining.data.HFDataset",
                         "path": "ylecun/mnist",
                         "split": "test",
                         "transform": {
-                            "_target_": "stable_ssl.data.transforms.ToImage",
+                            "_target_": "stable_pretraining.data.transforms.ToImage",
                         },
                     },
                     "batch_size": 20,
@@ -33,11 +33,11 @@ class TestMNISTUnit:
                 },
                 "test": {
                     "dataset": {
-                        "_target_": "stable_ssl.data.HFDataset",
+                        "_target_": "stable_pretraining.data.HFDataset",
                         "path": "ylecun/mnist",
                         "split": "test",
                         "transform": {
-                            "_target_": "stable_ssl.data.transforms.ToImage",
+                            "_target_": "stable_pretraining.data.transforms.ToImage",
                         },
                     },
                     "batch_size": 20,
@@ -47,7 +47,7 @@ class TestMNISTUnit:
         )
 
         # Verify configuration structure
-        assert data_config._target_ == "stable_ssl.data.DataModule"
+        assert data_config._target_ == "stable_pretraining.data.DataModule"
         assert data_config.train.dataset.path == "ylecun/mnist"
         assert data_config.train.batch_size == 20
         assert data_config.train.drop_last is True
@@ -57,7 +57,7 @@ class TestMNISTUnit:
 
     def test_manager_initialization_with_dictconfig(self):
         """Test Manager initialization with DictConfig."""
-        with patch("stable_ssl.Manager") as mock_manager:
+        with patch("stable_pretraining.Manager") as mock_manager:
             with patch("lightning.Trainer") as mock_trainer:
                 with patch("lightning.LightningModule") as mock_module:
                     data_config = Mock()
@@ -73,9 +73,9 @@ class TestMNISTUnit:
 
     def test_datamodule_dict_initialization(self):
         """Test DataModule initialization with dictionary configuration."""
-        with patch("stable_ssl.data.DataModule") as mock_datamodule:
-            with patch("stable_ssl.data.HFDataset") as mock_dataset:
-                with patch("stable_ssl.data.transforms.ToImage") as mock_transform:
+        with patch("stable_pretraining.data.DataModule") as mock_datamodule:
+            with patch("stable_pretraining.data.HFDataset") as mock_dataset:
+                with patch("stable_pretraining.data.transforms.ToImage") as mock_transform:
                     # Mock dataset instances
                     train_dataset = mock_dataset.return_value
                     test_dataset = mock_dataset.return_value
@@ -141,7 +141,7 @@ class TestMNISTUnit:
 
     def test_resnet9_initialization(self):
         """Test Resnet9 backbone initialization for MNIST."""
-        with patch("stable_ssl.backbone.Resnet9") as mock_resnet:
+        with patch("stable_pretraining.backbone.Resnet9") as mock_resnet:
             backbone = mock_resnet(num_classes=10, num_channels=1)
 
             mock_resnet.assert_called_once_with(num_classes=10, num_channels=1)
@@ -150,8 +150,8 @@ class TestMNISTUnit:
     def test_dataloader_creation(self):
         """Test DataLoader creation with MNIST dataset."""
         with patch("torch.utils.data.DataLoader") as mock_loader_class:
-            with patch("stable_ssl.data.HFDataset") as mock_dataset:
-                with patch("stable_ssl.data.transforms.ToImage") as mock_transform:
+            with patch("stable_pretraining.data.HFDataset") as mock_dataset:
+                with patch("stable_pretraining.data.transforms.ToImage") as mock_transform:
                     dataset = mock_dataset.return_value
                     mock_transform.return_value  # Just create the mock, don't assign
 

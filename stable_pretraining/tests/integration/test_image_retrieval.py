@@ -6,8 +6,8 @@ import torch
 import torchmetrics
 from transformers import AutoModel
 
-import stable_ssl as ossl
-from stable_ssl.data import transforms
+import stable_pretraining as spt
+from stable_pretraining.data import transforms
 
 
 @pytest.mark.integration
@@ -34,7 +34,7 @@ class TestImageRetrievalIntegration:
 
         # Create train dataloader with small subset
         train = torch.utils.data.DataLoader(
-            dataset=ossl.data.HFDataset(
+            dataset=spt.data.HFDataset(
                 path="frgfm/imagenette",
                 name="160px",
                 split="train[:128]",
@@ -53,7 +53,7 @@ class TestImageRetrievalIntegration:
         )
 
         # Create image retrieval dataset
-        imgret_ds = ossl.data.HFDataset(
+        imgret_ds = spt.data.HFDataset(
             path="randall-lab/revisitop",
             name="roxford5k",
             split="qimlist+imlist",
@@ -74,7 +74,7 @@ class TestImageRetrievalIntegration:
         )
 
         # Create data module
-        data = ossl.data.DataModule(train=train, val=val)
+        data = spt.data.DataModule(train=train, val=val)
 
         # Define forward function for feature extraction
         def forward(self, batch, stage):
@@ -85,12 +85,12 @@ class TestImageRetrievalIntegration:
             return batch
 
         # Create module with eval-only backbone
-        module = ossl.Module(
-            backbone=ossl.backbone.EvalOnly(backbone), forward=forward, optim=None
+        module = spt.Module(
+            backbone=spt.backbone.EvalOnly(backbone), forward=forward, optim=None
         )
 
         # Create image retrieval callback
-        img_ret = ossl.callbacks.ImageRetrieval(
+        img_ret = spt.callbacks.ImageRetrieval(
             module,
             "img_ret",
             input="embedding",
@@ -116,7 +116,7 @@ class TestImageRetrievalIntegration:
         )
 
         # Run training and validation
-        manager = ossl.Manager(trainer=trainer, module=module, data=data)
+        manager = spt.Manager(trainer=trainer, module=module, data=data)
         manager()
         manager.validate()
 
@@ -130,7 +130,7 @@ class TestImageRetrievalIntegration:
         )
 
         # Load retrieval dataset
-        imgret_ds = ossl.data.HFDataset(
+        imgret_ds = spt.data.HFDataset(
             path="randall-lab/revisitop",
             name="roxford5k",
             split="qimlist+imlist",

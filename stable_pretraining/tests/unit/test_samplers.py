@@ -4,7 +4,7 @@ import pytest
 import torch
 from torch.utils.data import Dataset
 
-import stable_ssl as ossl
+import stable_pretraining as spt
 
 
 class MockDataset(Dataset):
@@ -28,7 +28,7 @@ class TestSamplers:
     def test_repeated_random_sampler_indices(self, n_views):
         """Test RepeatedRandomSampler generates correct indices."""
         dataset_size = 10
-        sampler = ossl.data.sampler.RepeatedRandomSampler(
+        sampler = spt.data.sampler.RepeatedRandomSampler(
             data_source_or_len=dataset_size, n_views=n_views
         )
 
@@ -49,7 +49,7 @@ class TestSamplers:
     def test_repeated_random_sampler_with_dataset(self):
         """Test RepeatedRandomSampler with actual dataset."""
         dataset = MockDataset(size=20)
-        sampler = ossl.data.sampler.RepeatedRandomSampler(
+        sampler = spt.data.sampler.RepeatedRandomSampler(
             data_source_or_len=dataset, n_views=2
         )
 
@@ -58,11 +58,11 @@ class TestSamplers:
 
     def test_random_subset_sampler(self):
         """Test RandomSubsetSampler if it exists."""
-        if hasattr(ossl.data.sampler, "RandomSubsetSampler"):
+        if hasattr(spt.data.sampler, "RandomSubsetSampler"):
             dataset_size = 100
             subset_size = 20
 
-            sampler = ossl.data.sampler.RandomSubsetSampler(
+            sampler = spt.data.sampler.RandomSubsetSampler(
                 data_source_or_len=dataset_size, subset_size=subset_size
             )
 

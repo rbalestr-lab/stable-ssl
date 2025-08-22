@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import torch
 
-import stable_ssl.data.transforms as transforms
+import stable_pretraining.data.transforms as transforms
 
 
 @pytest.mark.unit
@@ -13,9 +13,9 @@ class TestTransformUtils:
 
     def test_collator(self):
         """Test the Collator utility."""
-        import stable_ssl as ossl
+        import stable_pretraining as spt
 
-        assert ossl.data.Collator._test()
+        assert spt.data.Collator._test()
 
     def test_compose_transforms(self):
         """Test composing multiple transforms."""

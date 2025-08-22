@@ -3,7 +3,7 @@
 import pytest
 import torch
 
-from stable_ssl.utils.nn_modules import (
+from stable_pretraining.utils.nn_modules import (
     UnsortedQueue,
     OrderedQueue,
     EMA,

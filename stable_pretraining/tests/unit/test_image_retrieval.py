@@ -13,7 +13,7 @@ class TestImageRetrievalUnit:
 
     def test_image_retrieval_callback_initialization(self):
         """Test ImageRetrieval callback initialization."""
-        with patch("stable_ssl.callbacks.ImageRetrieval") as mock_callback:
+        with patch("stable_pretraining.callbacks.ImageRetrieval") as mock_callback:
             mock_module = Mock()
             mock_metrics = {
                 "mAP": Mock(spec=torchmetrics.RetrievalMAP),
@@ -44,7 +44,7 @@ class TestImageRetrievalUnit:
 
     def test_transform_composition(self):
         """Test transform composition for train and validation."""
-        with patch("stable_ssl.data.transforms") as mock_transforms:
+        with patch("stable_pretraining.data.transforms") as mock_transforms:
             mean = [0.485, 0.456, 0.406]
             std = [0.229, 0.224, 0.225]
 
@@ -129,7 +129,7 @@ class TestImageRetrievalUnit:
 
     def test_eval_only_backbone(self):
         """Test EvalOnly wrapper for backbone."""
-        with patch("stable_ssl.backbone.EvalOnly") as mock_eval_only:
+        with patch("stable_pretraining.backbone.EvalOnly") as mock_eval_only:
             mock_backbone = Mock()
             eval_backbone = mock_eval_only(mock_backbone)
 
@@ -138,7 +138,7 @@ class TestImageRetrievalUnit:
 
     def test_module_creation_with_no_optim(self):
         """Test module creation with no optimizer."""
-        with patch("stable_ssl.Module") as mock_module_class:
+        with patch("stable_pretraining.Module") as mock_module_class:
             mock_backbone = Mock()
             mock_forward = Mock()
 

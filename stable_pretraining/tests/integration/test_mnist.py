@@ -5,7 +5,7 @@ import pytest
 import torch
 from omegaconf import OmegaConf
 
-import stable_ssl as ossl
+import stable_pretraining as spt
 
 
 @pytest.mark.integration
@@ -18,14 +18,14 @@ class TestMNISTIntegration:
         # Create configuration
         data = OmegaConf.create(
             {
-                "_target_": "stable_ssl.data.DataModule",
+                "_target_": "stable_pretraining.data.DataModule",
                 "train": {
                     "dataset": {
-                        "_target_": "stable_ssl.data.HFDataset",
+                        "_target_": "stable_pretraining.data.HFDataset",
                         "path": "ylecun/mnist",
                         "split": "test",
                         "transform": {
-                            "_target_": "stable_ssl.data.transforms.ToImage",
+                            "_target_": "stable_pretraining.data.transforms.ToImage",
                         },
                     },
                     "batch_size": 20,
@@ -35,11 +35,11 @@ class TestMNISTIntegration:
                 },
                 "test": {
                     "dataset": {
-                        "_target_": "stable_ssl.data.HFDataset",
+                        "_target_": "stable_pretraining.data.HFDataset",
                         "path": "ylecun/mnist",
                         "split": "test",
                         "transform": {
-                            "_target_": "stable_ssl.data.transforms.ToImage",
+                            "_target_": "stable_pretraining.data.transforms.ToImage",
                         },
                     },
                     "batch_size": 20,
@@ -49,7 +49,7 @@ class TestMNISTIntegration:
         )
 
         # Create manager
-        manager = ossl.Manager(
+        manager = spt.Manager(
             trainer=pl.Trainer(max_epochs=1), module=pl.LightningModule(), data=data
         )
 
@@ -61,10 +61,10 @@ class TestMNISTIntegration:
         """Test DataModule with MNIST dataset."""
         # Create train configuration
         train = dict(
-            dataset=ossl.data.HFDataset(
+            dataset=spt.data.HFDataset(
                 path="ylecun/mnist",
                 split="train",
-                transform=ossl.data.transforms.ToImage(),
+                transform=spt.data.transforms.ToImage(),
             ),
             batch_size=512,
             shuffle=True,
@@ -74,20 +74,20 @@ class TestMNISTIntegration:
 
         # Create test configuration
         test = dict(
-            dataset=ossl.data.HFDataset(
+            dataset=spt.data.HFDataset(
                 path="ylecun/mnist",
                 split="test",
-                transform=ossl.data.transforms.ToImage(),
+                transform=spt.data.transforms.ToImage(),
             ),
             batch_size=20,
             num_workers=10,
         )
 
         # Create DataModule
-        data = ossl.data.DataModule(train=train, test=test)
+        data = spt.data.DataModule(train=train, test=test)
 
         # Create manager
-        manager = ossl.Manager(
+        manager = spt.Manager(
             trainer=pl.Trainer(), module=pl.LightningModule(), data=data
         )
 
@@ -113,10 +113,10 @@ class TestMNISTIntegration:
         """Test full MNIST training with Resnet9."""
         # Create dataloaders
         train = torch.utils.data.DataLoader(
-            dataset=ossl.data.HFDataset(
+            dataset=spt.data.HFDataset(
                 path="ylecun/mnist",
                 split="train",
-                transform=ossl.data.transforms.ToImage(),
+                transform=spt.data.transforms.ToImage(),
             ),
             batch_size=512,
             shuffle=True,
@@ -125,17 +125,17 @@ class TestMNISTIntegration:
         )
 
         val = torch.utils.data.DataLoader(
-            dataset=ossl.data.HFDataset(
+            dataset=spt.data.HFDataset(
                 path="ylecun/mnist",
                 split="test",
-                transform=ossl.data.transforms.ToImage(),
+                transform=spt.data.transforms.ToImage(),
             ),
             batch_size=20,
             num_workers=10,
         )
 
         # Create data module
-        data = ossl.data.DataModule(train=train, val=val)
+        data = spt.data.DataModule(train=train, val=val)
 
         # Define forward function
         def forward(self, batch, stage):
@@ -148,11 +148,11 @@ class TestMNISTIntegration:
             return batch
 
         # Create backbone and module
-        backbone = ossl.backbone.Resnet9(num_classes=10, num_channels=1)
-        module = ossl.Module(backbone=backbone, forward=forward)
+        backbone = spt.backbone.Resnet9(num_classes=10, num_channels=1)
+        module = spt.Module(backbone=backbone, forward=forward)
 
         # Create trainer and manager
-        manager = ossl.Manager(
+        manager = spt.Manager(
             trainer=pl.Trainer(
                 max_steps=3,
                 num_sanity_val_steps=1,
@@ -170,13 +170,13 @@ class TestMNISTIntegration:
     def test_mnist_dataset_properties(self):
         """Test MNIST dataset loading and properties."""
         # Load MNIST train dataset
-        train_dataset = ossl.data.HFDataset(
-            path="ylecun/mnist", split="train", transform=ossl.data.transforms.ToImage()
+        train_dataset = spt.data.HFDataset(
+            path="ylecun/mnist", split="train", transform=spt.data.transforms.ToImage()
         )
 
         # Load MNIST test dataset
-        test_dataset = ossl.data.HFDataset(
-            path="ylecun/mnist", split="test", transform=ossl.data.transforms.ToImage()
+        test_dataset = spt.data.HFDataset(
+            path="ylecun/mnist", split="test", transform=spt.data.transforms.ToImage()
         )
 
         # Check dataset sizes
@@ -195,8 +195,8 @@ class TestMNISTIntegration:
     @pytest.mark.download
     def test_dataloader_batching(self):
         """Test DataLoader batching behavior."""
-        dataset = ossl.data.HFDataset(
-            path="ylecun/mnist", split="test", transform=ossl.data.transforms.ToImage()
+        dataset = spt.data.HFDataset(
+            path="ylecun/mnist", split="test", transform=spt.data.transforms.ToImage()
         )
 
         # Test with different batch sizes
@@ -215,10 +215,10 @@ class TestMNISTIntegration:
     def test_transform_application(self):
         """Test transform application on MNIST data."""
         # Create transform
-        transform = ossl.data.transforms.ToImage()
+        transform = spt.data.transforms.ToImage()
 
         # Create dataset with transform
-        dataset = ossl.data.HFDataset(
+        dataset = spt.data.HFDataset(
             path="ylecun/mnist",
             split="test[:10]",  # Small subset for testing
             transform=transform,
@@ -237,7 +237,7 @@ class TestMNISTIntegration:
     def test_model_forward_pass(self):
         """Test model forward pass with MNIST data."""
         # Create model
-        backbone = ossl.backbone.Resnet9(num_classes=10, num_channels=1)
+        backbone = spt.backbone.Resnet9(num_classes=10, num_channels=1)
 
         # Create dummy MNIST batch
         batch = torch.randn(4, 1, 28, 28)

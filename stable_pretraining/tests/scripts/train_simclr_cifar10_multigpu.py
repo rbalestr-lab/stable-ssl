@@ -12,9 +12,9 @@ import torchvision
 from lightning.pytorch.loggers import WandbLogger
 from transformers import AutoConfig, AutoModelForImageClassification
 
-import stable_ssl as ssl
-from stable_ssl.data import transforms
-from stable_ssl.data.utils import Dataset
+import stable_pretraining as ssl
+from stable_pretraining.data import transforms
+from stable_pretraining.data.utils import Dataset
 
 mean = [0.485, 0.456, 0.406]
 std = [0.229, 0.224, 0.225]

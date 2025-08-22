@@ -149,7 +149,7 @@ class LatentViz(OptimizedCallback):
             )
         else:
             # Use explicitly provided optimizer config
-            from stable_ssl.optim.utils import create_optimizer
+            from stable_pretraining.optim.utils import create_optimizer
 
             self.optimizer = create_optimizer(
                 self.module.parameters(), self._optimizer_config

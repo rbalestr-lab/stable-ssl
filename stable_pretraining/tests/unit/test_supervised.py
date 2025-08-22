@@ -99,7 +99,7 @@ class TestSupervisedUnit:
 
     def test_module_with_classifier(self):
         """Test module creation with classifier for supervised training."""
-        with patch("stable_ssl.Module") as mock_module:
+        with patch("stable_pretraining.Module") as mock_module:
             mock_backbone = Mock()
             mock_classifier = Mock()
             mock_forward = Mock()
@@ -114,7 +114,7 @@ class TestSupervisedUnit:
 
     def test_rankme_callback_initialization(self):
         """Test RankMe callback initialization."""
-        with patch("stable_ssl.callbacks.RankMe") as mock_rankme:
+        with patch("stable_pretraining.callbacks.RankMe") as mock_rankme:
             mock_module = Mock()
 
             mock_rankme(mock_module, "rankme", "embedding", 20000, target_shape=512)
@@ -125,7 +125,7 @@ class TestSupervisedUnit:
 
     def test_transform_composition_for_supervised(self):
         """Test transform composition for supervised training."""
-        with patch("stable_ssl.data.transforms") as mock_transforms:
+        with patch("stable_pretraining.data.transforms") as mock_transforms:
             mean = [0.485, 0.456, 0.406]
             std = [0.229, 0.224, 0.225]
 

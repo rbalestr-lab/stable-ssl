@@ -6,8 +6,8 @@ import torch
 import torchmetrics
 from transformers import AutoConfig, AutoModelForImageClassification
 
-import stable_ssl as ossl
-from stable_ssl.data import transforms
+import stable_pretraining as spt
+from stable_pretraining.data import transforms
 
 
 @pytest.mark.integration
@@ -36,7 +36,7 @@ class TestSimCLRIntegration:
         )
 
         # Create train dataset with multi-view sampling
-        train_dataset = ossl.data.HFDataset(
+        train_dataset = spt.data.HFDataset(
             path="frgfm/imagenette",
             name="160px",
             split="train",
@@ -45,7 +45,7 @@ class TestSimCLRIntegration:
 
         train = torch.utils.data.DataLoader(
             dataset=train_dataset,
-            sampler=ossl.data.sampler.RepeatedRandomSampler(train_dataset, n_views=2),
+            sampler=spt.data.sampler.RepeatedRandomSampler(train_dataset, n_views=2),
             batch_size=64,
             num_workers=20,
             drop_last=True,
@@ -60,7 +60,7 @@ class TestSimCLRIntegration:
         )
 
         val = torch.utils.data.DataLoader(
-            dataset=ossl.data.HFDataset(
+            dataset=spt.data.HFDataset(
                 path="frgfm/imagenette",
                 name="160px",
                 split="validation",
@@ -70,14 +70,14 @@ class TestSimCLRIntegration:
             num_workers=10,
         )
 
-        data = ossl.data.DataModule(train=train, val=val)
+        data = spt.data.DataModule(train=train, val=val)
 
         # Define SimCLR forward function
         def forward(self, batch, stage):
             batch["embedding"] = self.backbone(batch["image"])["logits"]
             if self.training:
                 proj = self.projector(batch["embedding"])
-                views = ossl.data.fold_views(proj, batch["sample_idx"])
+                views = spt.data.fold_views(proj, batch["sample_idx"])
                 batch["loss"] = self.simclr_loss(views[0], views[1])
             return batch
 
@@ -88,15 +88,15 @@ class TestSimCLRIntegration:
         projector = torch.nn.Linear(512, 128)
 
         # Create module
-        module = ossl.Module(
+        module = spt.Module(
             backbone=backbone,
             projector=projector,
             forward=forward,
-            simclr_loss=ossl.losses.NTXEntLoss(temperature=0.1),
+            simclr_loss=spt.losses.NTXEntLoss(temperature=0.1),
         )
 
         # Create online probes
-        linear_probe = ossl.callbacks.OnlineProbe(
+        linear_probe = spt.callbacks.OnlineProbe(
             "linear_probe",
             module,
             "embedding",
@@ -109,7 +109,7 @@ class TestSimCLRIntegration:
             },
         )
 
-        knn_probe = ossl.callbacks.OnlineKNN(
+        knn_probe = spt.callbacks.OnlineKNN(
             module,
             "knn_probe",
             "embedding",
@@ -131,7 +131,7 @@ class TestSimCLRIntegration:
         )
 
         # Run training
-        manager = ossl.Manager(trainer=trainer, module=module, data=data)
+        manager = spt.Manager(trainer=trainer, module=module, data=data)
         manager()
 
     @pytest.mark.gpu
@@ -147,7 +147,7 @@ class TestSimCLRIntegration:
             torch.nn.Linear(256, feature_dim),
         )
 
-        simclr_loss = ossl.losses.NTXEntLoss(temperature=0.1)
+        simclr_loss = spt.losses.NTXEntLoss(temperature=0.1)
 
         # Create dummy features
         features = torch.randn(batch_size, 512)
@@ -175,7 +175,7 @@ class TestSimCLRIntegration:
         )
 
         # Create multi-view sampler
-        sampler = ossl.data.sampler.RepeatedRandomSampler(dataset, n_views=2)
+        sampler = spt.data.sampler.RepeatedRandomSampler(dataset, n_views=2)
 
         # Create dataloader
         loader = torch.utils.data.DataLoader(
@@ -204,7 +204,7 @@ class TestSimCLRIntegration:
         )
 
         # Fold views
-        views = ossl.data.fold_views(features, sample_idx)
+        views = spt.data.fold_views(features, sample_idx)
 
         # Verify views
         assert len(views) == n_views
@@ -246,7 +246,7 @@ class TestSimCLRIntegration:
 
         # Test different temperatures
         for temp in [0.05, 0.1, 0.5, 1.0]:
-            loss_fn = ossl.losses.NTXEntLoss(temperature=temp)
+            loss_fn = spt.losses.NTXEntLoss(temperature=temp)
             loss = loss_fn(z1, z2)
             assert loss.item() > 0
 
@@ -270,7 +270,7 @@ class TestSimCLRIntegration:
         )
 
         # Load a small dataset
-        dataset = ossl.data.HFDataset(
+        dataset = spt.data.HFDataset(
             path="frgfm/imagenette",
             name="160px",
             split="train[:10]",
@@ -305,7 +305,7 @@ class TestSimCLRIntegration:
                 batch["loss"] = torch.nn.functional.mse_loss(proj[:half], proj[half:])
             return batch
 
-        module = ossl.Module(
+        module = spt.Module(
             backbone=backbone,
             projector=projector,
             forward=forward,

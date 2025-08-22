@@ -14,7 +14,7 @@ class TestSimCLRUnit:
 
     def test_simclr_loss_initialization(self):
         """Test NTXEntLoss initialization."""
-        with patch("stable_ssl.losses.NTXEntLoss") as mock_loss:
+        with patch("stable_pretraining.losses.NTXEntLoss") as mock_loss:
             loss_fn = mock_loss(temperature=0.1)
             mock_loss.assert_called_once_with(temperature=0.1)
             assert loss_fn is not None
@@ -27,7 +27,7 @@ class TestSimCLRUnit:
 
     def test_fold_views_function(self):
         """Test fold_views functionality for multi-view data."""
-        with patch("stable_ssl.data.fold_views") as mock_fold_views:
+        with patch("stable_pretraining.data.fold_views") as mock_fold_views:
             # Mock multi-view data
             batch_size = 32
             n_views = 2
@@ -96,7 +96,7 @@ class TestSimCLRUnit:
 
     def test_transform_with_gaussian_blur(self):
         """Test transform composition with Gaussian blur for SimCLR."""
-        with patch("stable_ssl.data.transforms") as mock_transforms:
+        with patch("stable_pretraining.data.transforms") as mock_transforms:
             mean = [0.485, 0.456, 0.406]
             std = [0.229, 0.224, 0.225]
 
@@ -122,7 +122,7 @@ class TestSimCLRUnit:
 
     def test_repeated_random_sampler_for_simclr(self):
         """Test RepeatedRandomSampler for multi-view SimCLR training."""
-        with patch("stable_ssl.data.sampler.RepeatedRandomSampler") as mock_sampler:
+        with patch("stable_pretraining.data.sampler.RepeatedRandomSampler") as mock_sampler:
             mock_dataset = Mock()
             mock_dataset.__len__ = Mock(return_value=1000)
 
@@ -159,7 +159,7 @@ class TestSimCLRUnit:
 
     def test_module_with_projector(self):
         """Test module creation with projector for SimCLR."""
-        with patch("stable_ssl.Module") as mock_module:
+        with patch("stable_pretraining.Module") as mock_module:
             mock_backbone = Mock()
             mock_projector = Mock()
             mock_forward = Mock()

@@ -10,8 +10,8 @@ import torch
 import torchmetrics
 from transformers import AutoConfig, AutoModelForImageClassification
 
-import stable_ssl as ossl
-from stable_ssl.data import transforms
+import stable_pretraining as spt
+from stable_pretraining.data import transforms
 
 
 @pytest.mark.integration
@@ -49,7 +49,7 @@ class TestWriterIntegration:
         )
 
         # Create small train dataset
-        train_dataset = ossl.data.HFDataset(
+        train_dataset = spt.data.HFDataset(
             path="frgfm/imagenette",
             name="160px",
             split="train[:256]",  # Use small subset
@@ -72,7 +72,7 @@ class TestWriterIntegration:
         )
 
         val = torch.utils.data.DataLoader(
-            dataset=ossl.data.HFDataset(
+            dataset=spt.data.HFDataset(
                 path="frgfm/imagenette",
                 name="160px",
                 split="validation[:128]",  # Small subset
@@ -82,7 +82,7 @@ class TestWriterIntegration:
             num_workers=4,
         )
 
-        data = ossl.data.DataModule(train=train, val=val)
+        data = spt.data.DataModule(train=train, val=val)
 
         # Define forward function
         def forward(self, batch, stage):
@@ -98,10 +98,10 @@ class TestWriterIntegration:
         backbone.classifier[1] = torch.nn.Identity()
         classifier = torch.nn.Linear(512, 10)
 
-        module = ossl.Module(backbone=backbone, classifier=classifier, forward=forward)
+        module = spt.Module(backbone=backbone, classifier=classifier, forward=forward)
 
         # Create callbacks
-        linear_probe = ossl.callbacks.OnlineProbe(
+        linear_probe = spt.callbacks.OnlineProbe(
             "linear_probe",
             module,
             "embedding",
@@ -115,7 +115,7 @@ class TestWriterIntegration:
         )
 
         # Create writer
-        writer = ossl.callbacks.OnlineWriter(
+        writer = spt.callbacks.OnlineWriter(
             names=["embedding", "linear_probe_preds"],
             path=temp_dir,
             during=["train"],
@@ -133,7 +133,7 @@ class TestWriterIntegration:
         )
 
         # Run training
-        manager = ossl.Manager(trainer=trainer, module=module, data=data)
+        manager = spt.Manager(trainer=trainer, module=module, data=data)
         manager()
 
         # Verify files were written

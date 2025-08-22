@@ -14,7 +14,7 @@ class TestMAEUnit:
 
     def test_mae_backbone_initialization(self):
         """Test MAE backbone can be initialized."""
-        with patch("stable_ssl.backbone.mae.vit_base_patch16_dec512d8b") as mock_mae:
+        with patch("stable_pretraining.backbone.mae.vit_base_patch16_dec512d8b") as mock_mae:
             backbone = mock_mae()
             mock_mae.assert_called_once()
             assert backbone is not None
@@ -68,7 +68,7 @@ class TestMAEUnit:
 
     def test_mae_loss_function(self):
         """Test MAE loss computation."""
-        with patch("stable_ssl.losses.mae") as mock_mae_loss:
+        with patch("stable_pretraining.losses.mae") as mock_mae_loss:
             mock_mae_loss.return_value = torch.tensor(0.5)
 
             patches = torch.randn(2, 196, 768)
@@ -103,7 +103,7 @@ class TestMAEUnit:
 
     def test_online_probe_initialization(self):
         """Test OnlineProbe callback initialization for MAE."""
-        with patch("stable_ssl.callbacks.OnlineProbe") as mock_probe:
+        with patch("stable_pretraining.callbacks.OnlineProbe") as mock_probe:
             mock_module = Mock()
             mock_linear = Mock(spec=nn.Linear)
             mock_loss_fn = Mock(spec=nn.CrossEntropyLoss)
@@ -127,7 +127,7 @@ class TestMAEUnit:
 
     def test_repeated_random_sampler(self):
         """Test RepeatedRandomSampler for multi-view training."""
-        with patch("stable_ssl.data.sampler.RepeatedRandomSampler") as mock_sampler:
+        with patch("stable_pretraining.data.sampler.RepeatedRandomSampler") as mock_sampler:
             mock_dataset = Mock()
             mock_dataset.__len__ = Mock(return_value=100)
 
@@ -138,7 +138,7 @@ class TestMAEUnit:
 
     def test_transform_composition_for_mae(self):
         """Test transform composition for MAE training."""
-        with patch("stable_ssl.data.transforms") as mock_transforms:
+        with patch("stable_pretraining.data.transforms") as mock_transforms:
             mean = [0.485, 0.456, 0.406]
             std = [0.229, 0.224, 0.225]
 

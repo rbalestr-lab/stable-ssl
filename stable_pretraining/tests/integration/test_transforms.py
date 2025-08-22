@@ -6,8 +6,8 @@ from torch.utils.data import DataLoader, Subset
 from torchvision.datasets import CIFAR10
 from torchvision.transforms import v2
 
-import stable_ssl as ossl
-import stable_ssl.data.transforms as transforms
+import stable_pretraining as spt
+import stable_pretraining.data.transforms as transforms
 
 
 @pytest.mark.integration
@@ -34,8 +34,8 @@ def test_controlled_transforms(our_transform, true_transform):
         transforms.ControlledTransform(transform=our_transform, seed_offset=0),
         transforms.ToImage(),
     )
-    our_dataset = ossl.data.dataset.DictFormat(CIFAR10("~/data", download=True))
-    our_dataset = ossl.data.dataset.AddTransform(our_dataset, transform)
+    our_dataset = spt.data.dataset.DictFormat(CIFAR10("~/data", download=True))
+    our_dataset = spt.data.dataset.AddTransform(our_dataset, transform)
     t = v2.Compose(
         [true_transform, v2.ToImage(), v2.ToDtype(torch.float32, scale=True)]
     )
@@ -66,8 +66,8 @@ def test_transforms_performance():
         transforms.GaussianBlur(kernel_size=(5, 5), p=1.0),
         transforms.ToImage(),
     )
-    dataset = ossl.data.dataset.DictFormat(CIFAR10("~/data", download=True))
-    dataset = ossl.data.dataset.AddTransform(dataset, transform)
+    dataset = spt.data.dataset.DictFormat(CIFAR10("~/data", download=True))
+    dataset = spt.data.dataset.AddTransform(dataset, transform)
     dataset = Subset(dataset, list(range(256)))
     loader = DataLoader(dataset, batch_size=64, num_workers=0)
     s = time.time()

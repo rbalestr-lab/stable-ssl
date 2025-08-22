@@ -12,13 +12,13 @@ class TestCheckpointingUnit:
 
     def test_sklearn_checkpoint_callback_initialization(self):
         """Test SklearnCheckpoint callback can be initialized."""
-        with patch("stable_ssl.callbacks.SklearnCheckpoint") as mock_callback:
+        with patch("stable_pretraining.callbacks.SklearnCheckpoint") as mock_callback:
             callback = mock_callback()
             assert callback is not None
 
     def test_module_with_sklearn_components(self):
         """Test module can be created with sklearn components."""
-        with patch("stable_ssl.module.Module") as mock_module:
+        with patch("stable_pretraining.module.Module") as mock_module:
             with patch("sklearn.tree.DecisionTreeRegressor") as mock_tree:
                 # Mock the components
                 mock_backbone = Mock()
@@ -113,7 +113,7 @@ class TestCheckpointingUnit:
             )
 
             # Test trainer with callbacks
-            with patch("stable_ssl.callbacks.SklearnCheckpoint") as mock_callback:
+            with patch("stable_pretraining.callbacks.SklearnCheckpoint") as mock_callback:
                 callback_instance = mock_callback.return_value
                 mock_trainer_class(
                     max_epochs=0,

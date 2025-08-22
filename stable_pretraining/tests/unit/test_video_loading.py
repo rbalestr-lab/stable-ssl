@@ -13,7 +13,7 @@ class TestVideoLoadingUnit:
     def test_random_contiguous_temporal_sampler_initialization(self):
         """Test RandomContiguousTemporalSampler initialization."""
         with patch(
-            "stable_ssl.data.transforms.RandomContiguousTemporalSampler"
+            "stable_pretraining.data.transforms.RandomContiguousTemporalSampler"
         ) as mock_sampler:
             sampler = mock_sampler(source="video", target="frames", num_frames=10)
 
@@ -24,7 +24,7 @@ class TestVideoLoadingUnit:
 
     def test_video_transform_composition(self):
         """Test composition of video transforms."""
-        with patch("stable_ssl.data.transforms") as mock_transforms:
+        with patch("stable_pretraining.data.transforms") as mock_transforms:
             mock_transforms.Compose.return_value = Mock()
 
             # Create video transform pipeline
@@ -69,7 +69,7 @@ class TestVideoLoadingUnit:
 
     def test_video_to_image_transform(self):
         """Test ToImage transform for video data."""
-        with patch("stable_ssl.data.transforms.ToImage") as mock_to_image:
+        with patch("stable_pretraining.data.transforms.ToImage") as mock_to_image:
             mock_to_image(
                 scale=False,
                 mean=[0, 0, 0],
@@ -88,7 +88,7 @@ class TestVideoLoadingUnit:
 
     def test_image_to_video_encoder_initialization(self):
         """Test ImageToVideoEncoder wrapper initialization."""
-        with patch("stable_ssl.utils.ImageToVideoEncoder") as mock_encoder:
+        with patch("stable_pretraining.utils.ImageToVideoEncoder") as mock_encoder:
             with patch("torchvision.models.resnet18") as mock_resnet:
                 backbone = mock_resnet()
                 encoder = mock_encoder(backbone)
@@ -160,7 +160,7 @@ class TestVideoLoadingUnit:
 
     def test_hf_dataset_with_video(self):
         """Test HFDataset initialization for video data."""
-        with patch("stable_ssl.data.HFDataset") as mock_dataset:
+        with patch("stable_pretraining.data.HFDataset") as mock_dataset:
             mock_transform = Mock()
             mock_dataset(
                 path="shivalikasingh/video-demo",

@@ -7,7 +7,7 @@ import torch
 from omegaconf import OmegaConf
 from torchvision.transforms import v2
 
-import stable_ssl as ossl
+import stable_pretraining as spt
 
 
 @pytest.mark.integration
@@ -18,7 +18,7 @@ class TestDatasetIntegration:
     def test_hf_datasets(self):
         """Test HuggingFace datasets loading and transformations."""
         # Test basic dataset loading
-        dataset1 = ossl.data.HFDataset("ylecun/mnist", split="train")
+        dataset1 = spt.data.HFDataset("ylecun/mnist", split="train")
 
         # Test with transform
         transform = v2.Compose([v2.ToImage(), v2.ToDtype(torch.float32, scale=True)])
@@ -27,13 +27,13 @@ class TestDatasetIntegration:
             x["image"] = transform(x["image"])
             return x
 
-        dataset2 = ossl.data.HFDataset("ylecun/mnist", split="train", transform=t)
+        dataset2 = spt.data.HFDataset("ylecun/mnist", split="train", transform=t)
 
         # Verify transform is applied correctly
         assert transform(dataset1[0]["image"]).eq(dataset2[0]["image"]).all()
 
         # Test with column renaming
-        dataset3 = ossl.data.HFDataset(
+        dataset3 = spt.data.HFDataset(
             "ylecun/mnist", split="train", rename_columns=dict(image="toto")
         )
         assert transform(dataset3[0]["toto"]).eq(dataset2[0]["image"]).all()
@@ -48,7 +48,7 @@ class TestDatasetIntegration:
             return x
 
         # Create dataset with transform
-        dataset = ossl.data.HFDataset("ylecun/mnist", split="train", transform=t)
+        dataset = spt.data.HFDataset("ylecun/mnist", split="train", transform=t)
         loader = torch.utils.data.DataLoader(dataset, batch_size=4, num_workers=2)
 
         # Test batch loading
@@ -65,7 +65,7 @@ class TestDatasetIntegration:
         train = OmegaConf.create(
             {
                 "dataset": {
-                    "_target_": "stable_ssl.data.HFDataset",
+                    "_target_": "stable_pretraining.data.HFDataset",
                     "path": "ylecun/mnist",
                     "split": "train",
                 },
@@ -78,11 +78,11 @@ class TestDatasetIntegration:
         test = OmegaConf.create(
             {
                 "dataset": {
-                    "_target_": "stable_ssl.data.HFDataset",
+                    "_target_": "stable_pretraining.data.HFDataset",
                     "path": "ylecun/mnist",
                     "split": "test",
                     "transform": {
-                        "_target_": "stable_ssl.data.transforms.ToImage",
+                        "_target_": "stable_pretraining.data.transforms.ToImage",
                     },
                 },
                 "batch_size": 20,
@@ -90,7 +90,7 @@ class TestDatasetIntegration:
         )
 
         # Create DataModule
-        module = ossl.data.DataModule(train=train, test=test, val=test, predict=test)
+        module = spt.data.DataModule(train=train, test=test, val=test, predict=test)
 
         # Test data preparation and setup
         module.prepare_data()
@@ -121,8 +121,8 @@ class TestDatasetIntegration:
     def test_dataset_sizes(self):
         """Test dataset size and splits."""
         # Load train and test splits
-        train_dataset = ossl.data.HFDataset("ylecun/mnist", split="train")
-        test_dataset = ossl.data.HFDataset("ylecun/mnist", split="test")
+        train_dataset = spt.data.HFDataset("ylecun/mnist", split="train")
+        test_dataset = spt.data.HFDataset("ylecun/mnist", split="test")
 
         # MNIST has 60,000 train and 10,000 test samples
         assert len(train_dataset) == 60000
@@ -137,7 +137,7 @@ class TestDatasetIntegration:
             x["image"] = transform(x["image"])
             return x
 
-        dataset = ossl.data.HFDataset("ylecun/mnist", split="train", transform=t)
+        dataset = spt.data.HFDataset("ylecun/mnist", split="train", transform=t)
 
         # Test different batch sizes
         for batch_size in [1, 16, 32]:
@@ -154,12 +154,12 @@ class TestDatasetIntegration:
     def test_fromtensor_dataset(self):
         """Test FromTensorDataset transform logic."""
         mock_data = torch.randn(128, 3, 32, 32)
-        trans = ossl.data.transforms.ToImage(mean=(0.5,), std=(0.5,))
+        trans = spt.data.transforms.ToImage(mean=(0.5,), std=(0.5,))
 
         # fake torch dataset
         dataset = torch.utils.data.TensorDataset(mock_data)
-        data = ossl.data.utils.FromTorchDataset(dataset, names=["image"])
-        data_trans = ossl.data.utils.FromTorchDataset(
+        data = spt.data.utils.FromTorchDataset(dataset, names=["image"])
+        data_trans = spt.data.utils.FromTorchDataset(
             dataset, names=["image"], transform=trans
         )
 
@@ -171,7 +171,7 @@ class TestDatasetIntegration:
         """Test bounds computation for MinariStepsDataset util."""
         # minari download D4RL/pen/human-v2
         minari_dataset = minari.load_dataset("D4RL/pen/human-v2", download=True)
-        dataset = ossl.data.MinariStepsDataset(minari_dataset, num_steps=2)
+        dataset = spt.data.MinariStepsDataset(minari_dataset, num_steps=2)
 
         assert np.all(dataset.bounds >= 0)
         assert len(dataset.bounds) == minari_dataset.total_episodes

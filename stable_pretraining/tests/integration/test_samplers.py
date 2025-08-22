@@ -4,7 +4,7 @@ import pytest
 import torch
 from omegaconf import OmegaConf
 
-import stable_ssl as ossl
+import stable_pretraining as spt
 
 
 @pytest.mark.integration
@@ -20,15 +20,15 @@ def test_repeated_sampler_with_dataloader(n_views):
     train = OmegaConf.create(
         {
             "dataset": {
-                "_target_": "stable_ssl.data.HFDataset",
+                "_target_": "stable_pretraining.data.HFDataset",
                 "path": "ylecun/mnist",
                 "split": "train[:128]",
                 "transform": {
-                    "_target_": "stable_ssl.data.transforms.ToImage",
+                    "_target_": "stable_pretraining.data.transforms.ToImage",
                 },
             },
             "sampler": {
-                "_target_": "stable_ssl.data.sampler.RepeatedRandomSampler",
+                "_target_": "stable_pretraining.data.sampler.RepeatedRandomSampler",
                 "n_views": n_views,
                 "data_source_or_len": 128,
             },
@@ -37,7 +37,7 @@ def test_repeated_sampler_with_dataloader(n_views):
     )
 
     # Test loader creation
-    loader = ossl.data.instantiate_from_dataloader_config(train, shuffle=True)
+    loader = spt.data.instantiate_from_dataloader_config(train, shuffle=True)
 
     # Verify one batch
     batch = next(iter(loader))
@@ -60,15 +60,15 @@ def test_samplers_with_partial_config():
     train = OmegaConf.create(
         {
             "dataset": {
-                "_target_": "stable_ssl.data.HFDataset",
+                "_target_": "stable_pretraining.data.HFDataset",
                 "path": "ylecun/mnist",
                 "split": "train[:64]",
                 "transform": {
-                    "_target_": "stable_ssl.data.transforms.ToImage",
+                    "_target_": "stable_pretraining.data.transforms.ToImage",
                 },
             },
             "sampler": {
-                "_target_": "stable_ssl.data.sampler.RepeatedRandomSampler",
+                "_target_": "stable_pretraining.data.sampler.RepeatedRandomSampler",
                 "_partial_": True,
                 "n_views": 2,
             },
@@ -76,6 +76,6 @@ def test_samplers_with_partial_config():
         }
     )
 
-    loader = ossl.data.instantiate_from_dataloader_config(train, shuffle=True)
+    loader = spt.data.instantiate_from_dataloader_config(train, shuffle=True)
     batch = next(iter(loader))
     assert batch["image"].shape[0] == 32

@@ -1,3 +1,4 @@
+
 """Integration tests for checkpointing functionality."""
 
 import pytest
@@ -19,7 +20,7 @@ class TestCheckpointingIntegration:
 
     def test_sklearn_module_checkpointing(self, temp_dir):
         """Test sklearn module checkpointing with SklearnCheckpoint callback."""
-        import stable_ssl as ssl
+        import stable_pretraining as ssl
         import lightning as pl
         import torchvision
         import sklearn.tree

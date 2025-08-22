@@ -14,7 +14,7 @@ class TestWriterUnit:
 
     def test_online_writer_initialization(self):
         """Test OnlineWriter callback initialization."""
-        with patch("stable_ssl.callbacks.OnlineWriter") as mock_writer:
+        with patch("stable_pretraining.callbacks.OnlineWriter") as mock_writer:
             writer = mock_writer(
                 names=["embedding", "linear_probe_preds"],
                 path="./tmp/",

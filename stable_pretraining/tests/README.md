@@ -5,7 +5,7 @@
 The test suite is organized into two main categories:
 
 ```
-stable_ssl/tests/
+stable_pretraining/tests/
 ├── unit/           # Fast tests without external dependencies
 ├── integration/    # Tests requiring GPU, data downloads, or full training
 ├── conftest.py     # Shared pytest fixtures
@@ -66,11 +66,11 @@ python -m pytest -m "unit and not slow"
 ### Run specific test files
 ```bash
 # Run all transform tests
-python -m pytest stable_ssl/tests/unit/test_transforms.py
-python -m pytest stable_ssl/tests/integration/test_transforms.py
+python -m pytest stable_pretraining/tests/unit/test_transforms.py
+python -m pytest stable_pretraining/tests/integration/test_transforms.py
 
 # Run with coverage
-python -m pytest --cov=stable_ssl -m unit
+python -m pytest --cov=stable_pretraining -m unit
 ```
 
 ## Test Markers
@@ -87,7 +87,7 @@ python -m pytest --cov=stable_ssl -m unit
 ```python
 import pytest
 import torch
-import stable_ssl as ossl
+import stable_pretraining as ossl
 
 
 @pytest.mark.unit
@@ -108,7 +108,7 @@ class TestMyComponent:
 ### Integration Test Example
 ```python
 import pytest
-import stable_ssl as ossl
+import stable_pretraining as ossl
 
 
 @pytest.mark.integration
@@ -129,7 +129,7 @@ def test_full_training():
 The CI pipeline runs only unit tests by default:
 ```yaml
 - name: Run Unit Tests
-  run: python -m pytest stable_ssl/ -m unit --verbose --cov=stable_ssl
+  run: python -m pytest stable_pretraining/ -m unit --verbose --cov=stable_pretraining
 ```
 
 Integration tests can be run separately in nightly builds or on-demand.

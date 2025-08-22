@@ -4,7 +4,7 @@ import pytest
 import torch
 import torch.nn as nn
 
-import stable_ssl as ossl
+import stable_pretraining as spt
 
 
 @pytest.mark.unit
@@ -33,7 +33,7 @@ class TestBackboneUtils:
         model = SimpleModel()
 
         # Set new embedding dimension without shape verification to avoid meta device issue
-        modified = ossl.backbone.set_embedding_dim(
+        modified = spt.backbone.set_embedding_dim(
             model,
             dim=20,
         )
@@ -68,7 +68,7 @@ class TestBackboneUtils:
         # In reality this would modify the model's classifier
         # For unit test, we just verify the function can be called
         try:
-            ossl.backbone.set_embedding_dim(
+            spt.backbone.set_embedding_dim(
                 model,
                 dim=5,
                 expected_input_shape=(1, 3, 16, 16),

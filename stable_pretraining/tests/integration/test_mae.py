@@ -5,8 +5,8 @@ import pytest
 import torch
 import torchmetrics
 
-import stable_ssl as ossl
-from stable_ssl.data import transforms
+import stable_pretraining as spt
+from stable_pretraining.data import transforms
 
 
 @pytest.mark.integration
@@ -34,7 +34,7 @@ class TestMAEIntegration:
         )
 
         # Create train dataset with multi-view sampling
-        train_dataset = ossl.data.HFDataset(
+        train_dataset = spt.data.HFDataset(
             path="frgfm/imagenette",
             name="160px",
             split="train",
@@ -43,7 +43,7 @@ class TestMAEIntegration:
 
         train = torch.utils.data.DataLoader(
             dataset=train_dataset,
-            sampler=ossl.data.sampler.RepeatedRandomSampler(train_dataset, n_views=2),
+            sampler=spt.data.sampler.RepeatedRandomSampler(train_dataset, n_views=2),
             batch_size=64,
             num_workers=20,
             drop_last=True,
@@ -58,7 +58,7 @@ class TestMAEIntegration:
         )
 
         val = torch.utils.data.DataLoader(
-            dataset=ossl.data.HFDataset(
+            dataset=spt.data.HFDataset(
                 path="frgfm/imagenette",
                 name="160px",
                 split="validation",
@@ -68,25 +68,25 @@ class TestMAEIntegration:
             num_workers=10,
         )
 
-        data = ossl.data.DataModule(train=train, val=val)
+        data = spt.data.DataModule(train=train, val=val)
 
         # Define MAE forward function
         def forward(self, batch, stage):
             latent, pred, mask = self.backbone(batch["image"])
             batch["embedding"] = latent[:, 0]  # CLS token only
             if self.training:
-                loss = ossl.losses.mae(
+                loss = spt.losses.mae(
                     self.backbone.patchify(batch["image"]), pred, mask
                 )
                 batch["loss"] = loss
             return batch
 
         # Create MAE backbone and module
-        backbone = ossl.backbone.mae.vit_base_patch16_dec512d8b()
-        module = ossl.Module(backbone=backbone, forward=forward)
+        backbone = spt.backbone.mae.vit_base_patch16_dec512d8b()
+        module = spt.Module(backbone=backbone, forward=forward)
 
         # Create online probe callback
-        linear_probe = ossl.callbacks.OnlineProbe(
+        linear_probe = spt.callbacks.OnlineProbe(
             "linear_probe",
             module,
             "embedding",
@@ -110,14 +110,14 @@ class TestMAEIntegration:
         )
 
         # Run training
-        manager = ossl.Manager(trainer=trainer, module=module, data=data)
+        manager = spt.Manager(trainer=trainer, module=module, data=data)
         manager()
 
     @pytest.mark.gpu
     def test_mae_reconstruction_loss(self):
         """Test MAE reconstruction loss computation."""
         # Create a small MAE model
-        backbone = ossl.backbone.mae.vit_base_patch16_dec512d8b()
+        backbone = spt.backbone.mae.vit_base_patch16_dec512d8b()
 
         # Create dummy batch
         batch_size = 2
@@ -129,7 +129,7 @@ class TestMAEIntegration:
 
         # Compute reconstruction loss
         patches = backbone.patchify(images)
-        loss = ossl.losses.mae(patches, pred, mask)
+        loss = spt.losses.mae(patches, pred, mask)
 
         # Verify loss properties
         assert isinstance(loss, torch.Tensor)
@@ -140,7 +140,7 @@ class TestMAEIntegration:
     def test_mae_feature_extraction(self):
         """Test MAE feature extraction for downstream tasks."""
         # Create MAE backbone
-        backbone = ossl.backbone.mae.vit_base_patch16_dec512d8b()
+        backbone = spt.backbone.mae.vit_base_patch16_dec512d8b()
         backbone.eval()
 
         # Create dummy batch
@@ -156,7 +156,7 @@ class TestMAEIntegration:
 
     def test_mae_patchify_unpatchify(self):
         """Test MAE patchify and unpatchify operations."""
-        from stable_ssl.backbone.mae import PatchEmbed
+        from stable_pretraining.backbone.mae import PatchEmbed
 
         # Create patch embedding layer
         patch_embed = PatchEmbed(img_size=224, patch_size=16, in_chans=3, embed_dim=768)
@@ -177,7 +177,7 @@ class TestMAEIntegration:
         # Note: This test would require modifying the MAE backbone to accept mask_ratio
         # For now, we'll test that the model works with its default masking
 
-        backbone = ossl.backbone.mae.vit_base_patch16_dec512d8b()
+        backbone = spt.backbone.mae.vit_base_patch16_dec512d8b()
         images = torch.randn(2, 3, 224, 224)
 
         # Forward pass
@@ -193,7 +193,7 @@ class TestMAEIntegration:
 
     def test_mae_multi_view_sampling(self):
         """Test MAE with multi-view data augmentation."""
-        from stable_ssl.data.sampler import RepeatedRandomSampler
+        from stable_pretraining.data.sampler import RepeatedRandomSampler
 
         # Create dummy dataset
         dataset = torch.utils.data.TensorDataset(
@@ -223,19 +223,19 @@ class TestMAEIntegration:
     def test_mae_training_step(self):
         """Test a single MAE training step."""
         # Create simple MAE setup
-        backbone = ossl.backbone.mae.vit_base_patch16_dec512d8b()
+        backbone = spt.backbone.mae.vit_base_patch16_dec512d8b()
 
         def forward(self, batch, stage):
             latent, pred, mask = self.backbone(batch["image"])
             batch["embedding"] = latent[:, 0]
             if self.training:
-                loss = ossl.losses.mae(
+                loss = spt.losses.mae(
                     self.backbone.patchify(batch["image"]), pred, mask
                 )
                 batch["loss"] = loss
             return batch
 
-        module = ossl.Module(backbone=backbone, forward=forward)
+        module = spt.Module(backbone=backbone, forward=forward)
         module.train()
 
         # Create dummy batch
