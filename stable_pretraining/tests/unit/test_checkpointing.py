@@ -113,7 +113,9 @@ class TestCheckpointingUnit:
             )
 
             # Test trainer with callbacks
-            with patch("stable_pretraining.callbacks.SklearnCheckpoint") as mock_callback:
+            with patch(
+                "stable_pretraining.callbacks.SklearnCheckpoint"
+            ) as mock_callback:
                 callback_instance = mock_callback.return_value
                 mock_trainer_class(
                     max_epochs=0,

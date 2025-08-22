@@ -98,7 +98,9 @@ class TestVideoLoadingIntegration:
         loader = torch.utils.data.DataLoader(dataset, batch_size=4, shuffle=True)
 
         # Create video encoder with ResNet18
-        embedding = stable_pretraining.utils.ImageToVideoEncoder(torchvision.models.resnet18())
+        embedding = stable_pretraining.utils.ImageToVideoEncoder(
+            torchvision.models.resnet18()
+        )
 
         # Test feature extraction
         for data in loader:

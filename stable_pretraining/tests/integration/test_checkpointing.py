@@ -1,4 +1,3 @@
-
 """Integration tests for checkpointing functionality."""
 
 import pytest

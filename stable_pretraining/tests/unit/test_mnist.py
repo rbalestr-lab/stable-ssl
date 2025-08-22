@@ -75,7 +75,9 @@ class TestMNISTUnit:
         """Test DataModule initialization with dictionary configuration."""
         with patch("stable_pretraining.data.DataModule") as mock_datamodule:
             with patch("stable_pretraining.data.HFDataset") as mock_dataset:
-                with patch("stable_pretraining.data.transforms.ToImage") as mock_transform:
+                with patch(
+                    "stable_pretraining.data.transforms.ToImage"
+                ) as mock_transform:
                     # Mock dataset instances
                     train_dataset = mock_dataset.return_value
                     test_dataset = mock_dataset.return_value
@@ -151,7 +153,9 @@ class TestMNISTUnit:
         """Test DataLoader creation with MNIST dataset."""
         with patch("torch.utils.data.DataLoader") as mock_loader_class:
             with patch("stable_pretraining.data.HFDataset") as mock_dataset:
-                with patch("stable_pretraining.data.transforms.ToImage") as mock_transform:
+                with patch(
+                    "stable_pretraining.data.transforms.ToImage"
+                ) as mock_transform:
                     dataset = mock_dataset.return_value
                     mock_transform.return_value  # Just create the mock, don't assign
 

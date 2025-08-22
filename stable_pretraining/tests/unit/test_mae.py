@@ -14,7 +14,9 @@ class TestMAEUnit:
 
     def test_mae_backbone_initialization(self):
         """Test MAE backbone can be initialized."""
-        with patch("stable_pretraining.backbone.mae.vit_base_patch16_dec512d8b") as mock_mae:
+        with patch(
+            "stable_pretraining.backbone.mae.vit_base_patch16_dec512d8b"
+        ) as mock_mae:
             backbone = mock_mae()
             mock_mae.assert_called_once()
             assert backbone is not None
@@ -127,7 +129,9 @@ class TestMAEUnit:
 
     def test_repeated_random_sampler(self):
         """Test RepeatedRandomSampler for multi-view training."""
-        with patch("stable_pretraining.data.sampler.RepeatedRandomSampler") as mock_sampler:
+        with patch(
+            "stable_pretraining.data.sampler.RepeatedRandomSampler"
+        ) as mock_sampler:
             mock_dataset = Mock()
             mock_dataset.__len__ = Mock(return_value=100)
 

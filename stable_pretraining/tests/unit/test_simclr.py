@@ -122,7 +122,9 @@ class TestSimCLRUnit:
 
     def test_repeated_random_sampler_for_simclr(self):
         """Test RepeatedRandomSampler for multi-view SimCLR training."""
-        with patch("stable_pretraining.data.sampler.RepeatedRandomSampler") as mock_sampler:
+        with patch(
+            "stable_pretraining.data.sampler.RepeatedRandomSampler"
+        ) as mock_sampler:
             mock_dataset = Mock()
             mock_dataset.__len__ = Mock(return_value=1000)
 
