@@ -36,11 +36,10 @@ trainer:
       loss_fn:
         _target_: torch.nn.CrossEntropyLoss
       metrics:
-        top1:
-          _target_: torchmetrics.classification.MulticlassAccuracy
+        # Metrics as a list instead of dict
+        - _target_: torchmetrics.classification.MulticlassAccuracy
           num_classes: 10
-        top5:
-          _target_: torchmetrics.classification.MulticlassAccuracy
+        - _target_: torchmetrics.classification.MulticlassAccuracy
           num_classes: 10
           top_k: 5
 
@@ -53,8 +52,8 @@ trainer:
       input_dim: 512
       k: 10
       metrics:
-        accuracy:
-          _target_: torchmetrics.classification.MulticlassAccuracy
+        # Single metric in a list
+        - _target_: torchmetrics.classification.MulticlassAccuracy
           num_classes: 10
 
   # Logger configuration (optional - can use WandB, TensorBoard, etc.)
@@ -108,12 +107,15 @@ module:
   # Optimizer configuration
   optim:
     optimizer:
-      type: LARS
+      _target_: stable_pretraining.optim.lars.LARS
+      _partial_: true  # Make it a partial function
       lr: 5.0
       weight_decay: 1e-6
     scheduler:
-      type: LinearWarmupCosineAnnealing
+      _target_: stable_pretraining.optim.lr_scheduler.LinearWarmupCosineAnnealingLR
+      _partial_: true
       warmup_epochs: 10
+      max_epochs: ${trainer.max_epochs}
     interval: epoch
 
 # Data module configuration
@@ -122,7 +124,7 @@ data:
 
   # Training dataloader
   train:
-    _target_: torch.utils.data.DataLoader
+    # DataLoader kwargs - no _target_ needed as DataLoader is constructed manually
     batch_size: 256
     num_workers: 8
     drop_last: true
@@ -195,7 +197,7 @@ data:
 
   # Validation dataloader
   val:
-    _target_: torch.utils.data.DataLoader
+    # Validation DataLoader kwargs
     batch_size: 256
     num_workers: 10
     dataset:
