@@ -52,19 +52,21 @@ data = spt.data.DataModule(train=train_dataloader, val=val_dataloader)
 # Transformer block number to probe
 transformer_block_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
 
+
 # Define the forward function (replaces training_step in PyTorch Lightning)
 def forward(self, batch, stage):
     out = {}
     embeddings = self.backbone(batch["image"])["hidden_states"]
     for i in transformer_block_indices:
-        embedding = embeddings[1+i] # +1 as 0 is the embedding layer
-        out[f"embedding_layer_{i}"] = embedding.mean(dim=1) # average pooling
+        embedding = embeddings[1 + i]  # +1 as 0 is the embedding layer
+        out[f"embedding_layer_{i}"] = embedding.mean(dim=1)  # average pooling
     return out
+
 
 # Init Hugging Face model
 backbone = AutoModel.from_pretrained(
     "nateraw/vit-base-patch16-224-cifar10",
-    output_hidden_states=True, # Enable output of hidden states
+    output_hidden_states=True,  # Enable output of hidden states
 )
 
 # Load torch checkpoint if needed
@@ -72,7 +74,7 @@ backbone = AutoModel.from_pretrained(
 
 # Create the module with all components
 module = spt.Module(
-    backbone=spt.backbone.EvalOnly(backbone), # Freeze backbone
+    backbone=spt.backbone.EvalOnly(backbone),  # Freeze backbone
     forward=forward,
     optim=None,
 )
@@ -91,7 +93,8 @@ for i in transformer_block_indices:
                 "top5": torchmetrics.classification.MulticlassAccuracy(10, top_k=5),
             },
             optimizer={
-                "type": "SGD", "lr": 1e-3,
+                "type": "SGD",
+                "lr": 1e-3,
             },
             scheduler={"type": "CosineAnnealingLR", "T_max": 100},
         )
