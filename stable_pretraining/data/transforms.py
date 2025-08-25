@@ -14,7 +14,7 @@ from torchvision.transforms import v2
 from torchvision.transforms.functional import InterpolationMode
 from torchvision.transforms.v2 import functional as F
 from torchvision.transforms.v2._utils import query_chw
-
+from transformers import AutoTokenizer
 
 class Transform(v2.Transform):
     """Base transform class extending torchvision v2.Transform with nested data handling."""
@@ -543,10 +543,26 @@ class ControlledTransform(Transform):
         self.key = key
 
     def __call__(self, x):
-        with random_seed(x["idx"] + self.seed_offset):
+        with random_seed(x[self.key] + self.seed_offset):
             x = self._transform(x)
         return x
+    
 
+class LambdaTransform(Transform):
+    """Apply a lambda function to the input."""
+
+    def __init__(self, fn: callable, source: str = "image", targets: tuple[str, ...] = ("image",)):
+        super().__init__()
+        self.fn = fn
+        self.source = source
+        self.targets = targets
+
+    def __call__(self, x):
+        out = self.fn(self.nested_get(x, self.source))
+        assert len(out) == len(self.targets), "Number of outputs and targets must match"
+        for data, target in zip(out, self.targets):
+            self.nested_set(x, data, target)
+        return x
 
 class Conditional(Transform):
     """Apply transform conditionally based on a data dictionary key."""
